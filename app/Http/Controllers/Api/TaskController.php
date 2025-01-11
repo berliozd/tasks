@@ -35,6 +35,7 @@ class TaskController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * @throws \Exception
      */
     public function update(Request $request, string $id)
     {
@@ -43,9 +44,7 @@ class TaskController extends Controller
             $data['completed_at'] = Carbon::parse($data['completed_at']);
         }
         $task = Task::whereId($id)->first();
-        if ($task->owner()->getResults()->id !== auth()->user()->id) {
-            throw new \Exception('Not allowed');
-        }
+        $this->checkPermissions($task);
         $task->fill($data);
         $task->save();
         return $data;
@@ -53,9 +52,24 @@ class TaskController extends Controller
 
     /**
      * Remove the specified resource from storage.
+     * @throws \Exception
      */
     public function destroy(string $id)
     {
-        //
+        $task = Task::whereId($id)->first();
+        $this->checkPermissions($task);
+        $task->delete();
+    }
+
+    /**
+     * @param $task
+     * @return void
+     * @throws \Exception
+     */
+    public function checkPermissions($task): void
+    {
+        if ($task->owner()->getResults()->id !== auth()->user()->id) {
+            throw new \Exception('Not allowed');
+        }
     }
 }

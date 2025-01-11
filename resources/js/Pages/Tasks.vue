@@ -5,6 +5,7 @@ import CheckButton from "@/Components/CheckButton.vue";
 import axios from 'axios';
 import {watch} from "vue";
 import debounce from "lodash/debounce";
+import DeleteButton from "@/Components/DeleteButton.vue";
 
 
 const props = defineProps({tasks: Array})
@@ -16,12 +17,8 @@ const editTask = (task) => {
 }
 const toggleCompleted = (task, index) => {
     if (task.completed_at === null) {
-        // props.tasks.splice(index, 1);
-        // props.tasks.push(task);
-        console.log('completed');
         task.completed_at = new Date();
     } else {
-        console.log('not completed');
         task.completed_at = null;
     }
 }
@@ -56,6 +53,13 @@ const cleanTask = (storedTask) => {
     return removeProperty(storedTask, 'deployed');
 }
 
+const deleteTask = (task, index) => {
+    axios.delete(route('tasks.delete', task.id))
+        .then(response => {
+            props.tasks.splice(index, 1);
+            // console.log(response);
+        })
+}
 </script>
 
 <template>
@@ -71,36 +75,43 @@ const cleanTask = (storedTask) => {
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                     <div v-for="(task, index) in tasks" class="border m-4 p-2"
                          :class="task.completed_at?'bg-gray-200':''" :key="index">
-                        <div class="flex justify-between">
+                        <div class="flex justify-between gap-2">
+                            <div class="flex">
+                                <div>
+                                    <CheckButton :checked="task.completed_at!==null"
+                                                 @click="toggleCompleted(task, index)"/>
+                                </div>
+                            </div>
                             <div class="w-full">
-
                                 <div @click="toggleDescription(task)" class="cursor-pointer w-full">
                                     {{ task.label }}
                                 </div>
-                                <div :class="task.editing?'':'hidden'">
-                                    <textarea v-model="task.label" class="w-full"/>
-                                </div>
-
                                 <div :class="task.deployed || task.editing?'':'hidden'" class="text-xs text-gray-500">
                                     <div :class="task.editing?'hidden':''">{{ task.description }}</div>
-                                    <div :class="task.editing?'':'hidden'">
-                                        <span>Description:</span>
-                                        <textarea v-model="task.description" class="w-full"/>
-                                    </div>
                                 </div>
                                 <div v-if="task.completed_at !== null" class="text-xs text-gray-500 underline">
                                     Completed on:{{ task.completed_at }}
                                 </div>
-
                             </div>
-                            <div class="flex gap-2">
+                            <div class="flex">
                                 <div :class="task.completed_at!==null?'invisible':''">
                                     <EditButton @click="editTask(task)"/>
                                 </div>
-                                <div :class="task.editing?'invisible':''">
-                                    <CheckButton :checked="task.completed_at!==null"
-                                                 @click="toggleCompleted(task, index)"/>
+                                <div>
+                                    <DeleteButton @click="deleteTask(task, index)"/>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="m-2">
+                            <div :class="task.editing?'':'hidden'">
+                                <div class="text-secondary text-xs">Label : </div>
+                                <textarea v-model="task.label"
+                                          class="text-primary-content rounded-md shadow-sm w-full"/>
+                            </div>
+                            <div :class="task.editing?'':'hidden'">
+                                <div class="text-secondary text-xs">Description : </div>
+                                <textarea v-model="task.description"
+                                          class="text-primary-content rounded-md shadow-sm w-full"/>
                             </div>
                         </div>
                     </div>
