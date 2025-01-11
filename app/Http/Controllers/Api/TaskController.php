@@ -22,7 +22,12 @@ class TaskController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $data = $request->toArray();
+        $data['user_id'] = auth()->user()->id;
+        $data['description'] = $data['description'] ?? '';
+        $data['completed_at'] = $data['completed_at'] ?? null;
+        $task = Task::create($data);
+        return $task;
     }
 
     /**
@@ -43,6 +48,7 @@ class TaskController extends Controller
         if (!empty($data['completed_at'])) {
             $data['completed_at'] = Carbon::parse($data['completed_at']);
         }
+        $data['description'] = $data['description'] ?? '';
         $task = Task::whereId($id)->first();
         $this->checkPermissions($task);
         $task->fill($data);
