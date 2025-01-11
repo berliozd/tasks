@@ -27,9 +27,6 @@ const toggleCompleted = (task) => {
 
 const updateTask = (task) => {
     axios.patch(route('tasks.update', task.id), task)
-        .then(response => {
-            // console.log(response);
-        })
 }
 
 const debouncedSave = debounce(updateTask, 300);
@@ -103,7 +100,7 @@ const addTask = () => {
 
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div class=" overflow-hidden shadow-xl sm:rounded-lg">
+                <div class="bg-gray-100 overflow-hidden shadow-xl sm:rounded-lg ">
 
                     <div class="">
 
@@ -112,7 +109,7 @@ const addTask = () => {
                                    class="w-full rounded">
                             <SaveButton @click="addTask"/>
                         </div>
-                        <div v-for="(task, index) in tasks" class="border m-4 p-2"
+                        <div v-for="(task, index) in tasks" class="border border-gray-400 m-4 p-2"
                              :class="task.completed_at?'bg-gray-200':''" :key="index">
                             <div class="flex justify-between gap-2">
                                 <div class="flex">
@@ -126,10 +123,10 @@ const addTask = () => {
                                         {{ task.label }}
                                     </div>
                                     <div :class="task.deployed || task.editing?'':'hidden'"
-                                         class="text-xs text-gray-500">
+                                         class="text-xs text-gray-400">
                                         <div :class="task.editing?'hidden':''">{{ task.description }}</div>
                                     </div>
-                                    <div v-if="task.completed_at !== null" class="text-xs text-gray-500 underline">
+                                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
                                         Completed on:{{ task.completed_at }}
                                     </div>
                                 </div>
