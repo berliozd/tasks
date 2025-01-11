@@ -7,6 +7,7 @@ import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
+import AuthProviders from "@/Components/AuthProviders.vue";
 
 const form = useForm({
     name: '',
@@ -107,6 +108,9 @@ const submit = () => {
                     Register
                 </PrimaryButton>
             </div>
+
+            <AuthProviders v-bind:login="false"/>
+
         </form>
     </AuthenticationCard>
 </template>

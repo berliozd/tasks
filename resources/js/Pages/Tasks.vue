@@ -61,7 +61,7 @@ const cleanTask = (storedTask) => {
 <template>
     <AppLayout title="Tasks">
         <template #header>
-            <h2 class="font-semibold text-xl text-red-800 leading-tight">
+            <h2 class="font-semibold text-xl leading-tight">
                 Tasks
             </h2>
         </template>
