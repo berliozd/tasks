@@ -6,7 +6,7 @@ import {usePage} from "@inertiajs/vue3";
 <template>
     <div>
         <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
-            <ApplicationLogo class="block h-48 w-auto"/>
+            <ApplicationLogo class="block w-72"/>
 
             <h1 class="mt-8 text-2xl font-medium text-gray-900">
                 Welcome to your smart tasks management tool!
@@ -15,8 +15,7 @@ import {usePage} from "@inertiajs/vue3";
             <p class="mt-6 text-gray-500 leading-relaxed">
                 Effortless Task Management Made Simple
                 <br/>
-
-                Welcome to {{ usePage().props.appName }}, the easiest way to stay organized and on top of your day. With
+                {{ usePage().props.appName }}, the easiest way to stay organized and on top of your day. With
                 a focus on
                 simplicity and efficiency, our smart task management tool helps you easily add, track, and manage your
                 tasks—no hassle, no complexity.
