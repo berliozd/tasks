@@ -69,6 +69,13 @@ const addTask = () => {
         }
     )
 }
+const editTask = (task) => {
+    task.editing = !task.editing
+    props.tasks.forEach(tsk => {
+        if (tsk.id === task.id) return;
+        tsk.editing = false
+    });
+}
 
 watch(props.tasks, () => {
     if (watchActive) saveAllTasks();
@@ -109,7 +116,7 @@ watch(props.tasks, () => {
                             </div>
                             <div class="flex gap-1">
                                 <div :class="task.completed_at!==null?'invisible':''">
-                                    <EditButton @click="task.editing = !task.editing"/>
+                                    <EditButton @click="editTask(task)"/>
                                 </div>
                                 <DeleteButton @click="deleteTask(task, index)"/>
                             </div>
