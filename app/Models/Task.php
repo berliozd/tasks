@@ -11,7 +11,15 @@ class Task extends Model
     /** @use HasFactory<TaskFactory> */
     use HasFactory;
 
-    protected $fillable = ['label', 'created_at', 'updated_date', 'completed_at', 'user_id', 'description'];
+    protected $fillable = [
+        'label',
+        'created_at',
+        'updated_date',
+        'completed_at',
+        'user_id',
+        'description',
+        'scheduled_at'
+    ];
 
     public function owner()
     {

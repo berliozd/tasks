@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
@@ -26,8 +27,12 @@ class TaskController extends Controller
         $data['user_id'] = auth()->user()->id;
         $data['description'] = $data['description'] ?? '';
         $data['completed_at'] = $data['completed_at'] ?? null;
-        $task = Task::create($data);
-        return $task;
+        if (!empty($data['scheduled_at'])) {
+            $data['scheduled_at'] = Carbon::parse($data['scheduled_at']);
+        } else {
+            $data['scheduled_at'] = now();
+        }
+        return Task::create($data);
     }
 
     /**
@@ -40,7 +45,7 @@ class TaskController extends Controller
 
     /**
      * Update the specified resource in storage.
-     * @throws \Exception
+     * @throws Exception
      */
     public function update(Request $request, string $id)
     {
@@ -58,7 +63,7 @@ class TaskController extends Controller
 
     /**
      * Remove the specified resource from storage.
-     * @throws \Exception
+     * @throws Exception
      */
     public function destroy(string $id)
     {
@@ -70,12 +75,12 @@ class TaskController extends Controller
     /**
      * @param $task
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function checkPermissions($task): void
     {
         if ($task->owner()->getResults()->id !== auth()->user()->id) {
-            throw new \Exception('Not allowed');
+            throw new Exception('Not allowed');
         }
     }
 }
