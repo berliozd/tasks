@@ -19,7 +19,7 @@ const emit = defineEmits(['click']);
          stroke="currentColor"
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
          class="lucide lucide-square-check cursor-pointer"
-         :class="enabled ? 'text-gray-500' : 'text-gray-300'">
+         :class="enabled ? 'text-gray-600' : 'text-gray-400'">
         <rect width="18" height="18" x="3" y="3" rx="2"/>
         <path d="m9 12 2 2 4-4"/>
     </svg>
@@ -28,7 +28,7 @@ const emit = defineEmits(['click']);
          viewBox="0 0 24 24" fill="none"
          stroke="currentColor"
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square cursor-pointer"
-         :class="enabled ? 'text-gray-500' : 'text-gray-300'">
+         :class="enabled ? 'text-gray-600' : 'text-gray-400'">
         <rect width="18" height="18" x="3" y="3" rx="2"/>
     </svg>
 </template>
