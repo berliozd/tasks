@@ -14,7 +14,7 @@ class TaskSeeder extends Seeder
     {
         Task::factory(5)->sequence(
             [
-                'user_id' => 1,
+                'user_id' => 5,
                 'created_at' => now()->subtract('day', 4),
                 'updated_at' => now()->subtract('day', 3),
                 'completed_at' => now()->subtract('day', 1),
@@ -22,7 +22,7 @@ class TaskSeeder extends Seeder
                 'description' => 'Description 1',
             ],
             [
-                'user_id' => 1,
+                'user_id' => 5,
                 'created_at' => now()->subtract('day', 7),
                 'updated_at' => now()->subtract('day', 6),
                 'completed_at' => now()->subtract('day', 5),
@@ -30,7 +30,7 @@ class TaskSeeder extends Seeder
                 'description' => 'Description 2',
             ],
             [
-                'user_id' => 1,
+                'user_id' => 5,
                 'created_at' => now()->subtract('day', 12),
                 'updated_at' => now()->subtract('day', 10),
                 'completed_at' => now()->subtract('day', 9),
@@ -38,7 +38,7 @@ class TaskSeeder extends Seeder
                 'description' => 'Description 3',
             ],
             [
-                'user_id' => 1,
+                'user_id' => 5,
                 'created_at' => now()->subtract('day', 19),
                 'updated_at' => now()->subtract('day', 12),
                 'completed_at' => now()->subtract('day', 3),
@@ -46,7 +46,7 @@ class TaskSeeder extends Seeder
                 'description' => 'Description 4',
             ],
             [
-                'user_id' => 1,
+                'user_id' => 5,
                 'created_at' => now()->subtract('day', 16),
                 'updated_at' => now()->subtract('day', 15),
                 'completed_at' => now()->subtract('day', 14),

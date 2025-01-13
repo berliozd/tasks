@@ -1,0 +1,20 @@
+{
+  "name": "addeos/laravel-timezone",
+  "description": "Helper module to help getting information related to current user timezone",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Didier Berlioz",
+      "email": "didier@addeos.com"
+    }
+  ],
+  "require": {
+    "php": ">=7.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "addeos\\timezone\\": "src/"
+    }
+  }
+}

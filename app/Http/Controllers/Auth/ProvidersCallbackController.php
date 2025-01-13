@@ -29,30 +29,35 @@ class ProvidersCallbackController extends Controller
         if (empty($driver)) {
             return redirect('');
         }
-        $providerUser = Socialite::driver($driver)->user();
-        $user = User::where($fieldId, $providerUser->id)->first();
-        if (empty($user)) {
-            $user = User::where('email', $providerUser->email)->first();
-        }
-        if (!empty($user)) {
-            $user->update([$fieldId => $providerUser->id, 'updated_at' => now()]);
-        } else {
-            $user = User::create([
-                $fieldId => $providerUser->id,
-                'name' => $providerUser->name,
-                'email' => $providerUser->email
-            ]);
-            $user->ownedTeams()->save(
-                Team::forceCreate([
-                    'user_id' => $user->id,
-                    'name' => explode(' ', $user->name, 2)[0] . "'s Team",
-                    'personal_team' => true,
-                ])
-            );
-            event(new Registered($user));
-        }
-        Auth::login($user);
+        try {
+            $providerUser = Socialite::driver($driver)->user();
+            $user = User::where($fieldId, $providerUser->id)->first();
+            if (empty($user)) {
+                $user = User::where('email', $providerUser->email)->first();
+            }
+            if (!empty($user)) {
+                $user->update([$fieldId => $providerUser->id, 'updated_at' => now()]);
+            } else {
+                $user = User::create([
+                    $fieldId => $providerUser->id,
+                    'name' => $providerUser->name,
+                    'email' => $providerUser->email
+                ]);
+                $user->ownedTeams()->save(
+                    Team::forceCreate([
+                        'user_id' => $user->id,
+                        'name' => explode(' ', $user->name, 2)[0] . "'s Team",
+                        'personal_team' => true,
+                    ])
+                );
+                event(new Registered($user));
+            }
+            Auth::login($user);
 
-        return redirect(route(config('app.home-route')));
+            return redirect(route(config('app.home-route')));
+        } catch (\Exception $e) {
+            return redirect()->route('login');
+        }
     }
+
 }

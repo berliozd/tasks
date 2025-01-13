@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\ProvidersCallbackController;
-use App\Models\Task;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
@@ -25,8 +26,22 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
     Route::get('/tasks', function () {
+        $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
+        $thisMorning = now($tz)->setHour(00)->setMinute(00)->setSecond(00)->subSeconds($tz->getOffset(now()));
+        $tonight = now($tz)->setHour(23)->setMinute(59)->setSecond(59)->subSeconds($tz->getOffset(now()));
         return Inertia::render('Tasks', [
-            'tasks' => Task::all()->where('user_id', auth()->user()->id),
+            'tasks' => DB::table('tasks')->where('user_id', auth()->user()->id)
+                ->where(function (Builder $query) use ($thisMorning, $tonight) {
+                    $query->where('scheduled_at', '>=', $thisMorning)
+                        ->where('scheduled_at', '<=', $tonight);
+                })
+                ->orWhere(function (Builder $query) use ($thisMorning, $tonight) {
+                    $query->where('scheduled_at', '<', $thisMorning)
+                        ->where('completed_at', null);
+                })
+                ->orderBy('created_at')
+                ->get(),
+
         ]);
     })->name('tasks');
 });
