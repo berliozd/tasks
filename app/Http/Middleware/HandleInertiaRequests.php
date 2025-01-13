@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
                 'location' => $request->url(),
             ],
             'appName' => config('app.name'),
+            'appLocale' => config('app.locale'),
         ];
     }
 }

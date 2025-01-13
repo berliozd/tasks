@@ -8,6 +8,7 @@ import axios from 'axios';
 import {ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
+import {usePage} from "@inertiajs/vue3";
 
 const newTaskLabel = ref('');
 const props = defineProps({tasks: Array})
@@ -123,7 +124,9 @@ watch(props.tasks, () => {
                                         </div>
                                     </div>
                                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                                        Completed on:{{ task.completed_at }}
+                                        Completed on:{{
+                                            format(task.completed_at, usePage().props.appLocale==='en' ? 'MM/dd/yyyy':'dd/MM/yyyy')
+                                        }}
                                     </div>
                                 </div>
                                 <div class="flex gap-1">
