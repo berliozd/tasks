@@ -79,6 +79,7 @@ const editTask = (task) => {
 }
 
 const taskIsLate = (task) => {
+    if (task.scheduled_at === undefined) return false;
     return format(new Date(task.scheduled_at), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd');
 }
 
