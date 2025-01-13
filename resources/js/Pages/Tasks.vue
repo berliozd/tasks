@@ -11,7 +11,7 @@ import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
 
 const newTaskLabel = ref('');
-const props = defineProps({tasks: Array})
+const props = defineProps({tasks: Array, todaysTasks: Array, lateTasks: Array});
 let storedTasks = JSON.parse(JSON.stringify(props.tasks));
 let watchActive = true;
 
@@ -125,7 +125,10 @@ watch(props.tasks, () => {
                                     </div>
                                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
                                         Completed on:{{
-                                            format(task.completed_at, usePage().props.appLocale==='en' ? 'MM/dd/yyyy':'dd/MM/yyyy')
+                                            format(
+                                                task.completed_at,
+                                                usePage().props.appLocale === 'en' ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
+                                            )
                                         }}
                                     </div>
                                 </div>
@@ -149,6 +152,23 @@ watch(props.tasks, () => {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="border-2 border-black">
+                    Todays
+                    <div v-for="task in todaysTasks" class="flex border border-black">
+                        <div>{{ task.label }}</div>
+                        <div>{{ task.scheduled_at }}</div>
+                        <div>{{ task.completed_at }}</div>
+                    </div>
+                </div>
+                <div class="border-2 border-black">
+                    Late
+                    <div v-for="task in lateTasks" class="flex border border-black">
+                        <div>{{ task.label }}</div>
+                        <div>{{ task.scheduled_at }}</div>
+                        <div>{{ task.completed_at }}</div>
                     </div>
                 </div>
             </div>
