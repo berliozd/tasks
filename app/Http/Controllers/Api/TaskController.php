@@ -27,11 +27,7 @@ class TaskController extends Controller
         $data['user_id'] = auth()->user()->id;
         $data['description'] = $data['description'] ?? '';
         $data['completed_at'] = $data['completed_at'] ?? null;
-        if (!empty($data['scheduled_at'])) {
-            $data['scheduled_at'] = Carbon::parse($data['scheduled_at']);
-        } else {
-            $data['scheduled_at'] = now();
-        }
+        $this->prepareScheduledAt($data);
         return Task::create($data);
     }
 
@@ -53,6 +49,7 @@ class TaskController extends Controller
         if (!empty($data['completed_at'])) {
             $data['completed_at'] = Carbon::parse($data['completed_at']);
         }
+        $this->prepareScheduledAt($data);
         $data['description'] = $data['description'] ?? '';
         $task = Task::whereId($id)->first();
         $this->checkPermissions($task);
@@ -81,6 +78,15 @@ class TaskController extends Controller
     {
         if ($task->owner()->getResults()->id !== auth()->user()->id) {
             throw new Exception('Not allowed');
+        }
+    }
+
+    public function prepareScheduledAt(array &$data)
+    {
+        if (!empty($data['scheduled_at'])) {
+            $data['scheduled_at'] = Carbon::parse($data['scheduled_at']);
+        } else {
+            $data['scheduled_at'] = now()->setMilli(0);
         }
     }
 }
