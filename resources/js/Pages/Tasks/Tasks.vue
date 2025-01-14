@@ -15,6 +15,7 @@ import SavedLabel from "@/Components/SavedLabel.vue";
 
 const newTaskLabel = ref('');
 const props = defineProps({tasks: Array, todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
+const lastSaved = ref(new Date());
 let storedTasks = JSON.parse(JSON.stringify(props.tasks));
 let watchActive = true;
 
@@ -28,7 +29,10 @@ const toggleCompleted = (task) => {
 
 const updateTask = (task) => {
     axios.patch(route('tasks.update', task.id), task).then(
-        useStore().setSaved('Saved!')
+        () => {
+            useStore().setSaved('Saved!');
+            lastSaved.value = new Date();
+        }
     )
 }
 const debouncedSave = debounce(updateTask, 300);
@@ -105,6 +109,14 @@ watch(props.tasks, () => {
                 <div class="min-h-6 ">
                     <SavedLabel/>
                 </div>
+                <div class="text-xs text-gray-400 flex justify-end">
+                    Last saved on {{
+                        format(
+                            lastSaved,
+                            usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
+                        )
+                    }}
+                </div>
                 <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-6">
                     <div class="border border-gray-400 m-4 p-2 flex justify-between align-center items-center gap-2">
                         <input type="text" v-model="newTaskLabel" placeholder="New task label"
@@ -112,7 +124,7 @@ watch(props.tasks, () => {
                         <SaveButton @click="addTask"/>
                     </div>
                 </div>
-                <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200">
+                <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
                     <div v-for="(task, index) in tasks" class="border border-gray-400 m-4"
                          :class="task.completed_at?'bg-gray-300':''" :key="index">
                         <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
