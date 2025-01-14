@@ -21,7 +21,7 @@ class TaskController extends Controller
         return Inertia::render(
             'Tasks/Tasks',
             [
-                'tasks' => array_merge($todayTasks->toArray(), $lateTasks->toArray(), $completedTodayTasks->toArray()),
+                'tasks' =>$this->taskService->getAll()->toArray(),
                 'todayTasks' => $todayTasks->toArray(),
                 'lateTasks' => $lateTasks->toArray(),
                 'completedTodayTasks' => $completedTodayTasks->toArray()

@@ -61,6 +61,31 @@ readonly class TaskService
             ? Carbon::parse($data['scheduled_at']) : now()->setMilli(0);
     }
 
+    public function getAll(): Collection
+    {
+        $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
+        $thisMorning = $this->getThisMorning($tz);
+        $tonight = $this->getTonight($tz);
+        $query = DB::table('tasks')->where('user_id', auth()->user()->id)
+            // scheduled today
+            ->where(function (Builder $query) use ($thisMorning, $tonight) {
+                $query->where('scheduled_at', '>=', $thisMorning)
+                    ->where('scheduled_at', '<=', $tonight)
+                    ->where('completed_at', null);
+            })
+            // completed today
+            ->orWhere(function (Builder $query) use ($thisMorning, $tonight) {
+                $query->where('completed_at', '>=', $thisMorning)
+                    ->where('completed_at', '<=', $tonight);
+            })
+            // late
+            ->orWhere(function (Builder $query) use ($thisMorning) {
+                $query->where('scheduled_at', '<', $thisMorning)
+                    ->where('completed_at', null);
+            });
+        return $query->get();
+    }
+
     public function getTodayTasks(): Collection
     {
         $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
@@ -86,7 +111,6 @@ readonly class TaskService
                     ->where('completed_at', '<=', $tonight);
             })->get();
     }
-
 
     public function getLateTasks(): Collection
     {
