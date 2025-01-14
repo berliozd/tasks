@@ -10,6 +10,8 @@ import debounce from "lodash/debounce";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
 import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
+import {useStore} from "@/Composables/store.js";
+import SavedLabel from "@/Components/SavedLabel.vue";
 
 const newTaskLabel = ref('');
 const props = defineProps({tasks: Array, todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
@@ -25,7 +27,9 @@ const toggleCompleted = (task) => {
 }
 
 const updateTask = (task) => {
-    axios.patch(route('tasks.update', task.id), task)
+    axios.patch(route('tasks.update', task.id), task).then(
+        useStore().setSaved('Saved!')
+    )
 }
 const debouncedSave = debounce(updateTask, 300);
 
@@ -96,7 +100,11 @@ watch(props.tasks, () => {
             <h2 class="font-semibold text-xl leading-tight">Tasks</h2>
         </template>
         <div class="py-12">
+
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="min-h-6 ">
+                    <SavedLabel/>
+                </div>
                 <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-6">
                     <div class="border border-gray-400 m-4 p-2 flex justify-between align-center items-center gap-2">
                         <input type="text" v-model="newTaskLabel" placeholder="New task label"
@@ -155,6 +163,9 @@ watch(props.tasks, () => {
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="min-h-6">
+                    <SavedLabel/>
                 </div>
                 <DebuggingTasks :todayTasks="todayTasks"
                                 :lateTasks="lateTasks"

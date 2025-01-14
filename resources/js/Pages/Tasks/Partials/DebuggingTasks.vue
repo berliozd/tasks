@@ -3,7 +3,7 @@ const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTa
 </script>
 
 <template>
-    <div>
+    <div class="mt-10">
         <div class="border-2 border-black mb-2">
             Scheduled Today
             <div class="grid grid-cols-4 bg-gray-400 p-2">
