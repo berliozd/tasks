@@ -9,9 +9,10 @@ import {ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
+import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 
 const newTaskLabel = ref('');
-const props = defineProps({tasks: Array, todaysTasks: Array, lateTasks: Array});
+const props = defineProps({tasks: Array, todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
 let storedTasks = JSON.parse(JSON.stringify(props.tasks));
 let watchActive = true;
 
@@ -45,8 +46,7 @@ const removeProperty = (obj, key) => {
 }
 const cleanTask = (storedTask) => {
     storedTask = JSON.parse(JSON.stringify(storedTask));
-    storedTask = removeProperty(storedTask, 'editing');
-    return removeProperty(storedTask, 'deployed');
+    return removeProperty(storedTask, 'editing');
 }
 
 const deleteTask = (task, index) => {
@@ -81,6 +81,7 @@ const editTask = (task) => {
 
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
+    if (task.completed_at !== null) return false;
     return format(new Date(task.scheduled_at), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd');
 }
 
@@ -113,15 +114,8 @@ watch(props.tasks, () => {
                                                  @click="toggleCompleted(task)" :enabled="!task.editing"/>
                                 </div>
                                 <div class="w-full">
-                                    <div @click="task.deployed = !task.deployed" class="cursor-pointer w-full">
+                                    <div @click="task.editing = !task.editing" class="cursor-pointer w-full">
                                         {{ task.label }}
-                                    </div>
-                                    <div :class="task.deployed || task.editing?'':'hidden'"
-                                         class="text-gray-400">
-                                        <div :class="task.editing?'hidden':''" class="min-h-4">{{
-                                                task.description === '' ? '-- No  description --' : task.description
-                                            }}
-                                        </div>
                                     </div>
                                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
                                         Completed on:{{
@@ -150,27 +144,22 @@ watch(props.tasks, () => {
                                     <textarea v-model="task.description"
                                               class="text-primary-content rounded-md shadow-sm w-full"/>
                                 </div>
+                                <div class="text-xs text-gray-400 underline">
+                                    Scheduled on:{{
+                                        format(
+                                            task.scheduled_at,
+                                            usePage().props.appLocale === 'en' ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
+                                        )
+                                    }}
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="border-2 border-black">
-                    Todays
-                    <div v-for="task in todaysTasks" class="flex border border-black">
-                        <div>{{ task.label }}</div>
-                        <div>{{ task.scheduled_at }}</div>
-                        <div>{{ task.completed_at }}</div>
-                    </div>
-                </div>
-                <div class="border-2 border-black">
-                    Late
-                    <div v-for="task in lateTasks" class="flex border border-black">
-                        <div>{{ task.label }}</div>
-                        <div>{{ task.scheduled_at }}</div>
-                        <div>{{ task.completed_at }}</div>
-                    </div>
-                </div>
+                <DebuggingTasks :todayTasks="todayTasks"
+                                :lateTasks="lateTasks"
+                                :completedTodayTasks="completedTodayTasks"
+                />
             </div>
         </div>
     </AppLayout>
