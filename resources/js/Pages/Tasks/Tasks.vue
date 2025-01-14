@@ -1,7 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import EditButton from "@/Components/EditButton.vue";
-import CheckButton from "@/Components/CheckButton.vue";
 import SaveButton from "@/Components/SaveButton.vue";
 import axios from 'axios';
 import {reactive, ref, watch} from "vue";
@@ -11,6 +10,7 @@ import {usePage} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
+import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
 
 const newTaskLabel = ref('');
 const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
@@ -24,13 +24,6 @@ const scrollTo = (view) => {
     view.value?.scrollIntoView({behavior: 'smooth'})
 }
 
-const toggleCompleted = (task) => {
-    if (task.completed_at === null) {
-        task.completed_at = new Date();
-    } else {
-        task.completed_at = null;
-    }
-}
 
 const updateTask = (task) => {
     axios.patch(route('tasks.update', task.id), task).then(
@@ -115,7 +108,6 @@ watch(reactiveTasks, () => {
             <h2 class="font-semibold text-xl leading-tight">Tasks</h2>
         </template>
         <div class="py-12">
-
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="min-h-6 ">
                     <SavedLabel/>
@@ -136,13 +128,13 @@ watch(reactiveTasks, () => {
                     </div>
                 </div>
                 <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
+
                     <div v-for="(task, index) in reactiveTasks.value" class="border border-gray-400 m-4"
                          :class="task.completed_at?'bg-gray-300':''" :key="index">
                         <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
                             <div class="flex justify-between gap-2">
                                 <div class="flex">
-                                    <CheckButton :checked="task.completed_at !== null"
-                                                 @click="toggleCompleted(task)" :enabled="!task.editing"/>
+                                    <CompleteTaskModal :task="task"/>
                                 </div>
                                 <div class="w-full">
                                     <div @click="task.editing = !task.editing" class="cursor-pointer w-full">
