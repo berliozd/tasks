@@ -9,7 +9,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
     Route::patch('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'update'])->name('tasks.update');;
-    Route::get('/tasks', [App\Http\Controllers\Api\TaskController::class, 'index']);
+    Route::get('/tasks', [App\Http\Controllers\Api\TaskController::class, 'index'])->name('tasks.index');
     Route::post('/tasks', [App\Http\Controllers\Api\TaskController::class, 'store'])->name('tasks.store');
     Route::get('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'show']);
     Route::delete('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'destroy'])->name('tasks.delete');;

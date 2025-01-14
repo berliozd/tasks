@@ -2,22 +2,23 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import EditButton from "@/Components/EditButton.vue";
 import CheckButton from "@/Components/CheckButton.vue";
-import DeleteButton from "@/Components/DeleteButton.vue";
 import SaveButton from "@/Components/SaveButton.vue";
 import axios from 'axios';
-import {ref, watch} from "vue";
+import {reactive, ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
 import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 import {useStore} from "@/Composables/store.js";
 import SavedLabel from "@/Components/SavedLabel.vue";
+import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 
 const newTaskLabel = ref('');
-const props = defineProps({tasks: Array, todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
+const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
 const lastSaved = ref(new Date());
-let storedTasks = JSON.parse(JSON.stringify(props.tasks));
-let watchActive = true;
+let storedReactiveTasks = null;
+let watchActive = false;
+const reactiveTasks = reactive({});
 
 const toggleCompleted = (task) => {
     if (task.completed_at === null) {
@@ -37,15 +38,15 @@ const updateTask = (task) => {
 }
 const debouncedSave = debounce(updateTask, 300);
 
-const saveAllTasks = () => {
-    props.tasks.forEach(task => {
+const saveReactiveTasks = () => {
+    reactiveTasks.value.forEach(task => {
         if (task.id === null || !task.id) return;
-        let storedTask = storedTasks.find(storedTask => storedTask.id === task.id);
+        let storedTask = storedReactiveTasks.find(storedTask => storedTask.id === task.id);
         if (JSON.stringify(cleanTask(storedTask)) !== JSON.stringify(cleanTask(task))) {
             debouncedSave(task)
         }
     });
-    storedTasks = JSON.parse(JSON.stringify(props.tasks));
+    storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
 }
 
 const removeProperty = (obj, key) => {
@@ -57,31 +58,24 @@ const cleanTask = (storedTask) => {
     return removeProperty(storedTask, 'editing');
 }
 
-const deleteTask = (task, index) => {
-    axios.delete(route('tasks.delete', task.id))
-        .then(response => {
-            props.tasks.splice(index, 1);
-        })
-}
-
 const addTask = () => {
     if (newTaskLabel.value === '') return;
     watchActive = false;
-    props.tasks.push({label: newTaskLabel.value, 'completed_at': null});
+    reactiveTasks.value.push({label: newTaskLabel.value, 'completed_at': null});
     axios.post(route('tasks.store'), {label: newTaskLabel.value})
         .then((response) => {
-                props.tasks[props.tasks.length - 1] = response.data;
+                reactiveTasks.value[reactiveTasks.value.length - 1] = response.data;
             }
         ).then(() => {
             newTaskLabel.value = '';
             watchActive = true;
-            storedTasks = JSON.parse(JSON.stringify(props.tasks));
+            storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
         }
     )
 }
 const editTask = (task) => {
     task.editing = !task.editing
-    props.tasks.forEach(tsk => {
+    reactiveTasks.value.forEach(tsk => {
         if (tsk.id === task.id) return;
         tsk.editing = false
     });
@@ -93,8 +87,19 @@ const taskIsLate = (task) => {
     return format(new Date(task.scheduled_at), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd');
 }
 
-watch(props.tasks, () => {
-    if (watchActive) saveAllTasks();
+const refreshTasks = () => {
+    axios.get(route('tasks.index'))
+        .then(response => {
+            reactiveTasks.value = response.data;
+            storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
+        }).then(() => {
+        watchActive = true
+    })
+}
+refreshTasks();
+
+watch(reactiveTasks, () => {
+    if (watchActive) saveReactiveTasks();
 })
 </script>
 
@@ -125,7 +130,7 @@ watch(props.tasks, () => {
                     </div>
                 </div>
                 <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-                    <div v-for="(task, index) in tasks" class="border border-gray-400 m-4"
+                    <div v-for="(task, index) in reactiveTasks.value" class="border border-gray-400 m-4"
                          :class="task.completed_at?'bg-gray-300':''" :key="index">
                         <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
                             <div class="flex justify-between gap-2">
@@ -150,7 +155,7 @@ watch(props.tasks, () => {
                                     <div :class="task.completed_at!==null?'invisible':''">
                                         <EditButton @click="editTask(task)"/>
                                     </div>
-                                    <DeleteButton @click="deleteTask(task, index)"/>
+                                    <DeleteModal :task="task" @deleted="refreshTasks()"/>
                                 </div>
                             </div>
                             <div :class="task.editing?'':'hidden'" class="m-2">
@@ -167,7 +172,7 @@ watch(props.tasks, () => {
                                 <div class="text-xs text-gray-400 underline">
                                     Scheduled on:{{
                                         format(
-                                            task.scheduled_at,
+                                            task.scheduled_at ?? new Date(),
                                             usePage().props.appLocale === 'en' ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
                                         )
                                     }}

@@ -13,6 +13,11 @@ class TaskController extends Controller
     {
     }
 
+    public function index()
+    {
+        return $this->taskService->getAll();
+    }
+
     /**
      * Store a newly created resource in storage.
      */
