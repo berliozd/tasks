@@ -8,7 +8,6 @@ import {reactive, ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
-import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 import {useStore} from "@/Composables/store.js";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
@@ -19,6 +18,11 @@ const lastSaved = ref(new Date());
 let storedReactiveTasks = null;
 let watchActive = false;
 const reactiveTasks = reactive({});
+const belowList = ref(null);
+
+const scrollTo = (view) => {
+    view.value?.scrollIntoView({behavior: 'smooth'})
+}
 
 const toggleCompleted = (task) => {
     if (task.completed_at === null) {
@@ -70,9 +74,11 @@ const addTask = () => {
             newTaskLabel.value = '';
             watchActive = true;
             storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
+            scrollTo(belowList)
         }
     )
 }
+
 const editTask = (task) => {
     task.editing = !task.editing
     reactiveTasks.value.forEach(tsk => {
@@ -114,7 +120,7 @@ watch(reactiveTasks, () => {
                 <div class="min-h-6 ">
                     <SavedLabel/>
                 </div>
-                <div class="text-xs text-gray-400 flex justify-end">
+                <div class="text-xs text-gray-400 flex justify-end pr-2">
                     Last saved on {{
                         format(
                             lastSaved,
@@ -181,13 +187,9 @@ watch(reactiveTasks, () => {
                         </div>
                     </div>
                 </div>
-                <div class="min-h-6">
+                <div class="min-h-6" ref="belowList">
                     <SavedLabel/>
                 </div>
-                <DebuggingTasks :todayTasks="todayTasks"
-                                :lateTasks="lateTasks"
-                                :completedTodayTasks="completedTodayTasks"
-                />
             </div>
         </div>
     </AppLayout>
