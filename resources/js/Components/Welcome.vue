@@ -6,6 +6,7 @@ import {usePage} from "@inertiajs/vue3";
 <template>
     <div>
         <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
+            <h2 class="text-5xl w-full items-center text-center">🚧 In progress! 🚧</h2>
             <ApplicationLogo class="block w-72"/>
 
             <h1 class="mt-8 text-2xl font-medium text-gray-900">
@@ -44,12 +45,14 @@ import {usePage} from "@inertiajs/vue3";
                         what’s on your plate.
                     </li>
                     <li>
-                        <span class="font-semibold text-gray-900">Mark Tasks as Done:</span> Check off completed tasks with a single click, instantly
+                        <span class="font-semibold text-gray-900">Mark Tasks as Done:</span> Check off completed tasks
+                        with a single click, instantly
                         clearing your mind
                         and keeping you motivated.
                     </li>
                     <li>
-                        <span class="font-semibold text-gray-900">Recurring Tasks:</span> Make repetitive tasks a breeze by setting them to recur
+                        <span class="font-semibold text-gray-900">Recurring Tasks:</span> Make repetitive tasks a breeze
+                        by setting them to recur
                         automatically, ensuring
                         nothing falls through the cracks.
                     </li>
@@ -57,9 +60,10 @@ import {usePage} from "@inertiajs/vue3";
                 </ul>
 
                 <p class="mt-4 text-sm">
-                    <a href="/tasks" class="inline-flex items-center font-semibold text-indigo-700">
+                    <a href="/tasks" class="inline-flex items-center font-semibold text-green-800/50">
                         Try it now
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" class="ms-1 size-5 fill-indigo-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                             class="ms-1 size-5 fill-green-800/50">
                             <path fill-rule="evenodd"
                                   d="M5 10a.75.75 0 01.75-.75h6.638L10.23 7.29a.75.75 0 111.04-1.08l3.5 3.25a.75.75 0 010 1.08l-3.5 3.25a.75.75 0 11-1.04-1.08l2.158-1.96H5.75A.75.75 0 015 10z"
                                   clip-rule="evenodd"/>
