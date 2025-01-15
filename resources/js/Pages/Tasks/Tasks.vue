@@ -171,7 +171,8 @@ const formatDateTime = (date) => {
                     <SavedLabel/>
                 </div>
                 <DebuggingTasks :todayTasks="todayTasks" :lateTasks="lateTasks"
-                                :completedTodayTasks="completedTodayTasks"/>
+                                :completedTodayTasks="completedTodayTasks"
+                                :class="usePage().props.environment === 'production'?'hidden':''"/>
             </div>
         </div>
     </AppLayout>
