@@ -1,6 +1,5 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import EditButton from "@/Components/EditButton.vue";
 import SaveButton from "@/Components/SaveButton.vue";
 import axios from 'axios';
 import {reactive, ref, watch} from "vue";
@@ -70,14 +69,6 @@ const addTask = () => {
             scrollTo(belowList)
         }
     )
-}
-
-const editTask = (task) => {
-    task.editing = !task.editing
-    reactiveTasks.value.forEach(tsk => {
-        if (tsk.id === task.id) return;
-        tsk.editing = false
-    });
 }
 
 const taskIsLate = (task) => {
@@ -154,12 +145,7 @@ const formatDateTime = (date) => {
                                         Completed on:{{ formatDateTime(task.completed_at) }}
                                     </div>
                                 </div>
-                                <div class="flex gap-1">
-                                    <div :class="task.completed_at!==null?'invisible':''">
-                                        <EditButton @click="editTask(task)"/>
-                                    </div>
-                                    <DeleteModal :task="task" @deleted="refreshTasks()"/>
-                                </div>
+                                <DeleteModal :task="task" @deleted="refreshTasks()"/>
                             </div>
                             <div :class="task.editing?'':'hidden'" class="m-2">
                                 <div>
