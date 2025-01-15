@@ -67,22 +67,20 @@ readonly class TaskService
         $thisMorning = $this->getThisMorning($tz);
         $tonight = $this->getTonight($tz);
         $query = DB::table('tasks')->where('user_id', auth()->user()->id)
-            // scheduled today
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
-                $query->where('scheduled_at', '>=', $thisMorning)
-                    ->where('scheduled_at', '<=', $tonight)
-                    ->where('completed_at', null);
-            })
-            // completed today
-            ->orWhere(function (Builder $query) use ($thisMorning, $tonight) {
-                $query->where('completed_at', '>=', $thisMorning)
-                    ->where('completed_at', '<=', $tonight);
-            })
-            // late
-            ->orWhere(function (Builder $query) use ($thisMorning) {
-                $query->where('scheduled_at', '<', $thisMorning)
-                    ->where('completed_at', null);
+                $query->where(function (Builder $query) use ($thisMorning, $tonight) {
+                    $query->where('scheduled_at', '>=', $thisMorning)
+                        ->where('scheduled_at', '<=', $tonight)
+                        ->where('completed_at', null);
+                })->orWhere(function (Builder $query) use ($thisMorning, $tonight) {
+                    $query->where('completed_at', '>=', $thisMorning)
+                        ->where('completed_at', '<=', $tonight);
+                })->orWhere(function (Builder $query) use ($thisMorning) {
+                    $query->where('scheduled_at', '<', $thisMorning)
+                        ->where('completed_at', null);
+                });
             });
+
         $collection = $query->get();
         foreach ($collection->all() as $task) {
             if (!empty($task->scheduled_at)) {
