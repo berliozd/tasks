@@ -44,12 +44,22 @@ const createTasks = async (nbDays) => {
         <div class="p-4 w-full space-y-4 flex flex-col">
             <div>Your task "{{ task.label }}" is marked as completed.</div>
             <div>Do you want to create a similar task?</div>
-            <div class="flex justify-end gap-2">
-                <SecondaryButton @click="hideModal">No</SecondaryButton>
-                <PrimaryButton @click="createTasks(1)">Tomorrow</PrimaryButton>
-                <PrimaryButton @click="createTasks(7)">Next week</PrimaryButton>
-                <PrimaryButton @click="createTasks(30)">Next month</PrimaryButton>
-                <PrimaryButton @click="createTasks(365)">Next year</PrimaryButton>
+            <div class="flex justify-between gap-2 md:gap-0 flex-col md:flex-row">
+                <div class="w-full text-center">
+                    <SecondaryButton @click="hideModal">No</SecondaryButton>
+                </div>
+                <div class="w-full text-center">
+                    <PrimaryButton @click="createTasks(1)">Tomorrow</PrimaryButton>
+                </div>
+                <div class="w-full text-center">
+                    <PrimaryButton @click="createTasks(7)">Next week</PrimaryButton>
+                </div>
+                <div class="w-full text-center">
+                    <PrimaryButton @click="createTasks(30)">Next month</PrimaryButton>
+                </div>
+                <div class="w-full text-center">
+                    <PrimaryButton @click="createTasks(365)">Next year</PrimaryButton>
+                </div>
             </div>
         </div>
     </Modal>
