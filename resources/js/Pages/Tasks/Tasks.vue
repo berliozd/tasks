@@ -11,6 +11,7 @@ import {useStore} from "@/Composables/store.js";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
+import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 
 const newTaskLabel = ref('');
 const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
@@ -23,7 +24,6 @@ const belowList = ref(null);
 const scrollTo = (view) => {
     view.value?.scrollIntoView({behavior: 'smooth'})
 }
-
 
 const updateTask = (task) => {
     axios.patch(route('tasks.update', task.id), task).then(
@@ -100,6 +100,16 @@ refreshTasks();
 watch(reactiveTasks, () => {
     if (watchActive) saveReactiveTasks();
 })
+
+const formatDateTime = (date) => {
+    if (date === undefined) {
+        return '';
+    }
+    return format(
+        date,
+        usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
+    )
+}
 </script>
 
 <template>
@@ -141,12 +151,7 @@ watch(reactiveTasks, () => {
                                         {{ task.label }}
                                     </div>
                                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                                        Completed on:{{
-                                            format(
-                                                task.completed_at,
-                                                usePage().props.appLocale === 'en' ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
-                                            )
-                                        }}
+                                        Completed on:{{ formatDateTime(task.completed_at) }}
                                     </div>
                                 </div>
                                 <div class="flex gap-1">
@@ -160,20 +165,17 @@ watch(reactiveTasks, () => {
                                 <div>
                                     <div class="text-secondary text-xs">Label :</div>
                                     <textarea v-model="task.label"
-                                              class="text-primary-content rounded-md shadow-sm w-full"/>
+                                              class="text-primary-content rounded-md shadow-sm w-full"
+                                              :disabled="task.completed_at!==null"/>
                                 </div>
                                 <div>
                                     <div class="text-secondary text-xs">Description :</div>
                                     <textarea v-model="task.description"
-                                              class="text-primary-content rounded-md shadow-sm w-full"/>
+                                              class="text-primary-content rounded-md shadow-sm w-full"
+                                              :disabled="task.completed_at!==null"/>
                                 </div>
                                 <div class="text-xs text-gray-400 underline">
-                                    Scheduled on:{{
-                                        format(
-                                            task.scheduled_at ?? new Date(),
-                                            usePage().props.appLocale === 'en' ? 'MM/dd/yyyy' : 'dd/MM/yyyy'
-                                        )
-                                    }}
+                                    Scheduled on:{{ formatDateTime(task.scheduled_at) }}
                                 </div>
                             </div>
                         </div>
@@ -182,6 +184,8 @@ watch(reactiveTasks, () => {
                 <div class="min-h-6" ref="belowList">
                     <SavedLabel/>
                 </div>
+                <DebuggingTasks :todayTasks="todayTasks" :lateTasks="lateTasks"
+                                :completedTodayTasks="completedTodayTasks"/>
             </div>
         </div>
     </AppLayout>

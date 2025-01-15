@@ -83,7 +83,16 @@ readonly class TaskService
                 $query->where('scheduled_at', '<', $thisMorning)
                     ->where('completed_at', null);
             });
-        return $query->get();
+        $collection = $query->get();
+        foreach ($collection->all() as $task) {
+            if (!empty($task->scheduled_at)) {
+                $task->scheduled_at = $task->scheduled_at . '.0Z';
+            }
+            if (!empty($task->completed_at)) {
+                $task->completed_at = $task->completed_at . '.0Z';
+            }
+        }
+        return $collection;
     }
 
     public function getTodayTasks(): Collection
