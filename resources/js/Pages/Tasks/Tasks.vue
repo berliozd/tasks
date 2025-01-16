@@ -152,8 +152,8 @@ const calculateProgress = () => {
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
 
                 <div v-for="(task, index) in reactiveTasks.value" class="border border-gray-400 m-4"
-                     :class="task.completed_at?'bg-gray-300':''" :key="index">
-                    <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
+                     :class="task.completed_at?'bg-gray-300':'bg-gray-100'" :key="index">
+                    <div class="p-2 bg-gray-100" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
                         <div class="flex justify-between gap-2">
                             <div class="flex">
                                 <CompleteTaskModal :task="task"/>
