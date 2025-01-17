@@ -8,9 +8,8 @@ import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
 import SavedLabel from "@/Components/SavedLabel.vue";
-import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
-import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
 import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
+import Task from "@/Pages/Tasks/Partials/Task.vue";
 
 const newTaskLabel = ref('');
 const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
@@ -74,12 +73,6 @@ const addTask = () => {
     )
 }
 
-const taskIsLate = (task) => {
-    if (task.scheduled_at === undefined) return false;
-    if (task.completed_at !== null) return false;
-    return format(new Date(task.scheduled_at), 'yyyy-MM-dd') !== format(new Date(), 'yyyy-MM-dd');
-}
-
 const refreshTasks = () => {
     axios.get(route('tasks.index'))
         .then(response => {
@@ -95,16 +88,6 @@ refreshTasks();
 watch(reactiveTasks, () => {
     if (watchActive) saveReactiveTasks();
 })
-
-const formatDateTime = (date) => {
-    if (date === undefined) {
-        return '';
-    }
-    return format(
-        date,
-        usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
-    )
-}
 
 const calculateProgress = () => {
     let completedTAsks = 0;
@@ -146,46 +129,13 @@ const calculateProgress = () => {
                     <SaveButton @click="addTask"/>
                 </div>
             </div>
-            <div class="shadow-lg sm:rounded-lg bg-gray-200 my-6 px-2" v-if="!isNaN(progress)">
+            <div class="shadow-lg sm:rounded-lg bg-gray-200 my-6 px-2" v-if="!isNaN(progress) && progress > 0">
                 <progress class="my-4 progress w-full" :value="progress" max="100">50%</progress>
             </div>
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-
                 <div v-for="(task, index) in reactiveTasks.value" class="border border-gray-400 m-4"
                      :class="task.completed_at?'bg-gray-300':'bg-gray-100'" :key="index">
-                    <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
-                        <div class="flex justify-between gap-2">
-                            <div class="flex">
-                                <CompleteTaskModal :task="task"/>
-                            </div>
-                            <div class="w-full">
-                                <div @click="task.editing = !task.editing" class="cursor-pointer w-full">
-                                    {{ task.label }}
-                                </div>
-                                <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                                    Completed on:{{ formatDateTime(task.completed_at) }}
-                                </div>
-                            </div>
-                            <DeleteModal :task="task" @deleted="refreshTasks()"/>
-                        </div>
-                        <div :class="task.editing?'':'hidden'" class="m-2">
-                            <div>
-                                <div class="text-secondary text-xs">Label :</div>
-                                <textarea v-model="task.label"
-                                          class="text-primary-content rounded-md shadow-sm w-full"
-                                          :disabled="task.completed_at!==null"/>
-                            </div>
-                            <div>
-                                <div class="text-secondary text-xs">Description :</div>
-                                <textarea v-model="task.description"
-                                          class="text-primary-content rounded-md shadow-sm w-full"
-                                          :disabled="task.completed_at!==null"/>
-                            </div>
-                            <div class="text-xs text-gray-400 underline">
-                                Scheduled on:{{ formatDateTime(task.scheduled_at) }}
-                            </div>
-                        </div>
-                    </div>
+                    <Task :task="task" @deleted="refreshTasks()"/>
                 </div>
             </div>
             <div class="min-h-6" ref="belowList">
