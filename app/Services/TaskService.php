@@ -57,6 +57,7 @@ readonly class TaskService
     {
         $data['description'] = $data['description'] ?? '';
         $data['completed_at'] = !empty($data['completed_at']) ? Carbon::parse($data['completed_at']) : null;
+        $data['start_progress_at'] = !empty($data['start_progress_at']) ? Carbon::parse($data['start_progress_at']) : null;
         $data['scheduled_at'] = !empty($data['scheduled_at'])
             ? Carbon::parse($data['scheduled_at']) : now()->setMilli(0);
     }

@@ -18,7 +18,8 @@ class Task extends Model
         'completed_at',
         'user_id',
         'description',
-        'scheduled_at'
+        'scheduled_at',
+        'start_progress_at',
     ];
 
     public function owner()

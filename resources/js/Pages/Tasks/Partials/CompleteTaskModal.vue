@@ -19,6 +19,7 @@ const toggleCompleted = (task) => {
         isShowModal.value = true
     } else {
         task.completed_at = null;
+        task.start_progress_at = null;
     }
 }
 

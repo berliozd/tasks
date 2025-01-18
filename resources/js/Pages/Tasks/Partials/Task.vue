@@ -3,6 +3,7 @@ import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
+import InProgressIcon from "@/Components/InProgressIcon.vue";
 
 const props = defineProps({task: Object});
 const emits = defineEmits(['deleted']);
@@ -22,6 +23,13 @@ const formatDateTime = (date) => {
         usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
     )
 }
+const toggleStartProgressAt = () => {
+    if (props.task.start_progress_at === null) {
+        props.task.start_progress_at = new Date();
+    } else {
+        props.task.start_progress_at = null;
+    }
+}
 </script>
 
 <template>
@@ -38,6 +46,8 @@ const formatDateTime = (date) => {
                     Completed on:{{ formatDateTime(task.completed_at) }}
                 </div>
             </div>
+            <InProgressIcon :in-progress="task.start_progress_at!==null" :enabled="task.completed_at===null"
+                            @click="toggleStartProgressAt()"/>
             <DeleteModal :task="task" @deleted="emits('deleted')"/>
         </div>
         <div :class="task.editing?'':'hidden'" class="m-2">

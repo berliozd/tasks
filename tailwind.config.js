@@ -29,7 +29,7 @@ export default {
     },
 
     daisyui: {
-        themes: ['default'],
+        themes: ['default', 'light'],
         base: true,
         styled: true,
         logs: true
