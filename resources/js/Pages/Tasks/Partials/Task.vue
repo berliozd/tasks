@@ -52,16 +52,16 @@ const toggleStartProgressAt = () => {
         </div>
         <div :class="task.editing?'':'hidden'" class="m-2">
             <div>
-                <div class="text-secondary text-xs">Label :</div>
+                <div class="text-xs">Label :</div>
                 <textarea v-model="task.label"
-                          class="text-primary-content rounded-md shadow-sm w-full"
+                          class="rounded-md shadow-sm w-full"
                           :disabled="task.completed_at!==null"
                           maxlength="255"/>
             </div>
             <div>
-                <div class="text-secondary text-xs">Description :</div>
+                <div class="text-xs">Description :</div>
                 <textarea v-model="task.description"
-                          class="text-primary-content rounded-md shadow-sm w-full h-48"
+                          class="rounded-md shadow-sm w-full h-48"
                           :disabled="task.completed_at!==null"
                           maxlength="5000"/>
             </div>
