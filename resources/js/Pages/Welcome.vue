@@ -1,5 +1,6 @@
 <script setup>
 import {Head, Link, usePage} from '@inertiajs/vue3';
+import Ad from "@/Components/Ad.vue";
 
 defineProps({
     canLogin: {
@@ -161,8 +162,9 @@ function handleImageError() {
                     </div>
                 </main>
 
+                <Ad/>
                 <footer class="py-16 text-center text-sm text-gray-600">
-                    {{usePage().props.appName}} - @copyright 2025 - Addeos
+                    {{ usePage().props.appName }} - @copyright 2025 - Addeos
                 </footer>
             </div>
         </div>
