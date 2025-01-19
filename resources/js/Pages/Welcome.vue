@@ -65,7 +65,7 @@ function handleImageError() {
                     </nav>
                 </header>
 
-                <main class="mt-6">
+                <main class="my-6">
                     <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
                         <a
                             href="/tasks"
@@ -163,6 +163,7 @@ function handleImageError() {
                 </main>
 
                 <Ad/>
+
                 <footer class="py-16 text-center text-sm text-gray-600">
                     {{ usePage().props.appName }} - @copyright 2025 - Addeos
                 </footer>
