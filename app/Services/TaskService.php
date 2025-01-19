@@ -7,15 +7,16 @@ use App\Repositories\TaskRepository;
 use Carbon\Carbon;
 use DateTimeZone;
 use Exception;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 readonly class TaskService
 {
 
-    public function __construct(private TaskRepository $taskRepository)
-    {
+    public function __construct(
+        private TaskRepository $taskRepository,
+        private TaskProgressionService $taskProgressionService
+    ) {
     }
 
     /**
@@ -26,6 +27,11 @@ readonly class TaskService
         $task = $this->taskRepository->find($id);
         $this->checkPerms($task);
         $this->prepareData($data);
+        if ($data['completed_at'] !== $task->compleded_at) {
+            if ($data['completed_at'] !== null) {
+                $this->taskProgressionService->stop($task->id);
+            }
+        }
         return $this->taskRepository->update($task, $data);
     }
 
@@ -57,7 +63,6 @@ readonly class TaskService
     {
         $data['description'] = $data['description'] ?? '';
         $data['completed_at'] = !empty($data['completed_at']) ? Carbon::parse($data['completed_at']) : null;
-        $data['start_progress_at'] = !empty($data['start_progress_at']) ? Carbon::parse($data['start_progress_at']) : null;
         $data['scheduled_at'] = !empty($data['scheduled_at'])
             ? Carbon::parse($data['scheduled_at']) : now()->setMilli(0);
     }
@@ -67,9 +72,12 @@ readonly class TaskService
         $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
         $thisMorning = $this->getThisMorning($tz);
         $tonight = $this->getTonight($tz);
-        $query = DB::table('tasks')->where('user_id', auth()->user()->id)
+
+        /** @var  $query Builder */
+        $query = Task::where('user_id', auth()->user()->id)
+            ->with('progressions')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
-                $query->where(function (Builder $query) use ($thisMorning, $tonight) {
+                $query->where(function ($query) use ($thisMorning, $tonight) {
                     $query->where('scheduled_at', '>=', $thisMorning)
                         ->where('scheduled_at', '<=', $tonight)
                         ->where('completed_at', null);
@@ -100,7 +108,8 @@ readonly class TaskService
         $thisMorning = $this->getThisMorning($tz);
         $tonight = $this->getTonight($tz);
 
-        return DB::table('tasks')->where('user_id', auth()->user()->id)
+        return Task::where('user_id', auth()->user()->id)
+            ->with('progressions')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where('scheduled_at', '>=', $thisMorning)
                     ->where('scheduled_at', '<=', $tonight)
@@ -113,7 +122,8 @@ readonly class TaskService
         $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
         $thisMorning = $this->getThisMorning($tz);
         $tonight = $this->getTonight($tz);
-        return DB::table('tasks')->where('user_id', auth()->user()->id)
+        return Task::where('user_id', auth()->user()->id)
+            ->with('progressions')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where('completed_at', '>=', $thisMorning)
                     ->where('completed_at', '<=', $tonight);
@@ -124,7 +134,8 @@ readonly class TaskService
     {
         $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
         $thisMorning = $this->getThisMorning($tz);
-        return DB::table('tasks')->where('user_id', auth()->user()->id)
+        return Task::where('user_id', auth()->user()->id)
+            ->with('progressions')
             ->where(function (Builder $query) use ($thisMorning) {
                 $query->where('scheduled_at', '<', $thisMorning)
                     ->where('completed_at', null);

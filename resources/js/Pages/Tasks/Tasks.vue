@@ -90,16 +90,16 @@ watch(reactiveTasks, () => {
 })
 
 const calculateProgress = () => {
-    let completedTAsks = 0;
-    let unCompletedTAsks = 0;
+    let completedTasks = 0;
+    let unCompletedTasks = 0;
     reactiveTasks.value.forEach(task => {
         if (task.completed_at === null) {
-            unCompletedTAsks++;
+            unCompletedTasks++;
         } else {
-            completedTAsks++;
+            completedTasks++;
         }
     });
-    progress.value = Math.round((completedTAsks / (completedTAsks + unCompletedTAsks)) * 100);
+    progress.value = Math.round((completedTasks / (completedTasks + unCompletedTasks)) * 100);
 }
 
 </script>
@@ -133,10 +133,9 @@ const calculateProgress = () => {
                 <progress class="my-4 progress w-full" :value="progress" max="100">50%</progress>
             </div>
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-                <div v-for="(task, index) in reactiveTasks.value" class="border border-gray-400 m-4"
-                     :class="task.completed_at?'bg-gray-300':'bg-gray-100'" :key="index">
-                    <Task :task="task" @deleted="refreshTasks()"/>
-                </div>
+                <template v-for="task in reactiveTasks.value">
+                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"/>
+                </template>
             </div>
             <div class="min-h-6" ref="belowList">
                 <SavedLabel/>

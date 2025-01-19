@@ -4,7 +4,7 @@ namespace App\Repositories;
 
 use App\Models\Task;
 
-class TaskRepository
+readonly class TaskRepository
 {
 
     public function create(array $data): Task

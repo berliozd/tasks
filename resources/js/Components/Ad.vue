@@ -29,7 +29,5 @@ onMounted(() => {
 })
 </script>
 <template>
-    <div class="max-w-7xl mx-auto">
-        <div :id="'ad-element-' + props.el"></div>
-    </div>
+    <div :id="'ad-element-' + props.el" class="w-full"></div>
 </template>

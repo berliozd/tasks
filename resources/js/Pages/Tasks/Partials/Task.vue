@@ -4,9 +4,10 @@ import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
+import axios from "axios";
 
 const props = defineProps({task: Object});
-const emits = defineEmits(['deleted']);
+const emits = defineEmits(['deleted', 'changed']);
 
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
@@ -23,50 +24,68 @@ const formatDateTime = (date) => {
         usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
     )
 }
-const toggleStartProgressAt = () => {
-    if (props.task.start_progress_at === null) {
-        props.task.start_progress_at = new Date();
+const updateProgression = (task) => {
+    if (taskHasActiveProgression(task)) {
+        // stop progression
+        axios.post(route('task-progression.stop', task.id)).then(() => {
+            emits('changed')
+        })
     } else {
-        props.task.start_progress_at = null;
+        // start progression
+        axios.post(route('task-progression.start', task.id)).then(() => {
+            emits('changed')
+        })
     }
 }
+
+const taskHasActiveProgression = (task) => {
+    if (task.completed_at !== null) return false
+    if (task.progressions === undefined) return false
+    for (let progression of task.progressions) {
+        if (progression.end_at === null) return true
+    }
+}
+
 </script>
 
 <template>
-    <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
-        <div class="flex justify-between gap-2">
-            <div class="flex">
-                <CompleteTaskModal :task="task"/>
-            </div>
-            <div class="w-full">
-                <div @click="task.editing = !task.editing" class="cursor-pointer w-full">
-                    {{ task.label }}
+    <div class="border border-gray-400 m-4"
+         :class="task.completed_at?'bg-gray-300':'bg-gray-100'">
+        <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
+            <div class="flex justify-between gap-2">
+                <div class="flex">
+                    <CompleteTaskModal :task="task"/>
                 </div>
-                <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                    Completed on:{{ formatDateTime(task.completed_at) }}
+                <div class="w-full">
+                    <div @click="task.editing = !task.editing" class="cursor-pointer w-full">
+                        {{ task.label }}
+                    </div>
+                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
+                        Completed on:{{ formatDateTime(task.completed_at) }}
+                    </div>
                 </div>
+                <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
+                                @click="updateProgression(task)"/>
+                <DeleteModal :task="task" @deleted="emits('deleted')"/>
             </div>
-            <InProgressIcon :in-progress="task.start_progress_at!==null" :enabled="task.completed_at===null"
-                            @click="toggleStartProgressAt()"/>
-            <DeleteModal :task="task" @deleted="emits('deleted')"/>
-        </div>
-        <div :class="task.editing?'':'hidden'" class="m-2">
-            <div>
-                <div class="text-xs">Label :</div>
-                <textarea v-model="task.label"
-                          class="rounded-md shadow-sm w-full"
-                          :disabled="task.completed_at!==null"
-                          maxlength="255"/>
-            </div>
-            <div>
-                <div class="text-xs">Description :</div>
-                <textarea v-model="task.description"
-                          class="rounded-md shadow-sm w-full h-48"
-                          :disabled="task.completed_at!==null"
-                          maxlength="5000"/>
-            </div>
-            <div class="text-xs text-gray-400 underline">
-                Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+            <div :class="task.editing?'':'hidden'" class="m-2">
+                <div>
+                    <div class="text-xs">Label :</div>
+                    <textarea v-model="task.label"
+                              class="rounded-md shadow-sm w-full"
+                              :disabled="task.completed_at!==null"
+                              maxlength="255"/>
+                </div>
+                <div>
+                    <div class="text-xs">Description :</div>
+                    <textarea v-model="task.description"
+                              class="rounded-md shadow-sm w-full h-48"
+                              :disabled="task.completed_at!==null"
+                              maxlength="5000"/>
+                </div>
+                <div class="text-xs text-gray-400 underline">
+                    Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+                </div>
             </div>
         </div>
     </div>
