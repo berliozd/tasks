@@ -16,7 +16,7 @@ class ProcessPodcast implements ShouldQueue
      */
     public function __construct()
     {
-        //
+        Log::info('Creating podcast job');
     }
 
     /**
