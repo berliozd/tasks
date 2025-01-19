@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Events\SubscriptionCreated;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Laravel\Reverb\Loggers\Log;
+use Illuminate\Support\Facades\Log;
 
 class ProcessPodcast implements ShouldQueue
 {
