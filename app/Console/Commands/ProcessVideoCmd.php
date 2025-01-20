@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Log;
 
 class ProcessVideoCmd extends Command
 {
-
     public function __construct()
     {
+        parent::__construct();
         Log::info('Creating video command');
     }
 
