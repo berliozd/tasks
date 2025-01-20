@@ -6,6 +6,7 @@ use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class SubscriptionCreated
 {
@@ -26,6 +27,7 @@ class SubscriptionCreated
      */
     public function broadcastOn(): array
     {
+        Log::info('SubscriptionCreated is broadcast');
         return [
             new PrivateChannel('channel-name'),
         ];
