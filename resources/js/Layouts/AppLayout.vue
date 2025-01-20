@@ -29,6 +29,9 @@ const logout = () => {
 console.log('avant listener broadcast event');
 
 Echo.private(`channel-name`)
+    .subscribed(() => {
+        console.log('Abonné au channel : channel-name');
+    })
     .listen('PodcastCreated', (e) => {
         console.log(e);
         console.log('PodcastCreated in private channel');
@@ -39,6 +42,9 @@ Echo.private(`channel-name`)
     });
 
 Echo.channel(`my-channel`)
+    .subscribed(() => {
+        console.log('Abonné au channel : my-channel');
+    })
     .listen('PodcastCreated', (e) => {
         console.log(e);
         console.log('PodcastCreated in public channel');
