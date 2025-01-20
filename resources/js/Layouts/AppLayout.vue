@@ -27,10 +27,14 @@ const logout = () => {
 };
 
 console.log('avant listener broadcast event');
+
 Echo.private(`channel-name`)
-    .listen('SubscriptionCreated', (e) => {
-        console.log('SubscriptionCreated');
-    });
+    .listen('PodcastCreated', (e) => {
+        console.log('PodcastCreated');
+    })
+    .listen('VideoCreated', (e) => {
+    console.log('VideoCreated');
+});
 
 </script>
 
