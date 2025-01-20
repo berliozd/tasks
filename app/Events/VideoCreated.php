@@ -33,4 +33,9 @@ class VideoCreated implements ShouldBroadcast
             new PrivateChannel('channel-name'),
         ];
     }
+
+    public function broadcastAs(): string
+    {
+        return 'VideoCreated';
+    }
 }

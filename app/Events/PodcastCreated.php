@@ -33,4 +33,9 @@ class PodcastCreated implements ShouldBroadcast
             new PrivateChannel('channel-name'),
         ];
     }
+
+    public function broadcastAs(): string
+    {
+        return 'PodcastCreated';
+    }
 }
