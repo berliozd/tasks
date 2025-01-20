@@ -1,6 +1,7 @@
 import Echo from 'laravel-echo';
 
 import Pusher from 'pusher-js';
+
 window.Pusher = Pusher;
 
 window.Echo = new Echo({
@@ -18,11 +19,11 @@ window.Echo.private(`channel-name`)
     .subscribed(() => {
         console.log('Abonné au channel : channel-name');
     })
-    .listen('PodcastCreated', (e) => {
+    .listen('PodcastCreated', e => {
         console.log(e);
         console.log('PodcastCreated in private channel');
     })
-    .listen('VideoCreated', (e) => {
+    .listen('VideoCreated', e => {
         console.log(e);
         console.log('VideoCreated in private channel');
     });
@@ -31,11 +32,11 @@ window.Echo.channel(`my-channel`)
     .subscribed(() => {
         console.log('Abonné au channel : my-channel');
     })
-    .listen('PodcastCreated', (e) => {
+    .listen('PodcastCreated', e => {
         console.log(e);
         console.log('PodcastCreated in public channel');
     })
-    .listen('VideoCreated', (e) => {
+    .listen('VideoCreated', e => {
         console.log(e);
         console.log('VideoCreated in public channel');
     });
