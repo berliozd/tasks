@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Events\SubscriptionCreated;
+use App\Events\PodcastCreated;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -26,7 +26,7 @@ class ProcessPodcast implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info('Processing podcast job');
-        SubscriptionCreated::dispatch();
+        Log::info('Process podcast and dispatch event PodcastCreated');
+        PodcastCreated::dispatch();
     }
 }

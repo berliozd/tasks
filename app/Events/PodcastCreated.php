@@ -9,7 +9,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class SubscriptionCreated implements ShouldBroadcast
+class PodcastCreated implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -28,7 +28,7 @@ class SubscriptionCreated implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        Log::info('SubscriptionCreated is broadcast');
+        Log::info('Before PodcastCreated event broadcast');
         return [
             new PrivateChannel('channel-name'),
         ];
