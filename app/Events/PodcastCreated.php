@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -31,6 +32,7 @@ class PodcastCreated implements ShouldBroadcast
         Log::info('Before PodcastCreated event broadcast');
         return [
             new PrivateChannel('channel-name'),
+            new Channel('my-channel')
         ];
     }
 

@@ -30,11 +30,23 @@ console.log('avant listener broadcast event');
 
 Echo.private(`channel-name`)
     .listen('PodcastCreated', (e) => {
-        console.log('PodcastCreated');
+        console.log(e);
+        console.log('PodcastCreated in private channel');
     })
     .listen('VideoCreated', (e) => {
-    console.log('VideoCreated');
-});
+        console.log(e);
+        console.log('VideoCreated in private channel');
+    });
+
+Echo.channel(`my-channel`)
+    .listen('PodcastCreated', (e) => {
+        console.log(e);
+        console.log('PodcastCreated in public channel');
+    })
+    .listen('VideoCreated', (e) => {
+        console.log(e);
+        console.log('VideoCreated in public channel');
+    });
 
 </script>
 
