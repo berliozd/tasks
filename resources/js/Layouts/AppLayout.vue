@@ -28,7 +28,7 @@ const logout = () => {
 
 console.log('avant listener broadcast event');
 
-Echo.private(`channel-name`)
+Echo.private(`private-channel-name`)
     .listen('PodcastCreated', (e) => {
         console.log('PodcastCreated');
     })
