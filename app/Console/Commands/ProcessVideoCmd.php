@@ -34,6 +34,6 @@ class ProcessVideoCmd extends Command
     public function handle()
     {
         Log::info('Process video, and dispatch event VideoCreated');
-        VideoCreated::dispatch();
+        VideoCreated::dispatch('Video has been created!');
     }
 }

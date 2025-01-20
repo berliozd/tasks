@@ -17,7 +17,7 @@ class VideoCreated implements ShouldBroadcast
     /**
      * Create a new event instance.
      */
-    public function __construct()
+    public function __construct(private readonly string $message)
     {
         //
     }
@@ -40,4 +40,10 @@ class VideoCreated implements ShouldBroadcast
     {
         return 'VideoCreated';
     }
+
+    public function broadcastWith(): array
+    {
+        return ['message' => $this->message];
+    }
+
 }

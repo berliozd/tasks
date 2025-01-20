@@ -17,7 +17,7 @@ class PodcastCreated implements ShouldBroadcast
     /**
      * Create a new event instance.
      */
-    public function __construct()
+    public function __construct(private readonly string $message)
     {
         //
     }
@@ -40,4 +40,10 @@ class PodcastCreated implements ShouldBroadcast
     {
         return 'PodcastCreated';
     }
+
+    public function broadcastWith(): array
+    {
+        return ['message' => $this->message];
+    }
+
 }

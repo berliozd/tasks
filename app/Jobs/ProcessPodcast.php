@@ -27,6 +27,6 @@ class ProcessPodcast implements ShouldQueue
     public function handle(): void
     {
         Log::info('Process podcast and dispatch event PodcastCreated');
-        PodcastCreated::dispatch();
+        PodcastCreated::dispatch('Podcast has been created!');
     }
 }
