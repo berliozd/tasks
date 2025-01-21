@@ -1,12 +1,11 @@
 <?php
 
-use App\Jobs\ProcessPodcast;
+use App\Jobs\CheckUserNotLogged;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schedule;
 
 Log::info('console run');
 
-Schedule::job(new ProcessPodcast)->everyMinute();
-Schedule::command('app:process-video-cmd')->everyMinute();
+Schedule::job(new CheckUserNotLogged)->everyMinute();
 
 Log::info('console end');

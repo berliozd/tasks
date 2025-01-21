@@ -10,7 +10,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class PodcastCreated implements ShouldBroadcast
+class UserNotLogged implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -29,16 +29,16 @@ class PodcastCreated implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        Log::info('Before PodcastCreated event broadcast');
+        Log::info('Before UserNotLogged event broadcast');
         return [
-            new PrivateChannel('channel-name'),
-            new Channel('my-channel')
+            new PrivateChannel('my-private-channel'),
+            new Channel('my-pubic-channel')
         ];
     }
 
     public function broadcastAs(): string
     {
-        return 'PodcastCreated';
+        return 'UserNotLogged';
     }
 
     public function broadcastWith(): array

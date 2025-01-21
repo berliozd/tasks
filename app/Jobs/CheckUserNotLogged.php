@@ -2,14 +2,14 @@
 
 namespace App\Jobs;
 
-use App\Events\PodcastCreated;
+use App\Events\UserNotLogged;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ProcessPodcast implements ShouldQueue
+class CheckUserNotLogged implements ShouldQueue
 {
     use InteractsWithQueue, Queueable, SerializesModels;
 
@@ -18,7 +18,7 @@ class ProcessPodcast implements ShouldQueue
      */
     public function __construct()
     {
-        Log::info('Creating podcast job');
+        Log::info('Creating CheckUserNotLogged job');
     }
 
     /**
@@ -26,7 +26,7 @@ class ProcessPodcast implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info('Process podcast and dispatch event PodcastCreated');
-        PodcastCreated::dispatch('Podcast has been created!');
+        Log::info('Check user is logged out and dispatch event UserNotLogged');
+        UserNotLogged::dispatch('Message : User logged out!');
     }
 }

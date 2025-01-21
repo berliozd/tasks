@@ -14,29 +14,3 @@ window.Echo = new Echo({
     enabledTransports: ['ws', 'wss'],
     logToConsole: true, // Active le débogage
 });
-
-window.Echo.private(`channel-name`)
-    .subscribed(() => {
-        console.log('Abonné au channel : channel-name');
-    })
-    .listen('.PodcastCreated', e => {
-        console.log(e);
-        console.log('PodcastCreated in private channel');
-    })
-    .listen('.VideoCreated', e => {
-        console.log(e);
-        console.log('VideoCreated in private channel');
-    });
-
-window.Echo.channel(`my-channel`)
-    .subscribed(() => {
-        console.log('Abonné au channel : my-channel');
-    })
-    .listen('.PodcastCreated', e => {
-        console.log(e);
-        console.log('PodcastCreated in public channel');
-    })
-    .listen('.VideoCreated', e => {
-        console.log(e);
-        console.log('VideoCreated in public channel');
-    });
