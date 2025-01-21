@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\EventController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,5 +19,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('task-progression.start');
     Route::post('/task-progression/stop/{id}', [App\Http\Controllers\Api\TaskProgressionController::class, 'stop'])
         ->name('task-progression.stop');
+
+    Route::get('/event', [EventController::class, 'index'])->name('event.index');
 
 });
