@@ -32,7 +32,7 @@ class UserNotLogged implements ShouldBroadcast
         Log::info('Before UserNotLogged event broadcast');
         return [
             new PrivateChannel('my-private-channel'),
-            new Channel('my-pubic-channel')
+            new Channel('my-public-channel')
         ];
     }
 
