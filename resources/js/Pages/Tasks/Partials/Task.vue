@@ -54,7 +54,7 @@ const taskHasActiveProgression = (task) => {
         <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
             <div class="flex justify-between gap-2">
                 <div class="flex">
-                    <CompleteTaskModal :task="task"/>
+                    <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
                 <div class="w-full">
                     <div @click="task.editing = !task.editing" class="cursor-pointer w-full">

@@ -27,10 +27,8 @@ readonly class TaskService
         $task = $this->taskRepository->find($id);
         $this->checkPerms($task);
         $this->prepareData($data);
-        if ($data['completed_at'] !== $task->compleded_at) {
-            if ($data['completed_at'] !== null) {
-                $this->taskProgressionService->stop($task->id);
-            }
+        if ($data['completed_at'] !== null) {
+            $this->taskProgressionService->stop($task->id);
         }
         return $this->taskRepository->update($task, $data);
     }

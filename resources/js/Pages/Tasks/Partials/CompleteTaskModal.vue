@@ -6,20 +6,21 @@ import CheckButton from "@/Components/CheckButton.vue";
 import {ref} from "vue";
 import axios from "axios";
 
-const isShowModal = ref(false)
 const props = defineProps({task: Object});
+const emits = defineEmits(['changed']);
+
+const isShowModal = ref(false)
+const checked = ref(props.task.completed_at !== null)
 
 const hideModal = () => {
     isShowModal.value = false
 }
 
-const toggleCompleted = (task) => {
-    if (task.completed_at === null) {
-        task.completed_at = new Date();
-        isShowModal.value = true
-    } else {
-        task.completed_at = null;
-    }
+const toggleChecked = async () => {
+    if (!checked.value) isShowModal.value = true;
+    checked.value = !checked.value;
+    await updateTask()
+    emits('changed')
 }
 
 const getDate = (nbDays) => {
@@ -28,6 +29,9 @@ const getDate = (nbDays) => {
     return now;
 }
 
+const updateTask = async () => {
+    await axios.patch(route('tasks.update', props.task.id), {completed_at: checked.value ? new Date() : null})
+}
 const createTasks = async (nbDays) => {
     await axios.post(
         route('tasks.store'),
@@ -38,8 +42,8 @@ const createTasks = async (nbDays) => {
 </script>
 
 <template>
-    <CheckButton :checked="task.completed_at !== null"
-                 @click="toggleCompleted(task)" :enabled="!task.editing"/>
+    <CheckButton :checked="checked"
+                 @click="toggleChecked()" :enabled="!task.editing"/>
     <Modal :show="isShowModal">
         <div class="p-4 w-full space-y-4 flex flex-col">
             <div>Your task "{{ task.label }}" is marked as completed.</div>
