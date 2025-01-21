@@ -1,11 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Log;
 
-Broadcast::channel('channel-name', function ($user) {
+Broadcast::channel('my-private-channel', function ($user) {
+    Log::info($user->id);
     return true;
 });
 
-Broadcast::channel('my-channel', function () {
-    return true; // Autorise tout le monde à écouter ce channel
+Broadcast::channel('my-public-channel', function () {
+    return true; // Allow everyone to listen that channel
 });
