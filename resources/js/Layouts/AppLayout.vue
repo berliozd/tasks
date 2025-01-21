@@ -27,13 +27,19 @@ const logout = () => {
 };
 
 
-Echo.private(`my-private-channel`)
+Echo.private('my-private-channel')
+    .subscribed(() => {
+        console.log('subscribed to my-private-channel');
+    })
     .listen('.UserNotLogged', e => {
         console.log(e);
         console.log('UserNotLogged in private channel');
     })
 
-Echo.channel(`my-public-channel`)
+Echo.channel('my-public-channel')
+    .subscribed(() => {
+        console.log('subscribed to my-public-channel');
+    })
     .listen('.UserNotLogged', e => {
         console.log(e);
         console.log('UserNotLogged in public channel');
