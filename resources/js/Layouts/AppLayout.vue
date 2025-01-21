@@ -26,6 +26,15 @@ const logout = () => {
     router.post(route('logout'));
 };
 
+Echo.channel('my-public-channel')
+    .subscribed(() => {
+        console.log('subscribed to my-public-channel');
+    })
+    .listen('.UserNotLogged', e => {
+        console.log(e);
+        console.log('UserNotLogged in public channel');
+    })
+
 
 Echo.private('my-private-channel')
     .subscribed(() => {
@@ -36,14 +45,6 @@ Echo.private('my-private-channel')
         console.log('UserNotLogged in private channel');
     })
 
-Echo.channel('my-public-channel')
-    .subscribed(() => {
-        console.log('subscribed to my-public-channel');
-    })
-    .listen('.UserNotLogged', e => {
-        console.log(e);
-        console.log('UserNotLogged in public channel');
-    })
 
 
 </script>
