@@ -6,6 +6,6 @@ use Illuminate\Support\Facades\Schedule;
 
 Log::info('console run');
 
-Schedule::job(new CheckUserNotLogged)->everyMinute();
+Schedule::job(new CheckUserNotLogged)->everyTenSeconds();
 
 Log::info('console end');
