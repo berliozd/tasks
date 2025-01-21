@@ -33,7 +33,7 @@ Echo.channel('my-public-channel')
     .listen('.UserNotLogged', e => {
         console.log(e);
         console.log('UserNotLogged in public channel');
-    })
+    });
 
 
 Echo.private('my-private-channel')
@@ -43,7 +43,7 @@ Echo.private('my-private-channel')
     .listen('.UserNotLogged', e => {
         console.log(e);
         console.log('UserNotLogged in private channel');
-    })
+    });
 
 
 
