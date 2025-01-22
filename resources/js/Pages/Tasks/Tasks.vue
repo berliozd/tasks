@@ -119,8 +119,7 @@ const dispatchEvent = () => {
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="min-h-6 ">
                 <SavedLabel/>
-                <button @click="dispatchEvent" class="rounded bg-gray-500 m-2">DISP</button>
-
+                <button @click="dispatchEvent" class="rounded bg-gray-500 m-2 hidden">DISP</button>
             </div>
             <div class="text-xs text-gray-400 flex justify-end pr-2">
                 Last saved on {{
