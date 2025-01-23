@@ -45,8 +45,6 @@ Echo.private('my-private-channel')
         console.log('UserNotLogged in private channel');
     });
 
-
-
 </script>
 
 <template>
@@ -186,6 +184,9 @@ Echo.private('my-private-channel')
                                         <DropdownLink :href="route('profile.show')">
                                             Profile
                                         </DropdownLink>
+                                        <DropdownLink :href="route('flags')">
+                                            Flags
+                                        </DropdownLink>
 
                                         <DropdownLink v-if="$page.props.jetstream.hasApiFeatures"
                                                       :href="route('api-tokens.index')">
@@ -269,6 +270,9 @@ Echo.private('my-private-channel')
                         <div class="mt-3 space-y-1">
                             <ResponsiveNavLink :href="route('profile.show')" :active="route().current('profile.show')">
                                 Profile
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('flags')" :active="route().current('flags')">
+                                Flags
                             </ResponsiveNavLink>
 
                             <ResponsiveNavLink v-if="$page.props.jetstream.hasApiFeatures"

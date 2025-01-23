@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\ProvidersCallbackController;
+use App\Http\Controllers\FlagController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,7 @@ Route::middleware([
         return Inertia::render('Dashboard');
     })->name('dashboard');
     Route::get('/tasks', TaskController::class)->name('tasks');
+    Route::get('/flags', FlagController::class)->name('flags');
 
 });
 

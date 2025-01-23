@@ -4,9 +4,8 @@ import Modal from "@/Components/Modal.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import {ref} from "vue";
 import DeleteButton from "@/Components/DeleteButton.vue";
-import axios from "axios";
 
-const props = defineProps({task: Object});
+const props = defineProps({label: String});
 const emits = defineEmits(['deleted']);
 const isShowModal = ref(false)
 const showModal = () => {
@@ -16,12 +15,9 @@ const showModal = () => {
 const hideModal = () => {
     isShowModal.value = false
 }
-
-const deleteTask = (task) => {
-    axios.delete(route('tasks.delete', task.id)).then(() => {
-        emits('deleted')
-        hideModal()
-    })
+const initDelete = () => {
+    hideModal()
+    emits('deleted')
 }
 </script>
 
@@ -29,10 +25,10 @@ const deleteTask = (task) => {
     <DeleteButton @click="showModal"></DeleteButton>
     <Modal :show="isShowModal">
         <div class="p-4 w-full space-y-4 flex flex-col">
-            Are you sure you want to delete this task?
+            {{label}}
             <div class="flex justify-end gap-2">
                 <SecondaryButton @click="hideModal">Cancel</SecondaryButton>
-                <PrimaryButton @click="deleteTask(props.task)">Delete</PrimaryButton>
+                <PrimaryButton @click="initDelete">Delete</PrimaryButton>
             </div>
         </div>
     </Modal>

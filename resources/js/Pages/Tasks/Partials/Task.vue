@@ -46,6 +46,13 @@ const taskHasActiveProgression = (task) => {
     }
 }
 
+const deleteTask = (task) => {
+    axios.delete(route('tasks.delete', task.id)).then(() => {
+        console.log('deleting task ' + task.id);
+        emits('deleted')
+    })
+}
+
 </script>
 
 <template>
@@ -66,7 +73,7 @@ const taskHasActiveProgression = (task) => {
                 </div>
                 <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
                                 @click="updateProgression(task)"/>
-                <DeleteModal :task="task" @deleted="emits('deleted')"/>
+                <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
             </div>
             <div :class="task.editing?'':'hidden'" class="m-2">
                 <div>
