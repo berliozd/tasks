@@ -71,6 +71,7 @@ const deleteTask = (task) => {
                         Completed on:{{ formatDateTime(task.completed_at) }}
                     </div>
                 </div>
+<!--                test-->
                 <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
                                 @click="updateProgression(task)"/>
                 <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
