@@ -5,6 +5,7 @@ import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
 import axios from "axios";
+import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 
 const props = defineProps({task: Object});
 const emits = defineEmits(['deleted', 'changed']);
@@ -53,6 +54,13 @@ const deleteTask = (task) => {
     })
 }
 
+const rescheduleTomorrow = async (task) => {
+    const newDate = new Date();
+    newDate.setDate(newDate.getDate() + 1);
+    await axios.patch(route('tasks.update', task.id), {scheduled_at: newDate})
+    emits('changed')
+}
+
 </script>
 
 <template>
@@ -90,9 +98,13 @@ const deleteTask = (task) => {
                               :disabled="task.completed_at!==null"
                               maxlength="5000"/>
                 </div>
-                <div class="text-xs text-gray-400 underline">
-                    Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+                <div class="flex justify-between">
+                    <div class="text-xs text-gray-400 underline">
+                        Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+                    </div>
+                    <ReScheduleModal @reschedule="rescheduleTomorrow(task)"/>
                 </div>
+
             </div>
         </div>
     </div>
