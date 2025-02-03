@@ -79,6 +79,7 @@ const rescheduleTomorrow = async (task) => {
                         Completed on:{{ formatDateTime(task.completed_at) }}
                     </div>
                 </div>
+                <ReScheduleModal @reschedule="rescheduleTomorrow(task)"/>
                 <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
                                 @click="updateProgression(task)"/>
                 <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
@@ -102,7 +103,6 @@ const rescheduleTomorrow = async (task) => {
                     <div class="text-xs text-gray-400 underline">
                         Scheduled on:{{ formatDateTime(task.scheduled_at) }}
                     </div>
-                    <ReScheduleModal @reschedule="rescheduleTomorrow(task)"/>
                 </div>
 
             </div>
