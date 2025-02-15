@@ -108,6 +108,15 @@ const dispatchEvent = () => {
     axios.get(route('event.index'));
 
 }
+
+const allFlags = ref([]);
+const getAllFlags = () => {
+    axios.get(route('flags.index'))
+        .then(response => {
+            allFlags.value = response.data;
+        });
+}
+getAllFlags();
 </script>
 
 <template>
@@ -141,7 +150,7 @@ const dispatchEvent = () => {
             </div>
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
                 <template v-for="task in reactiveTasks.value">
-                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"/>
+                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"/>
                 </template>
             </div>
             <div class="min-h-6" ref="belowList">

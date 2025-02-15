@@ -43,4 +43,14 @@ class TaskController extends Controller
     {
         $this->taskService->destroy((int)$id);
     }
+
+    public function addFlag(string $taskId, string $flagId)
+    {
+        return $this->taskService->addFlag((int)$taskId, (int)$flagId);
+    }
+
+    public function deleteFlag(string $taskId, string $flagId)
+    {
+        return $this->taskService->deleteFlag((int)$taskId, (int)$flagId);
+    }
 }

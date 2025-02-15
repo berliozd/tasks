@@ -74,6 +74,7 @@ readonly class TaskService
         /** @var  $query Builder */
         $query = Task::where('user_id', auth()->user()->id)
             ->with('progressions')
+            ->with('flags')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where(function ($query) use ($thisMorning, $tonight) {
                     $query->where('scheduled_at', '>=', $thisMorning)
@@ -158,4 +159,19 @@ readonly class TaskService
         return now($tz)->setHour(23)->setMinute(59)->setSecond(59)->subSeconds($tz->getOffset(now()));
     }
 
+    public function addFlag(int $taskId, int $flagId): Task
+    {
+        $task = $this->taskRepository->find($taskId);
+        $this->checkPerms($task);
+        $task->flags()->attach($flagId);
+        return $task;
+    }
+
+    public function deleteFlag(int $taskId, int $flagId): Task
+    {
+        $task = $this->taskRepository->find($taskId);
+        $this->checkPerms($task);
+        $task->flags()->detach($flagId);
+        return $task;
+    }
 }

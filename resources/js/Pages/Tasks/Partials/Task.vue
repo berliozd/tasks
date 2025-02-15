@@ -7,7 +7,7 @@ import InProgressIcon from "@/Components/InProgressIcon.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 
-const props = defineProps({task: Object});
+const props = defineProps({task: Object, allFlags: Array});
 const emits = defineEmits(['deleted', 'changed']);
 
 const taskIsLate = (task) => {
@@ -61,6 +61,21 @@ const rescheduleTomorrow = async (task) => {
     emits('changed')
 }
 
+const taskHasFlag = (task, flag) => {
+    return task.flags.some(f => f.id === flag.id);
+}
+
+const addFlag = (task, flag) => {
+    axios.post(route('tasks.add.flag', {taskId: task.id, flagId: flag.id})).then(() => {
+        emits('changed')
+    })
+}
+
+const deleteFlag = (task, flag) => {
+    axios.post(route('tasks.delete.flag', {taskId: task.id, flagId: flag.id})).then(() => {
+        emits('changed')
+    })
+}
 </script>
 
 <template>
@@ -78,6 +93,12 @@ const rescheduleTomorrow = async (task) => {
                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
                         Completed on:{{ formatDateTime(task.completed_at) }}
                     </div>
+                </div>
+                <div class="flex gap-2">
+                    <template v-for="flag in task.flags">
+                        <div class="w-6 h-6 border border-gray-700 tooltip tooltip-left"
+                             :style="{ 'background-color': flag.color  }" :data-tip="flag.name "/>
+                    </template>
                 </div>
                 <ReScheduleModal @reschedule="rescheduleTomorrow(task)"/>
                 <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
@@ -99,12 +120,21 @@ const rescheduleTomorrow = async (task) => {
                               :disabled="task.completed_at!==null"
                               maxlength="5000"/>
                 </div>
+                <div class="flex gap-2 my-2">
+                    <div class="flex gap-2 items-center">
+                        <div v-for="flag in allFlags" class="flex"
+                             :class="task.flags?.some(f => f.id === flag.id)?'border-2 border-dashed border-gray-700':''"
+                             @click="taskHasFlag(task, flag)?deleteFlag(task, flag):addFlag(task, flag)">
+                            <div class="w-6 h-6 border border-gray-700 tooltip tooltip-bottom cursor-pointer"
+                                 :style="{ 'background-color': flag.color  }" :data-tip="flag.name "/>
+                        </div>
+                    </div>
+                </div>
                 <div class="flex justify-between">
                     <div class="text-xs text-gray-400 underline">
                         Scheduled on:{{ formatDateTime(task.scheduled_at) }}
                     </div>
                 </div>
-
             </div>
         </div>
     </div>
