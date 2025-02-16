@@ -6,6 +6,7 @@ import {usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
+import {Link} from "@inertiajs/vue3";
 
 const props = defineProps({task: Object, allFlags: Array});
 const emits = defineEmits(['deleted', 'changed']);
@@ -121,13 +122,23 @@ const deleteFlag = (task, flag) => {
                               maxlength="5000"/>
                 </div>
                 <div class="flex gap-2 my-2">
-                    <div class="flex gap-2 items-center">
+                    <div class="flex gap-2 items-center" v-if="allFlags.length > 0">
                         <div v-for="flag in allFlags" class="flex"
                              :class="task.flags?.some(f => f.id === flag.id)?'border-2 border-dashed border-gray-700':''"
                              @click="taskHasFlag(task, flag)?deleteFlag(task, flag):addFlag(task, flag)">
                             <div class="w-6 h-6 border border-gray-700 tooltip tooltip-bottom cursor-pointer"
                                  :style="{ 'background-color': flag.color  }" :data-tip="flag.name "/>
                         </div>
+                        <Link :href="route('flags')"
+                              class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Update your flags
+                        </Link>
+                    </div>
+                    <div v-else>
+                        <Link :href="route('flags')"
+                              class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Create your flags
+                        </Link>
                     </div>
                 </div>
                 <div class="flex justify-between">
