@@ -73,11 +73,16 @@ refreshFlags();
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
                 <div v-for="flag in reactiveFlags"
-                     class="flex justify-between align-center gap-2 m-2 border-b last:border-0 border-gray-600 pb-2">
-                    <div class="">{{ flag.name }}</div>
-                    <div class="w-1/5 flex justify-end gap-2">
-                        <div class="w-1/2 h-8 border border-gray-700" :style="{ 'background-color': flag.color  }"/>
-                        <DeleteModal @deleted="deleteFlag(flag)" label="Are you sure you want to delete this flag?"/>
+                     class="flex justify-between align-center gap-2 m-4">
+                    <div class="border border-gray-400 bg-gray-100 p-2 flex justify-between w-full items-center">
+                        <div class=" p-2 w-full">
+                            <input type="text" :value="flag.name" class="p-1 rounded w-full mr-2" maxlength="255">
+                        </div>
+                        <div class=" flex justify-end">
+                            <input type="color" :value="flag.color" class="cursor-pointer">
+                            <DeleteModal @deleted="deleteFlag(flag)"
+                                         label="Are you sure you want to delete this flag?"/>
+                        </div>
                     </div>
                 </div>
             </div>
