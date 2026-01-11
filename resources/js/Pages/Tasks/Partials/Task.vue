@@ -2,11 +2,10 @@
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
 import {format} from "date-fns";
-import {usePage} from "@inertiajs/vue3";
+import {Link, usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
-import {Link} from "@inertiajs/vue3";
 
 const props = defineProps({task: Object, allFlags: Array});
 const emits = defineEmits(['deleted', 'changed']);
@@ -63,6 +62,9 @@ const rescheduleTomorrow = async (task) => {
 }
 
 const taskHasFlag = (task, flag) => {
+    if (task.flags === undefined) {
+        return false;
+    }
     return task.flags.some(f => f.id === flag.id);
 }
 
@@ -137,7 +139,7 @@ const deleteFlag = (task, flag) => {
                     <div v-else>
                         <Link :href="route('flags')"
                               class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                        Create your flags
+                            Create your flags
                         </Link>
                     </div>
                 </div>
