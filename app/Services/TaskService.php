@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Task;
 use App\Models\Recurrence;
+use App\Models\Task;
 use App\Repositories\TaskRepository;
 use Carbon\Carbon;
 use DateTimeZone;
@@ -95,7 +95,7 @@ readonly class TaskService
         return in_array($recurrence?->code, ['daily', 'weekly', 'monthly', 'yearly'], true);
     }
 
-    private function createNextOccurrence(Task $task): Task
+    private function createNextOccurrence(Task $task): void
     {
         $task->loadMissing(['recurrence', 'flags']);
         $recurrenceCode = $task->recurrence?->code;
@@ -103,13 +103,8 @@ readonly class TaskService
             throw new Exception('Invalid recurrence');
         }
 
-        $scheduledAt = Carbon::parse($task->scheduled_at);
         $completedAt = Carbon::parse($task->completed_at);
-        $nextScheduledAt = $this->addRecurrenceInterval($scheduledAt, $recurrenceCode);
-
-        while ($nextScheduledAt->toDateString() < $completedAt->toDateString()) {
-            $nextScheduledAt = $this->addRecurrenceInterval($nextScheduledAt, $recurrenceCode);
-        }
+        $nextScheduledAt = $this->addRecurrenceInterval($completedAt, $recurrenceCode);
 
         // Ensure we don't accumulate duplicate future occurrences.
         $this->deleteFutureOccurrences($task, $completedAt);
@@ -120,12 +115,11 @@ readonly class TaskService
             'scheduled_at' => $nextScheduledAt,
             'completed_at' => null,
             'recurrence_id' => $task->recurrence_id,
+            'parent_task_id' => $task->id,
             'user_id' => $task->user_id,
         ]);
 
         $nextTask->flags()->sync($task->flags()->pluck('flags.id')->all());
-
-        return $nextTask;
     }
 
     private function deleteFutureOccurrences(Task $task, ?Carbon $after = null): void
@@ -135,9 +129,7 @@ readonly class TaskService
         $after = $after ?? Carbon::parse($task->scheduled_at);
 
         Task::where('user_id', $task->user_id)
-            ->where('label', $task->label)
-            ->where('description', $task->description)
-            ->where('recurrence_id', $task->recurrence_id)
+            ->where('parent_task_id', $task->id)
             ->whereNull('completed_at')
             ->where('id', '!=', $task->id)
             ->where('scheduled_at', '>', $after)

@@ -24,6 +24,7 @@ class Task extends Model
         'scheduled_at',
         'start_progress_at',
         'recurrence_id',
+        'parent_task_id',
     ];
 
     public function owner(): BelongsTo
@@ -45,5 +46,15 @@ class Task extends Model
     public function recurrence(): BelongsTo
     {
         return $this->belongsTo(Recurrence::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Task::class, 'parent_task_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Task::class, 'parent_task_id');
     }
 }
