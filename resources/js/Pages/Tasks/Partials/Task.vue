@@ -7,7 +7,7 @@ import InProgressIcon from "@/Components/InProgressIcon.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 
-const props = defineProps({task: Object, allFlags: Array});
+const props = defineProps({task: Object, allFlags: Array, allRecurrences: Array});
 const emits = defineEmits(['deleted', 'changed']);
 
 const taskIsLate = (task) => {
@@ -79,6 +79,11 @@ const deleteFlag = (task, flag) => {
         emits('changed')
     })
 }
+
+const recurrenceLabel = (task) => {
+    if (!props.allRecurrences || !task.recurrence_id) return '';
+    return props.allRecurrences.find(r => r.id === task.recurrence_id)?.label ?? '';
+}
 </script>
 
 <template>
@@ -95,6 +100,9 @@ const deleteFlag = (task, flag) => {
                     </div>
                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
                         Completed on:{{ formatDateTime(task.completed_at) }}
+                    </div>
+                    <div v-if="task.recurrence_id" class="text-xs text-gray-500">
+                        Repeats: {{ recurrenceLabel(task) }}
                     </div>
                 </div>
                 <div class="flex gap-2">
@@ -142,6 +150,17 @@ const deleteFlag = (task, flag) => {
                             Create your flags
                         </Link>
                     </div>
+                </div>
+                <div class="my-2">
+                    <div class="text-xs">Recurrence :</div>
+                    <select v-model="task.recurrence_id"
+                            class="rounded-md shadow-sm w-full"
+                            :disabled="task.completed_at!==null">
+                        <option :value="null">No recurrence</option>
+                        <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
+                            {{ recurrence.label }}
+                        </option>
+                    </select>
                 </div>
                 <div class="flex justify-between">
                     <div class="text-xs text-gray-400 underline">

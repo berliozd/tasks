@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\EventController;
+use App\Http\Controllers\Api\RecurrenceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -30,4 +31,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/flags/{id}', [App\Http\Controllers\Api\FlagController::class, 'update'])->name('flags.update');
     Route::post('/flags', [App\Http\Controllers\Api\FlagController::class, 'store'])->name('flags.store');
     Route::delete('/flags/{id}', [App\Http\Controllers\Api\FlagController::class, 'destroy'])->name('flags.delete');
+
+    Route::get('/recurrences', [RecurrenceController::class, 'index'])->name('recurrences.index');
 });

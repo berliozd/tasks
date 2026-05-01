@@ -23,6 +23,7 @@ class Task extends Model
         'description',
         'scheduled_at',
         'start_progress_at',
+        'recurrence_id',
     ];
 
     public function owner(): BelongsTo
@@ -39,5 +40,10 @@ class Task extends Model
     {
         return $this->belongsToMany(Flag::class)
             ->withTimestamps();
+    }
+
+    public function recurrence(): BelongsTo
+    {
+        return $this->belongsTo(Recurrence::class);
     }
 }

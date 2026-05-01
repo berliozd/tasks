@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Task;
+use App\Models\Recurrence;
 use App\Repositories\TaskRepository;
 use Carbon\Carbon;
 use DateTimeZone;
@@ -26,11 +27,26 @@ readonly class TaskService
     {
         $task = $this->taskRepository->find($id);
         $this->checkPerms($task);
+        $wasCompleted = $task->completed_at !== null;
+        $data = array_merge($task->only([
+            'label',
+            'description',
+            'completed_at',
+            'scheduled_at',
+            'recurrence_id',
+        ]), $data);
         $this->prepareData($data);
         if ($data['completed_at'] !== null) {
             $this->taskProgressionService->stop($task->id);
         }
-        return $this->taskRepository->update($task, $data);
+        $updatedTask = $this->taskRepository->update($task, $data);
+        if (!$wasCompleted && $updatedTask->completed_at !== null && $this->isRecurring($updatedTask)) {
+            $this->createNextOccurrence($updatedTask);
+        }
+        if ($wasCompleted && $updatedTask->completed_at === null && $this->isRecurring($updatedTask)) {
+            $this->deleteFutureOccurrences($updatedTask);
+        }
+        return $updatedTask;
     }
 
     /**
@@ -63,6 +79,79 @@ readonly class TaskService
         $data['completed_at'] = !empty($data['completed_at']) ? Carbon::parse($data['completed_at']) : null;
         $data['scheduled_at'] = !empty($data['scheduled_at'])
             ? Carbon::parse($data['scheduled_at']) : now()->setMilli(0);
+        $data['recurrence_id'] = !empty($data['recurrence_id']) && $data['recurrence_id'] !== 'none'
+            ? (int)$data['recurrence_id']
+            : null;
+    }
+
+    private function isRecurring(Task $task): bool
+    {
+        if (empty($task->recurrence_id)) {
+            return false;
+        }
+        $recurrence = $task->relationLoaded('recurrence')
+            ? $task->recurrence
+            : Recurrence::find($task->recurrence_id);
+        return in_array($recurrence?->code, ['daily', 'weekly', 'monthly', 'yearly'], true);
+    }
+
+    private function createNextOccurrence(Task $task): Task
+    {
+        $task->loadMissing(['recurrence', 'flags']);
+        $recurrenceCode = $task->recurrence?->code;
+        if (!$recurrenceCode) {
+            throw new Exception('Invalid recurrence');
+        }
+
+        $scheduledAt = Carbon::parse($task->scheduled_at);
+        $completedAt = Carbon::parse($task->completed_at);
+        $nextScheduledAt = $this->addRecurrenceInterval($scheduledAt, $recurrenceCode);
+
+        while ($nextScheduledAt->toDateString() < $completedAt->toDateString()) {
+            $nextScheduledAt = $this->addRecurrenceInterval($nextScheduledAt, $recurrenceCode);
+        }
+
+        // Ensure we don't accumulate duplicate future occurrences.
+        $this->deleteFutureOccurrences($task, $completedAt);
+
+        $nextTask = $this->taskRepository->create([
+            'label' => $task->label,
+            'description' => $task->description,
+            'scheduled_at' => $nextScheduledAt,
+            'completed_at' => null,
+            'recurrence_id' => $task->recurrence_id,
+            'user_id' => $task->user_id,
+        ]);
+
+        $nextTask->flags()->sync($task->flags()->pluck('flags.id')->all());
+
+        return $nextTask;
+    }
+
+    private function deleteFutureOccurrences(Task $task, ?Carbon $after = null): void
+    {
+        // When completing/uncompleting a recurring task, remove any future duplicates for the same series.
+        // Use the task's scheduled date by default (uncomplete flow), or the completion date (complete flow).
+        $after = $after ?? Carbon::parse($task->scheduled_at);
+
+        Task::where('user_id', $task->user_id)
+            ->where('label', $task->label)
+            ->where('description', $task->description)
+            ->where('recurrence_id', $task->recurrence_id)
+            ->whereNull('completed_at')
+            ->where('id', '!=', $task->id)
+            ->where('scheduled_at', '>', $after)
+            ->delete();
+    }
+
+    private function addRecurrenceInterval(Carbon $date, string $recurrenceCode): Carbon
+    {
+        return match ($recurrenceCode) {
+            'daily' => $date->copy()->addDay(),
+            'weekly' => $date->copy()->addWeek(),
+            'monthly' => $date->copy()->addMonthNoOverflow(),
+            'yearly' => $date->copy()->addYearNoOverflow(),
+        };
     }
 
     public function getAll(): Collection
@@ -75,6 +164,7 @@ readonly class TaskService
         $query = Task::where('user_id', auth()->user()->id)
             ->with('progressions')
             ->with('flags')
+            ->with('recurrence')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where(function ($query) use ($thisMorning, $tonight) {
                     $query->where('scheduled_at', '>=', $thisMorning)
@@ -109,6 +199,7 @@ readonly class TaskService
 
         return Task::where('user_id', auth()->user()->id)
             ->with('progressions')
+            ->with('recurrence')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where('scheduled_at', '>=', $thisMorning)
                     ->where('scheduled_at', '<=', $tonight)
@@ -123,6 +214,7 @@ readonly class TaskService
         $tonight = $this->getTonight($tz);
         return Task::where('user_id', auth()->user()->id)
             ->with('progressions')
+            ->with('recurrence')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where('completed_at', '>=', $thisMorning)
                     ->where('completed_at', '<=', $tonight);
@@ -135,6 +227,7 @@ readonly class TaskService
         $thisMorning = $this->getThisMorning($tz);
         return Task::where('user_id', auth()->user()->id)
             ->with('progressions')
+            ->with('recurrence')
             ->where(function (Builder $query) use ($thisMorning) {
                 $query->where('scheduled_at', '<', $thisMorning)
                     ->where('completed_at', null);

@@ -12,6 +12,7 @@ import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 import Task from "@/Pages/Tasks/Partials/Task.vue";
 
 const newTaskLabel = ref('');
+const newTaskRecurrenceId = ref(null);
 const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
 const lastSaved = ref(new Date());
 const reactiveTasks = reactive({});
@@ -58,13 +59,14 @@ const cleanTask = (storedTask) => {
 const addTask = () => {
     if (newTaskLabel.value === '') return;
     watchActive = false;
-    reactiveTasks.value.push({label: newTaskLabel.value, 'completed_at': null});
-    axios.post(route('tasks.store'), {label: newTaskLabel.value})
+    reactiveTasks.value.push({label: newTaskLabel.value, 'completed_at': null, recurrence_id: newTaskRecurrenceId.value});
+    axios.post(route('tasks.store'), {label: newTaskLabel.value, recurrence_id: newTaskRecurrenceId.value})
         .then((response) => {
                 reactiveTasks.value[reactiveTasks.value.length - 1] = response.data;
             }
         ).then(() => {
             newTaskLabel.value = '';
+            newTaskRecurrenceId.value = null;
             watchActive = true;
             storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
             calculateProgress()
@@ -117,6 +119,15 @@ const getAllFlags = () => {
         });
 }
 getAllFlags();
+
+const allRecurrences = ref([]);
+const getAllRecurrences = () => {
+    axios.get(route('recurrences.index'))
+        .then(response => {
+            allRecurrences.value = response.data;
+        });
+}
+getAllRecurrences();
 </script>
 
 <template>
@@ -142,6 +153,12 @@ getAllFlags();
                 <div class="border border-gray-400 m-4 p-2 flex justify-between align-center items-center gap-2">
                     <input type="text" v-model="newTaskLabel" placeholder="New task label"
                            class="w-full rounded" @keydown.enter="addTask">
+                    <select v-model="newTaskRecurrenceId" class="rounded text-sm">
+                        <option :value="null">No recurrence</option>
+                        <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
+                            {{ recurrence.label }}
+                        </option>
+                    </select>
                     <SaveButton @click="addTask"/>
                 </div>
             </div>
@@ -150,7 +167,8 @@ getAllFlags();
             </div>
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
                 <template v-for="task in reactiveTasks.value">
-                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"/>
+                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"
+                          :all-recurrences="allRecurrences"/>
                 </template>
             </div>
             <div class="min-h-6" ref="belowList">

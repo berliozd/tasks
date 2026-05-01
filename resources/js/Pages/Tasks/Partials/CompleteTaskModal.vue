@@ -17,7 +17,7 @@ const hideModal = () => {
 }
 
 const toggleChecked = async () => {
-    if (!checked.value) isShowModal.value = true;
+    if (!checked.value && !props.task.recurrence_id) isShowModal.value = true;
     checked.value = !checked.value;
     await updateTask()
     emits('changed')
