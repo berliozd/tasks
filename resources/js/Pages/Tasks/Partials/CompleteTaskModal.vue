@@ -3,7 +3,7 @@ import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Modal from "@/Components/Modal.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import CheckButton from "@/Components/CheckButton.vue";
-import {ref} from "vue";
+import {ref, watch} from "vue";
 import axios from "axios";
 
 const props = defineProps({task: Object});
@@ -11,6 +11,13 @@ const emits = defineEmits(['changed']);
 
 const isShowModal = ref(false)
 const checked = ref(props.task.completed_at !== null)
+
+watch(
+    () => props.task.completed_at,
+    (completedAt) => {
+        checked.value = completedAt !== null;
+    }
+);
 
 const hideModal = () => {
     isShowModal.value = false

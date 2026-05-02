@@ -214,7 +214,7 @@ const filteredTasks = computed(() => {
                 </div>
             </div>
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-                <template v-for="task in filteredTasks">
+                <template v-for="task in filteredTasks" :key="task.id">
                     <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"
                           :all-recurrences="allRecurrences"/>
                 </template>
