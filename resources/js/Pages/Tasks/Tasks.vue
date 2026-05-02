@@ -2,7 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SaveButton from "@/Components/SaveButton.vue";
 import axios from 'axios';
-import {reactive, ref, watch} from "vue";
+import {computed, reactive, ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
@@ -21,8 +21,23 @@ const progress = ref(null);
 let storedReactiveTasks = null;
 let watchActive = false;
 
+const selectedFlagIds = ref([]);
+
 const scrollTo = (view) => {
     view.value?.scrollIntoView({behavior: 'smooth'})
+}
+
+const toggleFlagFilter = (flagId) => {
+    const idx = selectedFlagIds.value.indexOf(flagId);
+    if (idx >= 0) {
+        selectedFlagIds.value.splice(idx, 1);
+    } else {
+        selectedFlagIds.value.push(flagId);
+    }
+}
+
+const clearFlagFilters = () => {
+    selectedFlagIds.value = [];
 }
 
 const updateTask = (task) => {
@@ -128,6 +143,16 @@ const getAllRecurrences = () => {
         });
 }
 getAllRecurrences();
+
+const filteredTasks = computed(() => {
+    const tasks = reactiveTasks.value ?? [];
+    if (!selectedFlagIds.value.length) return tasks;
+    return tasks.filter(task => {
+        if (!task.flags || !task.flags.length) return false;
+        // Match ANY selected flag.
+        return task.flags.some(flag => selectedFlagIds.value.includes(flag.id));
+    });
+});
 </script>
 
 <template>
@@ -165,8 +190,31 @@ getAllRecurrences();
             <div class="shadow-lg sm:rounded-lg bg-gray-200 my-6 px-2" v-if="!isNaN(progress) && progress > 0">
                 <progress class="my-4 progress w-full" :value="progress" max="100">50%</progress>
             </div>
+
+            <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-6" v-if="allFlags.length">
+                <div class="border border-gray-400 m-4 p-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-sm font-semibold">Filter by flags</div>
+                        <button class="btn btn-xs" @click="clearFlagFilters" :disabled="!selectedFlagIds.length">
+                            Clear
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <button v-for="flag in allFlags"
+                                :key="flag.id"
+                                type="button"
+                                class="btn btn-sm gap-2 normal-case"
+                                :class="selectedFlagIds.includes(flag.id) ? 'btn-neutral' : 'btn-ghost'"
+                                @click="toggleFlagFilter(flag.id)">
+                            <span class="inline-block w-3 h-3 border border-gray-700"
+                                  :style="{ backgroundColor: flag.color }"/>
+                            <span class="truncate max-w-48">{{ flag.name }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-                <template v-for="task in reactiveTasks.value">
+                <template v-for="task in filteredTasks">
                     <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"
                           :all-recurrences="allRecurrences"/>
                 </template>
