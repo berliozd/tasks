@@ -44,6 +44,13 @@ class TaskController extends Controller
         $this->taskService->destroy((int)$id);
     }
 
+    public function completed(Request $request)
+    {
+        $period = (string) $request->query('period', 'day');
+        $endDate = $request->query('end_date'); // YYYY-MM-DD in user's timezone
+        return $this->taskService->getCompletedPast($period, is_string($endDate) ? $endDate : null);
+    }
+
     public function history(string $id)
     {
         return $this->taskService->getHistory((int)$id);

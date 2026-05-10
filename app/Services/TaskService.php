@@ -244,6 +244,18 @@ readonly class TaskService
         return now($tz)->setHour(23)->setMinute(59)->setSecond(59)->subSeconds($tz->getOffset(now()));
     }
 
+    private function getMorningForDate(string $ymd, DateTimeZone $tz): Carbon
+    {
+        $local = Carbon::parse($ymd . ' 00:00:00', $tz);
+        return $local->copy()->subSeconds($tz->getOffset($local));
+    }
+
+    private function getNightForDate(string $ymd, DateTimeZone $tz): Carbon
+    {
+        $local = Carbon::parse($ymd . ' 23:59:59', $tz);
+        return $local->copy()->subSeconds($tz->getOffset($local));
+    }
+
     public function addFlag(int $taskId, int $flagId): Task
     {
         $task = $this->taskRepository->find($taskId);
@@ -258,6 +270,56 @@ readonly class TaskService
         $this->checkPerms($task);
         $task->flags()->detach($flagId);
         return $task;
+    }
+
+    /**
+     * Completed tasks over a past window ending on a given day (default: yesterday).
+     *
+     * period: day|week|month
+     * endDateYmd: YYYY-MM-DD in user's timezone.
+     */
+    public function getCompletedPast(string $period = 'day', ?string $endDateYmd = null): Collection
+    {
+        $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
+
+        $endLocal = $endDateYmd
+            ? Carbon::parse($endDateYmd, $tz)
+            : now($tz)->subDay();
+
+        $endYmd = $endLocal->format('Y-m-d');
+
+        $days = match ($period) {
+            'day' => 1,
+            'week' => 7,
+            'month' => 30,
+            default => 1,
+        };
+
+        $startLocal = $endLocal->copy()->subDays($days - 1);
+        $startYmd = $startLocal->format('Y-m-d');
+
+        $start = $this->getMorningForDate($startYmd, $tz);
+        $end = $this->getNightForDate($endYmd, $tz);
+
+        $collection = Task::where('user_id', auth()->user()->id)
+            ->with('flags')
+            ->with('recurrence')
+            ->whereNotNull('completed_at')
+            ->where('completed_at', '>=', $start)
+            ->where('completed_at', '<=', $end)
+            ->orderByDesc('completed_at')
+            ->get();
+
+        foreach ($collection->all() as $task) {
+            if (!empty($task->scheduled_at)) {
+                $task->scheduled_at = $task->scheduled_at . '.0Z';
+            }
+            if (!empty($task->completed_at)) {
+                $task->completed_at = $task->completed_at . '.0Z';
+            }
+        }
+
+        return $collection;
     }
 
     /**

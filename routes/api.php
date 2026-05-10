@@ -14,6 +14,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks', [App\Http\Controllers\Api\TaskController::class, 'index'])->name('tasks.index');
     Route::post('/tasks', [App\Http\Controllers\Api\TaskController::class, 'store'])->name('tasks.store');
     Route::delete('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'destroy'])->name('tasks.delete');
+    Route::get('/tasks/completed', [App\Http\Controllers\Api\TaskController::class, 'completed'])->name('tasks.completed');
     Route::get('/tasks/{id}/history', [App\Http\Controllers\Api\TaskController::class, 'history'])->name('tasks.history');
     Route::post('/tasks/add-flag/{taskId}/{flagId}', [App\Http\Controllers\Api\TaskController::class, 'addFlag'])->name(
         'tasks.add.flag'
