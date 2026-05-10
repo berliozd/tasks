@@ -307,7 +307,7 @@ readonly class TaskService
             ->whereNotNull('completed_at')
             ->where('completed_at', '>=', $start)
             ->where('completed_at', '<=', $end)
-            ->orderByDesc('completed_at')
+            ->orderBy('completed_at')
             ->get();
 
         foreach ($collection->all() as $task) {

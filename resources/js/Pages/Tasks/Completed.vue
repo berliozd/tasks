@@ -1,8 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
-import {ref, watch} from 'vue';
-import {format} from 'date-fns';
+import {computed, ref, watch} from 'vue';
+import {addDays, format, parseISO} from 'date-fns';
 import {usePage} from '@inertiajs/vue3';
 
 const period = ref('day'); // day|week|month
@@ -16,6 +16,20 @@ const yesterdayYmd = () => {
 };
 
 const endDate = ref(yesterdayYmd());
+const maxEndDate = computed(() => yesterdayYmd());
+
+const periodDays = computed(() => {
+    if (period.value === 'week') return 7;
+    if (period.value === 'month') return 30;
+    return 1;
+});
+
+const shiftEndDate = (deltaDays) => {
+    const current = parseISO(endDate.value);
+    const next = addDays(current, deltaDays);
+    const nextYmd = format(next, 'yyyy-MM-dd');
+    endDate.value = nextYmd > maxEndDate.value ? maxEndDate.value : nextYmd;
+};
 
 const formatDateTime = (date) => {
     if (!date) return '';
@@ -52,6 +66,20 @@ watch([period, endDate], fetchCompleted, {immediate: true});
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg p-4 mt-6">
                 <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-1">
+                        <button class="px-2 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                                title="Previous"
+                                @click="shiftEndDate(-periodDays)">
+                            &lt;
+                        </button>
+                        <button class="px-2 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                                title="Next"
+                                :disabled="endDate >= maxEndDate"
+                                @click="shiftEndDate(periodDays)">
+                            &gt;
+                        </button>
+                    </div>
+
                     <div class="flex rounded border border-gray-300 overflow-hidden">
                         <button class="px-3 py-1 text-sm"
                                 :class="period === 'day' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'"
@@ -72,7 +100,7 @@ watch([period, endDate], fetchCompleted, {immediate: true});
 
                     <div class="flex items-center gap-2">
                         <div class="text-sm text-gray-600">End date</div>
-                        <input type="date" v-model="endDate" class="rounded border-gray-300 text-sm"/>
+                        <input type="date" v-model="endDate" :max="maxEndDate" class="rounded border-gray-300 text-sm"/>
                     </div>
 
                     <div v-if="loading" class="text-sm text-gray-400">Loading...</div>
@@ -101,4 +129,3 @@ watch([period, endDate], fetchCompleted, {immediate: true});
         </div>
     </AppLayout>
 </template>
-
