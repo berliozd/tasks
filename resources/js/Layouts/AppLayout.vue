@@ -1,18 +1,27 @@
 <script setup>
 import {ref} from 'vue';
-import {Head, Link, router} from '@inertiajs/vue3';
+import {Head, Link, router, usePage} from '@inertiajs/vue3';
 import ApplicationMark from '@/Components/ApplicationMark.vue';
 import Banner from '@/Components/Banner.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
+import {useIdleRedirect} from '@/Composables/useIdleRedirect';
 
 defineProps({
     title: String,
 });
 
 const showingNavigationDropdown = ref(false);
+
+const page = usePage();
+
+useIdleRedirect({
+    // Redirect a bit before the server session likely expires.
+    timeoutMs: Math.max(0, Number(page.props.sessionIdleMs ?? 0) - 60_000),
+    to: '/',
+});
 
 const switchToTeam = (team) => {
     router.put(route('current-team.update'), {

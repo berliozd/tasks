@@ -39,6 +39,8 @@ class HandleInertiaRequests extends Middleware
             'appName' => config('app.name'),
             'appLocale' => config('app.locale'),
             'environment' => config('app.env'),
+            // Client-side idle redirect uses this to approximate session expiry without polling.
+            'sessionIdleMs' => (int) config('session.lifetime') * 60 * 1000,
         ];
     }
 }
