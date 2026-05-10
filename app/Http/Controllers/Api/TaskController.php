@@ -44,6 +44,11 @@ class TaskController extends Controller
         $this->taskService->destroy((int)$id);
     }
 
+    public function history(string $id)
+    {
+        return $this->taskService->getHistory((int)$id);
+    }
+
     public function addFlag(string $taskId, string $flagId)
     {
         return $this->taskService->addFlag((int)$taskId, (int)$flagId);

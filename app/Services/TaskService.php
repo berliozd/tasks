@@ -259,4 +259,91 @@ readonly class TaskService
         $task->flags()->detach($flagId);
         return $task;
     }
+
+    /**
+     * Return the "series" history for a task by walking its parent chain (previous occurrences).
+     * Includes the immediate parent and all earlier ancestors up to the root.
+     *
+     * Also returns the upcoming occurrence (child) when it exists.
+     *
+     * @return array{history: array<int, array{id:int,label:string,scheduled_at:mixed,completed_at:mixed}>, upcoming: array{id:int,label:string,scheduled_at:mixed,completed_at:mixed}|null}
+     * @throws Exception
+     */
+    public function getHistory(int $id): array
+    {
+        $task = Task::find($id);
+        if (!$task) {
+            throw new Exception('Task not found');
+        }
+        $this->checkPerms($task);
+
+        $history = [];
+        $visited = [];
+        $current = $task;
+        $depth = 0;
+
+        while (!empty($current->parent_task_id)) {
+            $depth++;
+            if ($depth > 200) {
+                break;
+            }
+
+            $parentId = (int)$current->parent_task_id;
+            if (isset($visited[$parentId])) {
+                break;
+            }
+            $visited[$parentId] = true;
+
+            $parent = Task::find($parentId);
+            if (!$parent) {
+                break;
+            }
+            $this->checkPerms($parent);
+
+            $row = [
+                'id' => $parent->id,
+                'label' => (string)$parent->label,
+                'scheduled_at' => $parent->scheduled_at,
+                'completed_at' => $parent->completed_at,
+            ];
+
+            // Match the frontend date parsing convention used in getAll().
+            if (!empty($row['scheduled_at'])) {
+                $row['scheduled_at'] = $row['scheduled_at'] . '.0Z';
+            }
+            if (!empty($row['completed_at'])) {
+                $row['completed_at'] = $row['completed_at'] . '.0Z';
+            }
+
+            $history[] = $row;
+            $current = $parent;
+        }
+
+        $upcoming = Task::where('user_id', $task->user_id)
+            ->where('parent_task_id', $task->id)
+            ->orderBy('scheduled_at')
+            ->first();
+
+        $upcomingRow = null;
+        if ($upcoming) {
+            $this->checkPerms($upcoming);
+            $upcomingRow = [
+                'id' => $upcoming->id,
+                'label' => (string)$upcoming->label,
+                'scheduled_at' => $upcoming->scheduled_at,
+                'completed_at' => $upcoming->completed_at,
+            ];
+            if (!empty($upcomingRow['scheduled_at'])) {
+                $upcomingRow['scheduled_at'] = $upcomingRow['scheduled_at'] . '.0Z';
+            }
+            if (!empty($upcomingRow['completed_at'])) {
+                $upcomingRow['completed_at'] = $upcomingRow['completed_at'] . '.0Z';
+            }
+        }
+
+        return [
+            'history' => $history,
+            'upcoming' => $upcomingRow,
+        ];
+    }
 }

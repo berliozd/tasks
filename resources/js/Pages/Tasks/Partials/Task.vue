@@ -6,9 +6,14 @@ import {Link, usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
+import {ref} from "vue";
 
 const props = defineProps({task: Object, allFlags: Array, allRecurrences: Array});
 const emits = defineEmits(['deleted', 'changed']);
+
+const historyLoading = ref(false);
+const historyItems = ref([]);
+const upcomingItem = ref(null);
 
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
@@ -84,6 +89,25 @@ const recurrenceLabel = (task) => {
     if (!props.allRecurrences || !task.recurrence_id) return '';
     return props.allRecurrences.find(r => r.id === task.recurrence_id)?.label ?? '';
 }
+
+const loadHistory = async () => {
+    if (!props.task?.id) return;
+    historyLoading.value = true;
+    try {
+        const response = await axios.get(route('tasks.history', props.task.id));
+        historyItems.value = response.data?.history ?? [];
+        upcomingItem.value = response.data?.upcoming ?? null;
+    } finally {
+        historyLoading.value = false;
+    }
+}
+
+const toggleEditing = async () => {
+    props.task.editing = !props.task.editing;
+    if (props.task.editing) {
+        await loadHistory();
+    }
+}
 </script>
 
 <template>
@@ -95,7 +119,7 @@ const recurrenceLabel = (task) => {
                     <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
                 <div class="w-full">
-                    <div @click="task.editing = !task.editing" class="cursor-pointer w-full">
+                    <div @click="toggleEditing" class="cursor-pointer w-full">
                         {{ task.label }}
                     </div>
                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
@@ -161,6 +185,28 @@ const recurrenceLabel = (task) => {
                             {{ recurrence.label }}
                         </option>
                     </select>
+                </div>
+                <div v-if="upcomingItem || task.parent_task_id" class="my-3 border-t border-gray-300 pt-2">
+                    <div v-if="upcomingItem" class="mb-3">
+                        <div class="text-xs text-gray-600">Upcoming occurrence :</div>
+                        <div class="mt-1 text-xs text-gray-700 flex justify-between gap-3">
+                            <div class="truncate">{{ upcomingItem.label }}</div>
+                            <div class="shrink-0 text-gray-500">
+                                {{ upcomingItem.scheduled_at ? formatDateTime(upcomingItem.scheduled_at) : '' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-600">Previous occurrences :</div>
+                    <div v-if="historyLoading" class="text-xs text-gray-400">Loading...</div>
+                    <div v-else-if="!historyItems.length" class="text-xs text-gray-400">None</div>
+                    <div v-else class="mt-1 space-y-1">
+                        <div v-for="h in historyItems" :key="h.id" class="text-xs text-gray-700 flex justify-between gap-3">
+                            <div class="truncate">{{ h.label }}</div>
+                            <div class="shrink-0 text-gray-500">
+                                {{ h.completed_at ? formatDateTime(h.completed_at) : '' }}
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex justify-between">
                     <div class="text-xs text-gray-400 underline">
