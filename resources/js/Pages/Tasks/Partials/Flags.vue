@@ -1,12 +1,25 @@
 <script setup>
 import {Link} from "@inertiajs/vue3";
-import {ref} from "vue";
+import {ref, watch} from "vue";
 
 const props = defineProps({allFlags: Array});
 const emit = defineEmits(["filter"]);
 
 const selectedFlagIds = ref([]);
 const isOpen = ref(true);
+
+watch(
+    () => props.allFlags,
+    (flags) => {
+        const allowed = new Set((flags ?? []).map(f => f.id));
+        const next = selectedFlagIds.value.filter(id => allowed.has(id));
+        if (next.length !== selectedFlagIds.value.length) {
+            selectedFlagIds.value = next;
+            emit("filter", selectedFlagIds);
+        }
+    },
+    {immediate: true}
+);
 
 const toggleOpen = () => {
     isOpen.value = !isOpen.value;

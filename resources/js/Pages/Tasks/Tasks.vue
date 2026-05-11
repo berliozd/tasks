@@ -127,6 +127,15 @@ const getAllFlags = () => {
 }
 getAllFlags();
 
+const pageFlags = computed(() => {
+    const flagsById = new Set();
+    const tasks = reactiveTasks.value ?? [];
+    tasks.forEach(task => {
+        (task.flags ?? []).forEach(flag => flagsById.add(flag.id));
+    });
+    return (allFlags.value ?? []).filter(flag => flagsById.has(flag.id));
+});
+
 const allRecurrences = ref([]);
 const getAllRecurrences = () => {
     axios.get(route('recurrences.index'))
@@ -188,7 +197,7 @@ const updateSelectedFlags = (e) => {
                 <progress class="my-4 progress w-full" :value="progress" max="100">50%</progress>
             </div>
 
-            <Flags :all-flags="allFlags" @filter="updateSelectedFlags"/>
+            <Flags :all-flags="pageFlags" @filter="updateSelectedFlags"/>
 
             <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
                 <template v-for="task in filteredTasks" :key="task.id">
