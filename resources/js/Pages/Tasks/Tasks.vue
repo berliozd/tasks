@@ -180,11 +180,13 @@ const updateSelectedFlags = (e) => {
                     )
                 }}
             </div>
-            <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-6">
-                <div class="border border-gray-400 m-4 p-2 flex justify-between align-center items-center gap-2">
+            <div class="overflow-hidden shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-6">
+                <div class="p-4 flex flex-wrap justify-between items-center gap-2">
                     <input type="text" v-model="newTaskLabel" placeholder="New task label"
-                           class="w-full rounded" @keydown.enter="addTask">
-                    <select v-model="newTaskRecurrenceId" class="rounded text-sm">
+                           class="w-full md:flex-1 rounded-md border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                           @keydown.enter="addTask">
+                    <select v-model="newTaskRecurrenceId"
+                            class="rounded-md border-gray-300 text-sm focus:border-gray-400 focus:ring-gray-400">
                         <option :value="null">No recurrence</option>
                         <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
                             {{ recurrence.label }}
@@ -193,17 +195,20 @@ const updateSelectedFlags = (e) => {
                     <SaveButton @click="addTask"/>
                 </div>
             </div>
-            <div class="shadow-lg sm:rounded-lg bg-gray-200 my-6 px-2" v-if="!isNaN(progress) && progress > 0">
-                <progress class="my-4 progress w-full" :value="progress" max="100">50%</progress>
+            <div class="shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 my-6 px-4"
+                 v-if="!isNaN(progress) && progress > 0">
+                <progress class="my-4 progress w-full" :value="progress" max="100"/>
             </div>
 
             <Flags :all-flags="pageFlags" @filter="updateSelectedFlags"/>
 
-            <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-                <template v-for="task in filteredTasks" :key="task.id">
+            <div class="overflow-hidden shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-2">
+                <div class="divide-y divide-gray-100">
+                    <template v-for="task in filteredTasks" :key="task.id">
                     <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"
                           :all-recurrences="allRecurrences"/>
-                </template>
+                    </template>
+                </div>
             </div>
             <div class="min-h-6" ref="belowList">
                 <SavedLabel/>

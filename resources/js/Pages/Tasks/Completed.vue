@@ -4,6 +4,7 @@ import axios from 'axios';
 import {computed, ref, watch} from 'vue';
 import {addDays, format, parseISO} from 'date-fns';
 import {usePage} from '@inertiajs/vue3';
+import FlagSwatches from '@/Components/FlagSwatches.vue';
 
 const period = ref('day'); // day|week|month
 const loading = ref(false);
@@ -64,19 +65,35 @@ watch([period, endDate], fetchCompleted, {immediate: true});
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow sm:rounded-lg p-4 mt-6">
+            <div class="bg-white shadow-sm sm:rounded-lg p-4 mt-6 ring-1 ring-gray-200">
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-1">
-                        <button class="px-2 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
-                                title="Previous"
-                                @click="shiftEndDate(-periodDays)">
-                            &lt;
+                        <button
+                            class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom"
+                            type="button"
+                            data-tip="Previous"
+                            aria-label="Previous"
+                            @click="shiftEndDate(-periodDays)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round"
+                                 class="lucide lucide-chevron-left">
+                                <path d="m15 18-6-6 6-6"/>
+                            </svg>
                         </button>
-                        <button class="px-2 py-1 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-40"
-                                title="Next"
-                                :disabled="endDate >= maxEndDate"
-                                @click="shiftEndDate(periodDays)">
-                            &gt;
+                        <button
+                            class="btn btn-ghost btn-sm btn-square tooltip tooltip-bottom disabled:opacity-40"
+                            type="button"
+                            data-tip="Next"
+                            aria-label="Next"
+                            :disabled="endDate >= maxEndDate"
+                            @click="shiftEndDate(periodDays)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                 stroke-linecap="round" stroke-linejoin="round"
+                                 class="lucide lucide-chevron-right">
+                                <path d="m9 18 6-6-6-6"/>
+                            </svg>
                         </button>
                     </div>
 
@@ -100,29 +117,30 @@ watch([period, endDate], fetchCompleted, {immediate: true});
 
                     <div class="flex items-center gap-2">
                         <div class="text-sm text-gray-600">End date</div>
-                        <input type="date" v-model="endDate" :max="maxEndDate" class="rounded border-gray-300 text-sm"/>
+                        <input type="date" v-model="endDate" :max="maxEndDate"
+                               class="rounded-md border-gray-300 text-sm focus:border-gray-400 focus:ring-gray-400"/>
                     </div>
 
                     <div v-if="loading" class="text-sm text-gray-400">Loading...</div>
                 </div>
             </div>
 
-            <div class="bg-gray-200 shadow sm:rounded-lg mt-4">
+            <div class="bg-white shadow-sm sm:rounded-lg mt-4 ring-1 ring-gray-200 overflow-hidden">
                 <div v-if="!loading && !tasks.length" class="p-4 text-sm text-gray-500">
                     No completed tasks.
                 </div>
-                <div v-for="task in tasks" :key="task.id" class="border-b border-gray-300 p-3 flex justify-between gap-4">
-                    <div class="min-w-0">
-                        <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
-                        <div class="mt-1 flex gap-2">
-                            <div v-for="flag in (task.flags ?? [])" :key="flag.id"
-                                 class="w-4 h-4 border border-gray-700"
-                                 :style="{ 'background-color': flag.color }"
-                                 :title="flag.name"/>
+                <div v-else class="divide-y divide-gray-100">
+                    <div v-for="task in tasks" :key="task.id"
+                         class="p-3 flex justify-between gap-4 hover:bg-gray-50 transition">
+                        <div class="min-w-0">
+                            <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
                         </div>
-                    </div>
-                    <div class="shrink-0 text-xs text-gray-500">
-                        {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
+                        <div class="shrink-0 flex items-center gap-3">
+                            <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
+                            <div class="text-xs text-gray-500">
+                                {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

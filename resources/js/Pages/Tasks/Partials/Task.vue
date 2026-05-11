@@ -4,6 +4,7 @@ import CompleteTaskModal from "@/Pages/Tasks/Partials/CompleteTaskModal.vue";
 import {format} from "date-fns";
 import {Link, usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
+import FlagSwatches from "@/Components/FlagSwatches.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 import {ref} from "vue";
@@ -111,16 +112,21 @@ const toggleEditing = async () => {
 </script>
 
 <template>
-    <div class="border border-gray-400 m-4"
-         :class="task.completed_at?'bg-gray-300':'bg-gray-100'">
-        <div class="p-2" :class="taskIsLate(task)?'border-t-2 border-red-400':''">
+    <div class="px-4 py-3" :class="task.completed_at ? 'bg-gray-50' : 'bg-white'">
+        <div class="rounded-lg ring-1 px-3 py-2 transition"
+             :class="[
+                taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400' : 'ring-gray-200 hover:ring-gray-300',
+                task.completed_at ? 'bg-gray-50' : 'bg-white'
+             ]">
             <div class="flex justify-between gap-2">
                 <div class="flex">
                     <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
                 <div class="w-full">
                     <div @click="toggleEditing" class="cursor-pointer w-full">
-                        {{ task.label }}
+                        <span :class="task.completed_at ? 'text-gray-500 line-through' : 'text-gray-900'">
+                            {{ task.label }}
+                        </span>
                     </div>
                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
                         Completed on:{{ formatDateTime(task.completed_at) }}
@@ -130,28 +136,25 @@ const toggleEditing = async () => {
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <template v-for="flag in task.flags">
-                        <div class="w-6 h-6 border border-gray-700 tooltip tooltip-left"
-                             :style="{ 'background-color': flag.color  }" :data-tip="flag.name "/>
-                    </template>
+                    <FlagSwatches :flags="task.flags" size-class="w-5 h-5" gap-class="gap-2"/>
                 </div>
                 <ReScheduleModal @reschedule="rescheduleTomorrow(task)"/>
                 <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
                                 @click="updateProgression(task)"/>
                 <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
             </div>
-            <div :class="task.editing?'':'hidden'" class="m-2">
+            <div :class="task.editing?'':'hidden'" class="mt-3">
                 <div>
                     <div class="text-xs">Label :</div>
                     <textarea v-model="task.label"
-                              class="rounded-md shadow-sm w-full"
+                              class="rounded-md shadow-sm w-full border-gray-300 focus:border-gray-400 focus:ring-gray-400"
                               :disabled="task.completed_at!==null"
                               maxlength="255"/>
                 </div>
                 <div>
                     <div class="text-xs">Description :</div>
                     <textarea v-model="task.description"
-                              class="rounded-md shadow-sm w-full h-48"
+                              class="rounded-md shadow-sm w-full h-48 border-gray-300 focus:border-gray-400 focus:ring-gray-400"
                               :disabled="task.completed_at!==null"
                               maxlength="5000"/>
                 </div>
@@ -178,7 +181,7 @@ const toggleEditing = async () => {
                 <div class="my-2">
                     <div class="text-xs">Recurrence :</div>
                     <select v-model="task.recurrence_id"
-                            class="rounded-md shadow-sm w-full"
+                            class="rounded-md shadow-sm w-full border-gray-300 focus:border-gray-400 focus:ring-gray-400"
                             :disabled="task.completed_at!==null">
                         <option :value="null">No recurrence</option>
                         <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
