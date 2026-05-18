@@ -77,20 +77,30 @@ const taskHasFlag = (task, flag) => {
 }
 
 const addFlag = (task, flag) => {
-    axios.post(route('tasks.add.flag', {taskId: task.id, flagId: flag.id})).then(() => {
+    axios.post(route('tasks.add.flag', {taskId: task.id, flagId: flag.id})).then((response) => {
         // Update locally to avoid reloading the whole list (which collapses the editor).
-        task.flags = task.flags ?? [];
-        if (!task.flags.some(f => f.id === flag.id)) {
-            task.flags.push(flag);
+        if (response?.data) {
+            task.flags = response.data.flags ?? task.flags ?? [];
+            task.updated_at = response.data.updated_at ?? task.updated_at;
+        } else {
+            task.flags = task.flags ?? [];
+            if (!task.flags.some(f => f.id === flag.id)) {
+                task.flags.push(flag);
+            }
         }
-    })
+    });
 }
 
 const deleteFlag = (task, flag) => {
-    axios.post(route('tasks.delete.flag', {taskId: task.id, flagId: flag.id})).then(() => {
+    axios.post(route('tasks.delete.flag', {taskId: task.id, flagId: flag.id})).then((response) => {
         // Update locally to avoid reloading the whole list (which collapses the editor).
-        task.flags = (task.flags ?? []).filter(f => f.id !== flag.id);
-    })
+        if (response?.data) {
+            task.flags = response.data.flags ?? (task.flags ?? []).filter(f => f.id !== flag.id);
+            task.updated_at = response.data.updated_at ?? task.updated_at;
+        } else {
+            task.flags = (task.flags ?? []).filter(f => f.id !== flag.id);
+        }
+    });
 }
 
 const recurrenceLabel = (task) => {
@@ -246,6 +256,9 @@ watch(editFlagIds, (next, prev) => {
                         Scheduled on:{{ formatDateTime(task.scheduled_at) }}
                     </div>
                 </div>
+            </div>
+            <div class="mt-2 text-xs text-gray-400 underline">
+                Updated on:{{ formatDateTime(task.updated_at) }}
             </div>
         </div>
     </div>

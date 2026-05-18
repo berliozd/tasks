@@ -46,7 +46,7 @@ readonly class TaskService
         if ($wasCompleted && $updatedTask->completed_at === null && $this->isRecurring($updatedTask)) {
             $this->deleteFutureOccurrences($updatedTask);
         }
-        return $updatedTask;
+        return $this->normalizeTaskDates($updatedTask);
     }
 
     /**
@@ -72,7 +72,7 @@ readonly class TaskService
             $task->load('flags');
         }
 
-        return $task;
+        return $this->normalizeTaskDates($task);
     }
 
     private function checkPerms(Task $task): void
@@ -182,12 +182,7 @@ readonly class TaskService
 
         $collection = $query->get();
         foreach ($collection->all() as $task) {
-            if (!empty($task->scheduled_at)) {
-                $task->scheduled_at = $task->scheduled_at . '.0Z';
-            }
-            if (!empty($task->completed_at)) {
-                $task->completed_at = $task->completed_at . '.0Z';
-            }
+            $this->normalizeTaskDates($task);
         }
         return $collection;
     }
@@ -270,7 +265,8 @@ readonly class TaskService
         $task = $this->taskRepository->find($taskId);
         $this->checkPerms($task);
         $task->flags()->attach($flagId);
-        return $task;
+        $task->load('flags');
+        return $this->normalizeTaskDates($task);
     }
 
     public function deleteFlag(int $taskId, int $flagId): Task
@@ -278,7 +274,8 @@ readonly class TaskService
         $task = $this->taskRepository->find($taskId);
         $this->checkPerms($task);
         $task->flags()->detach($flagId);
-        return $task;
+        $task->load('flags');
+        return $this->normalizeTaskDates($task);
     }
 
     /**
@@ -320,15 +317,27 @@ readonly class TaskService
             ->get();
 
         foreach ($collection->all() as $task) {
-            if (!empty($task->scheduled_at)) {
-                $task->scheduled_at = $task->scheduled_at . '.0Z';
-            }
-            if (!empty($task->completed_at)) {
-                $task->completed_at = $task->completed_at . '.0Z';
-            }
+            $this->normalizeTaskDates($task);
         }
 
         return $collection;
+    }
+
+    private function normalizeTaskDates(Task $task): Task
+    {
+        foreach (['scheduled_at', 'completed_at', 'updated_at'] as $field) {
+            $v = $task->{$field} ?? null;
+            if (empty($v)) {
+                continue;
+            }
+            $s = (string) $v;
+            if (str_ends_with($s, 'Z')) {
+                $task->{$field} = $s;
+                continue;
+            }
+            $task->{$field} = $s . '.0Z';
+        }
+        return $task;
     }
 
     /**

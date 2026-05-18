@@ -32,7 +32,16 @@ const scrollTo = (view) => {
 
 const updateTask = (task) => {
     axios.patch(route('tasks.update', task.id), task).then(
-        () => {
+        (response) => {
+            // Keep local state in sync so "updated at" refreshes without reloading.
+            if (response?.data) {
+                task.updated_at = response.data.updated_at;
+                task.scheduled_at = response.data.scheduled_at;
+                task.completed_at = response.data.completed_at;
+                task.recurrence_id = response.data.recurrence_id;
+                task.label = response.data.label;
+                task.description = response.data.description;
+            }
             useStore().setSaved('Saved!');
             lastSaved.value = new Date();
         }

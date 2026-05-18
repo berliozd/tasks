@@ -1,5 +1,5 @@
 <script setup>
-import {computed, onBeforeUnmount, onMounted, ref} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import FlagSwatches from '@/Components/FlagSwatches.vue'
 
 const props = defineProps({
@@ -14,6 +14,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const open = ref(false)
 const rootEl = ref(null)
+const panelStyle = ref({})
 
 const ids = computed(() => new Set(props.modelValue ?? []))
 const selectedFlags = computed(() => (props.allFlags ?? []).filter(f => ids.value.has(f.id)))
@@ -51,14 +52,45 @@ const onDocKeydown = (e) => {
     if (e.key === 'Escape') close()
 }
 
+const updatePanelPosition = async () => {
+    await nextTick()
+    const root = rootEl.value
+    if (!root) return
+    const btn = root.querySelector('button')
+    if (!btn) return
+
+    const r = btn.getBoundingClientRect()
+    const margin = 12
+    const maxWidth = Math.min(288, window.innerWidth - margin * 2) // 18rem = 288px
+    const left = Math.min(
+        window.innerWidth - margin - maxWidth,
+        Math.max(margin, r.right - maxWidth)
+    )
+    const top = Math.min(window.innerHeight - margin, r.bottom + 8)
+    const maxHeight = Math.max(160, window.innerHeight - top - margin)
+
+    panelStyle.value = {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${maxWidth}px`,
+        maxHeight: `${maxHeight}px`,
+    }
+}
+
+watch(open, (v) => {
+    if (v) updatePanelPosition()
+})
+
 onMounted(() => {
     document.addEventListener('pointerdown', onDocPointerDown)
     document.addEventListener('keydown', onDocKeydown)
+    window.addEventListener('resize', updatePanelPosition)
 })
 
 onBeforeUnmount(() => {
     document.removeEventListener('pointerdown', onDocPointerDown)
     document.removeEventListener('keydown', onDocKeydown)
+    window.removeEventListener('resize', updatePanelPosition)
 })
 </script>
 
@@ -85,8 +117,9 @@ onBeforeUnmount(() => {
         </button>
 
         <div v-if="open"
-             class="absolute right-0 z-30 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-lg bg-white ring-1 ring-gray-200 shadow-lg overflow-hidden">
-            <div class="flex flex-col max-h-[60vh]">
+             class="fixed z-50 rounded-lg bg-white ring-1 ring-gray-200 shadow-lg overflow-hidden"
+             :style="panelStyle">
+            <div class="flex flex-col" :style="{ maxHeight: panelStyle.maxHeight }">
                 <div class="sticky top-0 bg-white flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100">
                     <div class="text-xs text-gray-500 truncate">Select flags</div>
                     <button type="button" class="btn btn-ghost btn-xs" :disabled="!(modelValue?.length ?? 0)" @click="clear">
@@ -114,4 +147,3 @@ onBeforeUnmount(() => {
         </div>
     </div>
 </template>
-
