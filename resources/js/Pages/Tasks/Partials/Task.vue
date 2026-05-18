@@ -76,13 +76,18 @@ const taskHasFlag = (task, flag) => {
 
 const addFlag = (task, flag) => {
     axios.post(route('tasks.add.flag', {taskId: task.id, flagId: flag.id})).then(() => {
-        emits('changed')
+        // Update locally to avoid reloading the whole list (which collapses the editor).
+        task.flags = task.flags ?? [];
+        if (!task.flags.some(f => f.id === flag.id)) {
+            task.flags.push(flag);
+        }
     })
 }
 
 const deleteFlag = (task, flag) => {
     axios.post(route('tasks.delete.flag', {taskId: task.id, flagId: flag.id})).then(() => {
-        emits('changed')
+        // Update locally to avoid reloading the whole list (which collapses the editor).
+        task.flags = (task.flags ?? []).filter(f => f.id !== flag.id);
     })
 }
 

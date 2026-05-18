@@ -62,8 +62,17 @@ readonly class TaskService
     public function create(array $data): Task
     {
         $data['user_id'] = auth()->user()->id;
+        $flagIds = $data['flag_ids'] ?? null;
+        unset($data['flag_ids']);
         $this->prepareData($data);
-        return $this->taskRepository->create($data);
+        $task = $this->taskRepository->create($data);
+
+        if (is_array($flagIds) && !empty($flagIds)) {
+            $task->flags()->sync(array_map('intval', $flagIds));
+            $task->load('flags');
+        }
+
+        return $task;
     }
 
     private function checkPerms(Task $task): void
