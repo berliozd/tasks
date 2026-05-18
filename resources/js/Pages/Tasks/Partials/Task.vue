@@ -5,9 +5,10 @@ import {format} from "date-fns";
 import {Link, usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
 import FlagSwatches from "@/Components/FlagSwatches.vue";
+import FlagMultiSelect from "@/Components/FlagMultiSelect.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
-import {ref} from "vue";
+import {ref, watch} from "vue";
 
 const props = defineProps({task: Object, allFlags: Array, allRecurrences: Array});
 const emits = defineEmits(['deleted', 'changed']);
@@ -15,6 +16,7 @@ const emits = defineEmits(['deleted', 'changed']);
 const historyLoading = ref(false);
 const historyItems = ref([]);
 const upcomingItem = ref(null);
+const editFlagIds = ref([]);
 
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
@@ -111,9 +113,31 @@ const loadHistory = async () => {
 const toggleEditing = async () => {
     props.task.editing = !props.task.editing;
     if (props.task.editing) {
+        editFlagIds.value = (props.task.flags ?? []).map(f => f.id);
         await loadHistory();
     }
 }
+
+watch(editFlagIds, (next, prev) => {
+    if (!props.task?.editing) return;
+    const nextSet = new Set(next ?? []);
+    const prevSet = new Set(prev ?? []);
+
+    // Added
+    for (const id of nextSet) {
+        if (!prevSet.has(id)) {
+            const flag = (props.allFlags ?? []).find(f => f.id === id);
+            if (flag) addFlag(props.task, flag);
+        }
+    }
+    // Removed
+    for (const id of prevSet) {
+        if (!nextSet.has(id)) {
+            const flag = (props.allFlags ?? []).find(f => f.id === id) || {id};
+            deleteFlag(props.task, flag);
+        }
+    }
+}, {deep: true});
 </script>
 
 <template>
@@ -163,36 +187,37 @@ const toggleEditing = async () => {
                               :disabled="task.completed_at!==null"
                               maxlength="5000"/>
                 </div>
-                <div class="flex gap-2 my-2">
-                    <div class="flex gap-2 items-center" v-if="allFlags.length > 0">
-                        <div v-for="flag in allFlags" class="flex"
-                             :class="task.flags?.some(f => f.id === flag.id)?'border-2 border-dashed border-gray-700':''"
-                             @click="taskHasFlag(task, flag)?deleteFlag(task, flag):addFlag(task, flag)">
-                            <div class="w-6 h-6 border border-gray-700 tooltip tooltip-bottom cursor-pointer"
-                                 :style="{ 'background-color': flag.color  }" :data-tip="flag.name "/>
-                        </div>
-                        <Link :href="route('flags')"
-                              class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Update your flags
-                        </Link>
+                <div class="my-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="rounded-lg bg-gray-50 ring-1 ring-gray-200 p-3">
+                        <div class="text-xs text-gray-600 mb-2">Flags :</div>
+                        <template v-if="allFlags.length > 0">
+                            <div class="flex items-center justify-between gap-2">
+                                <FlagMultiSelect v-model="editFlagIds" :all-flags="allFlags"/>
+                                <Link :href="route('flags')"
+                                      class="text-sm text-gray-600 hover:text-gray-900 underline">
+                                    Update your flags
+                                </Link>
+                            </div>
+                        </template>
+                        <template v-else>
+                            <Link :href="route('flags')"
+                                  class="text-sm text-gray-600 hover:text-gray-900 underline">
+                                Create flags
+                            </Link>
+                        </template>
                     </div>
-                    <div v-else>
-                        <Link :href="route('flags')"
-                              class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Create your flags
-                        </Link>
+
+                    <div class="rounded-lg bg-gray-50 ring-1 ring-gray-200 p-3">
+                        <div class="text-xs text-gray-600 mb-2">Recurrence :</div>
+                        <select v-model="task.recurrence_id"
+                                class="h-10 rounded-md shadow-sm w-full border-gray-300 focus:border-gray-400 focus:ring-gray-400 bg-white"
+                                :disabled="task.completed_at!==null">
+                            <option :value="null">No recurrence</option>
+                            <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
+                                {{ recurrence.label }}
+                            </option>
+                        </select>
                     </div>
-                </div>
-                <div class="my-2">
-                    <div class="text-xs">Recurrence :</div>
-                    <select v-model="task.recurrence_id"
-                            class="rounded-md shadow-sm w-full border-gray-300 focus:border-gray-400 focus:ring-gray-400"
-                            :disabled="task.completed_at!==null">
-                        <option :value="null">No recurrence</option>
-                        <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
-                            {{ recurrence.label }}
-                        </option>
-                    </select>
                 </div>
                 <div v-if="upcomingItem || task.parent_task_id" class="my-3 border-t border-gray-300 pt-2">
                     <div v-if="upcomingItem" class="mb-3">

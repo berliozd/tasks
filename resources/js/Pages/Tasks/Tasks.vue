@@ -2,7 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import SaveButton from "@/Components/SaveButton.vue";
 import axios from 'axios';
-import {computed, onBeforeUnmount, onMounted, reactive, ref, watch} from "vue";
+import {computed, reactive, ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
 import {usePage} from "@inertiajs/vue3";
@@ -11,13 +11,11 @@ import SavedLabel from "@/Components/SavedLabel.vue";
 import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 import Task from "@/Pages/Tasks/Partials/Task.vue";
 import Flags from "@/Pages/Tasks/Partials/Flags.vue";
-import FlagSwatches from "@/Components/FlagSwatches.vue";
+import FlagMultiSelect from "@/Components/FlagMultiSelect.vue";
 
 const newTaskLabel = ref('');
 const newTaskRecurrenceId = ref(null);
 const newTaskFlagIds = ref([]);
-const newTaskFlagsOpen = ref(false);
-const newTaskFlagsEl = ref(null);
 const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
 const lastSaved = ref(new Date());
 const reactiveTasks = reactive({});
@@ -169,50 +167,6 @@ const updateSelectedFlags = (e) => {
     selectedFlagIds.value = e.value;
 };
 
-const toggleNewTaskFlags = () => {
-    newTaskFlagsOpen.value = !newTaskFlagsOpen.value;
-}
-
-const closeNewTaskFlags = () => {
-    newTaskFlagsOpen.value = false;
-}
-
-const toggleNewTaskFlagId = (flagId) => {
-    const idx = newTaskFlagIds.value.indexOf(flagId);
-    if (idx >= 0) {
-        newTaskFlagIds.value.splice(idx, 1);
-    } else {
-        newTaskFlagIds.value.push(flagId);
-    }
-}
-
-const selectedNewTaskFlags = computed(() => {
-    const ids = new Set(newTaskFlagIds.value ?? []);
-    return (allFlags.value ?? []).filter(f => ids.has(f.id));
-});
-
-const onDocPointerDown = (e) => {
-    if (!newTaskFlagsOpen.value) return;
-    const el = newTaskFlagsEl.value;
-    if (!el) return;
-    if (el === e.target || el.contains(e.target)) return;
-    closeNewTaskFlags();
-}
-
-const onDocKeydown = (e) => {
-    if (e.key === 'Escape') closeNewTaskFlags();
-}
-
-onMounted(() => {
-    document.addEventListener('pointerdown', onDocPointerDown);
-    document.addEventListener('keydown', onDocKeydown);
-});
-
-onBeforeUnmount(() => {
-    document.removeEventListener('pointerdown', onDocPointerDown);
-    document.removeEventListener('keydown', onDocKeydown);
-});
-
 </script>
 
 <template>
@@ -246,60 +200,7 @@ onBeforeUnmount(() => {
                             {{ recurrence.label }}
                         </option>
                     </select>
-                    <div class="relative" ref="newTaskFlagsEl">
-                        <button type="button"
-                                class="h-10 w-32 btn btn-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 normal-case justify-between"
-                                :disabled="!allFlags?.length"
-                                @click="toggleNewTaskFlags"
-                                :aria-expanded="newTaskFlagsOpen ? 'true' : 'false'">
-                            <span class="truncate">Flags</span>
-                            <span class="inline-flex items-center gap-1">
-                                <span class="inline-flex items-center justify-center rounded-full bg-gray-100 text-gray-700 text-xs tabular-nums min-w-6 h-6 px-2"
-                                      :class="newTaskFlagIds.length ? '' : 'opacity-0'">
-                                    {{ newTaskFlagIds.length }}
-                                </span>
-                            <svg class="ms-1 size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                 viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
-                            </svg>
-                            </span>
-                        </button>
-
-                        <div v-if="newTaskFlagsOpen"
-                             class="absolute right-0 z-30 mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-lg bg-white ring-1 ring-gray-200 shadow-lg overflow-hidden">
-                            <div class="flex flex-col max-h-[60vh]">
-                            <div class="sticky top-0 bg-white flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100">
-                                <div class="text-xs text-gray-500 truncate">
-                                    Select flags
-                                </div>
-                                <button type="button"
-                                        class="btn btn-ghost btn-xs"
-                                        :disabled="!newTaskFlagIds.length"
-                                        @click="newTaskFlagIds = []">
-                                    Clear
-                                </button>
-                            </div>
-
-                            <div class="flex-1 overflow-auto py-2">
-                                <label v-for="flag in allFlags" :key="flag.id"
-                                       class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
-                                    <input type="checkbox"
-                                           class="checkbox checkbox-sm"
-                                           :checked="newTaskFlagIds.includes(flag.id)"
-                                           @change="toggleNewTaskFlagId(flag.id)"/>
-                                    <span class="inline-block w-3 h-3 border border-gray-700"
-                                          :style="{ backgroundColor: flag.color }"/>
-                                    <span class="text-sm text-gray-800 truncate">{{ flag.name }}</span>
-                                </label>
-                            </div>
-
-                            <div v-if="selectedNewTaskFlags.length"
-                                 class="sticky bottom-0 bg-white border-t border-gray-100 px-3 py-2">
-                                <FlagSwatches :flags="selectedNewTaskFlags" size-class="w-4 h-4" gap-class="gap-1"/>
-                            </div>
-                            </div>
-                        </div>
-                    </div>
+                    <FlagMultiSelect v-model="newTaskFlagIds" :all-flags="allFlags"/>
                     <SaveButton @click="addTask"/>
                 </div>
             </div>
@@ -310,8 +211,8 @@ onBeforeUnmount(() => {
 
             <Flags :all-flags="pageFlags" @filter="updateSelectedFlags"/>
 
-            <div class="overflow-hidden shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-2">
-                <div class="divide-y divide-gray-100">
+            <div class="shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-2 overflow-visible">
+                <div class="divide-y divide-gray-100 sm:rounded-lg">
                     <template v-for="task in filteredTasks" :key="task.id">
                     <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"
                           :all-recurrences="allRecurrences"/>
