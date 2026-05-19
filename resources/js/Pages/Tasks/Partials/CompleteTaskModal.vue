@@ -50,7 +50,8 @@ const createTasks = async (nbDays) => {
 
 <template>
     <CheckButton :checked="checked"
-                 @click="toggleChecked()" :enabled="!task.editing"/>
+                 @click="toggleChecked()"
+                 :enabled="!task.editing"/>
     <Modal :show="isShowModal">
         <div class="p-4 w-full space-y-4 flex flex-col">
             <div>Your task "{{ task.label }}" is marked as completed.</div>

@@ -27,6 +27,14 @@ readonly class TaskService
     {
         $task = $this->taskRepository->find($id);
         $this->checkPerms($task);
+        // Completed tasks are read-only, except for toggling completion back to "not completed".
+        if ($task->completed_at !== null) {
+            $allowedKeys = ['completed_at'];
+            $extraKeys = array_diff(array_keys($data), $allowedKeys);
+            if (!empty($extraKeys)) {
+                throw new Exception('Completed tasks cannot be updated');
+            }
+        }
         $wasCompleted = $task->completed_at !== null;
         $data = array_merge($task->only([
             'label',
@@ -264,6 +272,9 @@ readonly class TaskService
     {
         $task = $this->taskRepository->find($taskId);
         $this->checkPerms($task);
+        if ($task->completed_at !== null) {
+            throw new Exception('Completed tasks cannot be updated');
+        }
         $task->flags()->attach($flagId);
         $task->load('flags');
         return $this->normalizeTaskDates($task);
@@ -273,6 +284,9 @@ readonly class TaskService
     {
         $task = $this->taskRepository->find($taskId);
         $this->checkPerms($task);
+        if ($task->completed_at !== null) {
+            throw new Exception('Completed tasks cannot be updated');
+        }
         $task->flags()->detach($flagId);
         $task->load('flags');
         return $this->normalizeTaskDates($task);

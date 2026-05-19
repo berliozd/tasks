@@ -167,9 +167,6 @@ watch(editFlagIds, (next, prev) => {
                             {{ task.label }}
                         </span>
                     </div>
-                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                        Completed on:{{ formatDateTime(task.completed_at) }}
-                    </div>
                     <div v-if="task.recurrence_id" class="text-xs text-gray-500">
                         Repeats: {{ recurrenceLabel(task) }}
                     </div>
@@ -177,7 +174,7 @@ watch(editFlagIds, (next, prev) => {
                 <div class="flex gap-2">
                     <FlagSwatches :flags="task.flags" size-class="w-5 h-5" gap-class="gap-2"/>
                 </div>
-                <ReScheduleModal @reschedule="rescheduleTomorrow(task)"/>
+                <ReScheduleModal v-if="task.completed_at === null" @reschedule="rescheduleTomorrow(task)"/>
                 <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
                                 @click="updateProgression(task)"/>
                 <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
@@ -202,7 +199,7 @@ watch(editFlagIds, (next, prev) => {
                         <div class="text-xs text-gray-600 mb-2">Flags :</div>
                         <template v-if="allFlags.length > 0">
                             <div class="flex items-center justify-between gap-2">
-                                <FlagMultiSelect v-model="editFlagIds" :all-flags="allFlags"/>
+                                <FlagMultiSelect v-model="editFlagIds" :all-flags="allFlags" :disabled="task.completed_at !== null"/>
                                 <Link :href="route('flags')"
                                       class="text-sm text-gray-600 hover:text-gray-900 underline">
                                     Update your flags
@@ -243,7 +240,8 @@ watch(editFlagIds, (next, prev) => {
                     <div v-if="historyLoading" class="text-xs text-gray-400">Loading...</div>
                     <div v-else-if="!historyItems.length" class="text-xs text-gray-400">None</div>
                     <div v-else class="mt-1 space-y-1">
-                        <div v-for="h in historyItems" :key="h.id" class="text-xs text-gray-700 flex justify-between gap-3">
+                        <div v-for="h in historyItems" :key="h.id"
+                             class="text-xs text-gray-700 flex justify-between gap-3">
                             <div class="truncate">{{ h.label }}</div>
                             <div class="shrink-0 text-gray-500">
                                 {{ h.completed_at ? formatDateTime(h.completed_at) : '' }}
@@ -251,15 +249,21 @@ watch(editFlagIds, (next, prev) => {
                         </div>
                     </div>
                 </div>
-                <div class="flex justify-between">
-                    <div class="text-xs text-gray-400 underline">
-                        Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+                <div class="flex items-start justify-between gap-6">
+                    <div class="flex flex-col gap-1 min-w-0">
+                        <div class="text-xs text-gray-400 underline">
+                            Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+                        </div>
+                        <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
+                            Completed on:{{ formatDateTime(task.completed_at) }}
+                        </div>
+                    </div>
+                    <div class="shrink-0 text-xs text-gray-400 underline text-right whitespace-nowrap">
+                        Updated on:{{ formatDateTime(task.updated_at) }}
                     </div>
                 </div>
             </div>
-            <div class="mt-2 text-xs text-gray-400 underline">
-                Updated on:{{ formatDateTime(task.updated_at) }}
-            </div>
+
         </div>
     </div>
 </template>
