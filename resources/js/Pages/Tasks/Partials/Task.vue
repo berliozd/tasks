@@ -157,11 +157,11 @@ watch(editFlagIds, (next, prev) => {
                 taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400' : 'ring-gray-200 hover:ring-gray-300',
                 task.completed_at ? 'bg-gray-50' : 'bg-white'
              ]">
-            <div class="flex justify-between gap-2">
-                <div class="flex">
+            <div class="flex items-start gap-2 sm:grid sm:grid-cols-[auto_1fr_10rem_6.5rem] sm:items-center">
+                <div class="flex items-center pt-0.5 sm:pt-0">
                     <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
-                <div class="w-full">
+                <div class="min-w-0 w-full">
                     <div @click="toggleEditing" class="cursor-pointer w-full">
                         <span :class="task.completed_at ? 'text-gray-500 line-through' : 'text-gray-900'">
                             {{ task.label }}
@@ -174,13 +174,22 @@ watch(editFlagIds, (next, prev) => {
                         Repeats: {{ recurrenceLabel(task) }}
                     </div>
                 </div>
-                <div class="flex gap-2">
+                <div class="ml-auto flex items-center gap-2 sm:ml-0 sm:justify-end sm:min-h-10 sm:w-40">
                     <FlagSwatches :flags="task.flags" size-class="w-5 h-5" gap-class="gap-2"/>
                 </div>
-                <ReScheduleModal v-if="task.completed_at === null" @reschedule="rescheduleTomorrow(task)"/>
-                <InProgressIcon :in-progress="taskHasActiveProgression(task)" :enabled="task.completed_at === null"
-                                @click="updateProgression(task)"/>
-                <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
+                <div class="flex items-center justify-end gap-2 sm:min-h-10 sm:w-[6.5rem]">
+                    <div class="w-6 h-6 flex items-center justify-center">
+                        <ReScheduleModal v-if="task.completed_at === null" @reschedule="rescheduleTomorrow(task)"/>
+                    </div>
+                    <div class="w-6 h-6 flex items-center justify-center">
+                        <InProgressIcon v-if="task.completed_at === null"
+                                        :in-progress="taskHasActiveProgression(task)" :enabled="true"
+                                        @click="updateProgression(task)"/>
+                    </div>
+                    <div class="w-6 h-6 flex items-center justify-center">
+                        <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
+                    </div>
+                </div>
             </div>
             <div :class="task.editing?'':'hidden'" class="mt-3">
                 <div>
