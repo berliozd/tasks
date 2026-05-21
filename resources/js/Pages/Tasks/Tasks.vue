@@ -31,8 +31,14 @@ const scrollTo = (view) => {
 }
 
 const updateTask = (task) => {
-    console.log('save');
-    axios.patch(route('tasks.update', task.id), task).then(
+    // Only send editable fields; avoid server-managed fields (e.g. updated_at) to prevent save loops.
+    axios.patch(route('tasks.update', task.id), {
+        label: task.label,
+        description: task.description,
+        completed_at: task.completed_at,
+        scheduled_at: task.scheduled_at,
+        recurrence_id: task.recurrence_id,
+    }).then(
         (response) => {
             // Keep local state in sync so "updated at" refreshes without reloading.
             if (response?.data) {
@@ -62,13 +68,18 @@ const saveReactiveTasks = () => {
     calculateProgress()
 }
 
-const removeProperty = (obj, key) => {
-    const {[key]: _, ...newObj} = obj;
-    return newObj;
-}
 const cleanTask = (storedTask) => {
     storedTask = JSON.parse(JSON.stringify(storedTask));
-    return removeProperty(storedTask, 'editing');
+    // Compare only fields we actually save from this page. Exclude server-managed timestamps to avoid loops.
+    const {
+        id,
+        label,
+        description,
+        completed_at,
+        scheduled_at,
+        recurrence_id,
+    } = storedTask;
+    return {id, label, description, completed_at, scheduled_at, recurrence_id};
 }
 
 const addTask = () => {
