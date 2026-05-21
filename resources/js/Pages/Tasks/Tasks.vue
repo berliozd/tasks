@@ -31,6 +31,7 @@ const scrollTo = (view) => {
 }
 
 const updateTask = (task) => {
+    console.log('save');
     axios.patch(route('tasks.update', task.id), task).then(
         (response) => {
             // Keep local state in sync so "updated at" refreshes without reloading.
@@ -47,7 +48,7 @@ const updateTask = (task) => {
         }
     )
 }
-const debouncedSave = debounce(updateTask, 300);
+const debouncedSave = debounce(updateTask, 1500);
 
 const saveReactiveTasks = () => {
     reactiveTasks.value.forEach(task => {

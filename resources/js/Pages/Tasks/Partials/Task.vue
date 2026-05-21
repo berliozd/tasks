@@ -167,6 +167,9 @@ watch(editFlagIds, (next, prev) => {
                             {{ task.label }}
                         </span>
                     </div>
+                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
+                        Completed on:{{ formatDateTime(task.completed_at) }}
+                    </div>
                     <div v-if="task.recurrence_id" class="text-xs text-gray-500">
                         Repeats: {{ recurrenceLabel(task) }}
                     </div>
@@ -253,9 +256,6 @@ watch(editFlagIds, (next, prev) => {
                     <div class="flex flex-col gap-1 min-w-0">
                         <div class="text-xs text-gray-400 underline">
                             Scheduled on:{{ formatDateTime(task.scheduled_at) }}
-                        </div>
-                        <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                            Completed on:{{ formatDateTime(task.completed_at) }}
                         </div>
                     </div>
                     <div class="shrink-0 text-xs text-gray-400 underline text-right whitespace-nowrap">
