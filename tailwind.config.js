@@ -16,6 +16,10 @@ export default {
     theme: {
         extend: {
             colors: {
+                brand: {
+                    navy: '#011342',
+                    surface: '#F2F6FF',
+                },
                 red: {
                     light: '#158749',
                     DEFAULT: '#158749',

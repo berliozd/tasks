@@ -1,6 +1,9 @@
 <script setup>
 import {Head, Link, usePage} from '@inertiajs/vue3';
 import Ad from "@/Components/Ad.vue";
+import GuestLayout from "@/Layouts/GuestLayout.vue";
+import BulletLogo from "@/Components/BulletLogo.vue";
+import AuthenticationCardLogo from "@/Components/AuthenticationCardLogo.vue";
 
 defineProps({
     canLogin: {
@@ -29,41 +32,36 @@ function handleImageError() {
 
 <template>
     <Head title="Welcome"/>
-    <div class="">
-        <div
-            class="relative min-h-screen flex flex-col items-center justify-center selection:bg-[#FF2D20] selection:text-white">
-            <div class="relative w-full max-w-2xl px-6 lg:max-w-7xl text-gray-600">
+    <GuestLayout :show-home-link="false">
+        <div class="relative w-full text-gray-600 selection:bg-[#FF2D20] selection:text-white">
+            <div class="relative">
                 <header class="grid grid-cols-2 items-center gap-2 py-10 lg:grid-cols-3">
-                    <div class="flex lg:justify-center lg:col-start-2">
-                        <img src="/img/complete-square-logo.png"/>
+                    <div class="flex lg:justify-center lg:col-start-2 rounded-full">
+                        <AuthenticationCardLogo/>
                     </div>
-                    <nav v-if="canLogin" class="-mx-3 flex flex-1 justify-end">
+                </header>
+
+                <div
+                    v-if="canLogin && !$page.props.auth.user"
+                    class="pb-4 flex items-center justify-center"
+                >
+                    <div class="flex flex-col sm:flex-row gap-3 w-full max-w-md">
                         <Link
-                            v-if="$page.props.auth.user"
-                            :href="route('dashboard')"
-                            class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:focus-visible:ring-white"
+                            :href="route('login')"
+                            class="w-full inline-flex items-center justify-center rounded-xl bg-brand-navy px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-navy/90 focus:outline-none focus:ring-2 focus:ring-brand-navy/40"
                         >
-                            Dashboard
+                            Log in
                         </Link>
 
-                        <template v-else>
-                            <Link
-                                :href="route('login')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:focus-visible:ring-white"
-                            >
-                                Log in
-                            </Link>
-
-                            <Link
-                                v-if="canRegister"
-                                :href="route('register')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:focus-visible:ring-white"
-                            >
-                                Register
-                            </Link>
-                        </template>
-                    </nav>
-                </header>
+                        <Link
+                            v-if="canRegister"
+                            :href="route('register')"
+                            class="w-full inline-flex items-center justify-center rounded-xl bg-brand-navy px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-brand-navy/90 focus:outline-none focus:ring-2 focus:ring-brand-navy/40"
+                        >
+                            Register
+                        </Link>
+                    </div>
+                </div>
 
                 <main class="my-6">
                     <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
@@ -90,8 +88,8 @@ function handleImageError() {
                                     <div
                                         class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16">
                                         <div
-                                            class="flex size-12 shrink-0 items-center justify-center rounded-full bg-green-800/30 sm:size-16">
-                                            <img src="/img/hat.png" alt="Add Tasks for Today">
+                                            class="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand-navy sm:size-16">
+                                            <img src="/img/tasks-nobg.png" class="size-8 object-contain" alt="Tasks">
                                         </div>
                                     </div>
 
@@ -115,11 +113,8 @@ function handleImageError() {
                         </a>
 
                         <div
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-full bg-green-800/30 sm:size-16">
-                                <img src="/img/hat.png" alt="Add Tasks for Today">
-                            </div>
+                            class="flex items-start gap-4 rounded-lg p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
+                            <BulletLogo/>
                             <div class="pt-3 sm:pt-5">
                                 <h2 class="text-xl font-semibold text-black">Add Tasks for Today</h2>
 
@@ -130,11 +125,8 @@ function handleImageError() {
                             </div>
                         </div>
                         <div
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-full bg-green-800/30 sm:size-16">
-                                <img src="/img/hat.png" alt="Mark Tasks as Done">
-                            </div>
+                            class="flex items-start gap-4 rounded-lg p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
+                            <BulletLogo/>
                             <div class="pt-3 sm:pt-5">
                                 <h2 class="text-xl font-semibold text-black">Mark Tasks as Done</h2>
 
@@ -145,11 +137,8 @@ function handleImageError() {
                             </div>
                         </div>
                         <div
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-full bg-green-800/30 sm:size-16">
-                                <img src="/img/hat.png" alt="Recurring Tasks">
-                            </div>
+                            class="flex items-start gap-4 rounded-lg p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
+                            <BulletLogo/>
                             <div class="pt-3 sm:pt-5">
                                 <h2 class="text-xl font-semibold text-black">Recurring Tasks</h2>
 
@@ -169,5 +158,5 @@ function handleImageError() {
                 </footer>
             </div>
         </div>
-    </div>
+    </GuestLayout>
 </template>
