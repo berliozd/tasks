@@ -1,6 +1,7 @@
 {
   "name": "tasks",
   "short_name": "Tasks",
+  "id": "/tasks",
   "description": "A simple task management app.",
   "start_url": "/tasks",
   "scope": "/",
