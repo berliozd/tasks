@@ -111,6 +111,12 @@ const addTask = () => {
     )
 }
 
+const setActiveTask = (task) => {
+    (reactiveTasks.value ?? []).forEach(t => {
+        t.editing = t.id === task.id ? !t.editing : false;
+    });
+}
+
 const refreshTasks = () => {
     axios.get(route('tasks.index'))
         .then(response => {
@@ -233,7 +239,7 @@ const exportTasks = async () => {
 <template>
     <AppLayout title="Tasks">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight">Tasks</h2>
+            <h2 class="font-semibold text-xl leading-tight text-slate-900">Tasks</h2>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -249,13 +255,13 @@ const exportTasks = async () => {
                     )
                 }}
             </div>
-            <div class="shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-6 overflow-visible">
+            <div class="surface-card mb-6 overflow-visible">
                 <div class="p-4 flex flex-wrap justify-between items-center gap-2">
                     <input type="text" v-model="newTaskLabel" placeholder="New task label"
-                           class="w-full md:flex-1 rounded-md border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                           class="w-full md:flex-1 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
                            @keydown.enter="addTask">
                     <select v-model="newTaskRecurrenceId"
-                            class="h-10 rounded-md border-gray-300 text-sm focus:border-gray-400 focus:ring-gray-400">
+                            class="h-10 rounded-lg border-gray-300 text-sm focus:border-brand-accent focus:ring-brand-accent transition">
                         <option :value="null">No recurrence</option>
                         <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
                             {{ recurrence.label }}
@@ -265,15 +271,15 @@ const exportTasks = async () => {
                     <SaveButton @click="addTask"/>
                 </div>
             </div>
-            <div class="shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 my-6 px-4"
+            <div class="surface-card my-6 px-4"
                  v-if="!isNaN(progress) && progress > 0">
-                <progress class="my-4 progress w-full" :value="progress" max="100"/>
+                <progress class="my-4 progress progress-primary w-full" :value="progress" max="100"/>
             </div>
 
             <Flags :all-flags="pageFlags" @filter="updateSelectedFlags"/>
 
             <div class="flex items-center justify-between gap-2 px-1 mb-2">
-                <div class="text-xs text-gray-500">{{ filteredTasks.length }} task(s)</div>
+                <div class="text-xs font-medium text-gray-500">{{ filteredTasks.length }} task(s)</div>
                 <button type="button" @click="exportTasks" :disabled="!filteredTasks.length"
                         class="btn btn-ghost btn-xs gap-1 normal-case disabled:opacity-50">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -286,12 +292,16 @@ const exportTasks = async () => {
                 </button>
             </div>
 
-            <div class="shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-2 overflow-visible">
-                <div class="divide-y divide-gray-100 sm:rounded-lg">
+            <div class="surface-card mb-2 overflow-hidden">
+                <div class="flex flex-col gap-2 p-2">
                     <template v-for="task in filteredTasks" :key="task.id">
-                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()" :all-flags="allFlags"
+                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"
+                          @toggle-editing="setActiveTask" :all-flags="allFlags"
                           :all-recurrences="allRecurrences"/>
                     </template>
+                    <div v-if="!filteredTasks.length" class="px-4 py-10 text-center text-sm text-gray-400">
+                        No tasks here. Add one above to get started.
+                    </div>
                 </div>
             </div>
             <div class="min-h-6" ref="belowList">

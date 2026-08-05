@@ -11,7 +11,7 @@ import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 import {ref, watch} from "vue";
 
 const props = defineProps({task: Object, allFlags: Array, allRecurrences: Array});
-const emits = defineEmits(['deleted', 'changed']);
+const emits = defineEmits(['deleted', 'changed', 'toggle-editing']);
 
 const historyLoading = ref(false);
 const historyItems = ref([]);
@@ -120,13 +120,15 @@ const loadHistory = async () => {
     }
 }
 
-const toggleEditing = async () => {
-    props.task.editing = !props.task.editing;
-    if (props.task.editing) {
-        editFlagIds.value = (props.task.flags ?? []).map(f => f.id);
-        await loadHistory();
-    }
+const toggleEditing = () => {
+    emits('toggle-editing', props.task);
 }
+
+watch(() => props.task.editing, async (isEditing) => {
+    if (!isEditing) return;
+    editFlagIds.value = (props.task.flags ?? []).map(f => f.id);
+    await loadHistory();
+})
 
 watch(editFlagIds, (next, prev) => {
     if (!props.task?.editing) return;
@@ -151,85 +153,84 @@ watch(editFlagIds, (next, prev) => {
 </script>
 
 <template>
-    <div class="px-4 py-3" :class="task.completed_at ? 'bg-gray-50' : 'bg-white'">
-        <div class="rounded-lg ring-1 px-3 py-2 transition"
-             :class="[
-                taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400' : 'ring-gray-200 hover:ring-gray-300',
-                task.completed_at ? 'bg-gray-50' : 'bg-white'
-             ]">
+    <div class="rounded-lg ring-1 shadow-soft px-3 py-2.5 transition hover:shadow-card-hover"
+         :class="[
+            taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400 bg-red-50/40' : 'ring-slate-900/[0.08] hover:ring-slate-900/[0.16]',
+            task.completed_at ? 'bg-gray-50/70' : 'bg-white'
+         ]">
             <div class="flex items-start gap-2 sm:grid sm:grid-cols-[auto_1fr_10rem_6.5rem] sm:items-center">
                 <div class="flex items-center pt-0.5 sm:pt-0">
                     <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
                 <div class="min-w-0 w-full">
                     <div @click="toggleEditing" class="cursor-pointer w-full">
-                        <span :class="task.completed_at ? 'text-gray-500 line-through' : 'text-gray-900'">
+                        <span :class="task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900'">
                             {{ task.label }}
                         </span>
                     </div>
-                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400 underline">
-                        Completed on:{{ formatDateTime(task.completed_at) }}
+                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400">
+                        Completed on {{ formatDateTime(task.completed_at) }}
                     </div>
-                    <div v-if="task.recurrence_id" class="text-xs text-gray-500">
+                    <div v-if="task.recurrence_id" class="text-xs text-brand-accent-dark">
                         Repeats: {{ recurrenceLabel(task) }}
                     </div>
                 </div>
                 <div class="ml-auto flex items-center gap-2 sm:ml-0 sm:justify-end sm:min-h-10 sm:w-40">
-                    <FlagSwatches :flags="task.flags" size-class="w-5 h-5" gap-class="gap-2"/>
+                    <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-1.5"/>
                 </div>
-                <div class="flex items-center justify-end gap-2 sm:min-h-10 sm:w-[6.5rem]">
-                    <div class="w-6 h-6 flex items-center justify-center">
+                <div class="flex items-center justify-end gap-1 sm:min-h-10 sm:w-[6.5rem]">
+                    <div class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
                         <ReScheduleModal v-if="task.completed_at === null" @reschedule="rescheduleTomorrow(task)"/>
                     </div>
-                    <div class="w-6 h-6 flex items-center justify-center">
+                    <div class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
                         <InProgressIcon v-if="task.completed_at === null"
                                         :in-progress="taskHasActiveProgression(task)" :enabled="true"
                                         @click="updateProgression(task)"/>
                     </div>
-                    <div class="w-6 h-6 flex items-center justify-center">
+                    <div class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition">
                         <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
                     </div>
                 </div>
             </div>
-            <div :class="task.editing?'':'hidden'" class="mt-3">
+            <div :class="task.editing?'':'hidden'" class="mt-3 pt-3 border-t border-gray-100">
                 <div>
-                    <div class="text-xs">Label :</div>
+                    <div class="text-xs font-medium text-gray-500 mb-1">Label</div>
                     <textarea v-model="task.label"
-                              class="rounded-md shadow-sm w-full border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                              class="rounded-lg shadow-sm w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
                               :disabled="task.completed_at!==null"
                               maxlength="255"/>
                 </div>
-                <div>
-                    <div class="text-xs">Description :</div>
+                <div class="mt-3">
+                    <div class="text-xs font-medium text-gray-500 mb-1">Description</div>
                     <textarea v-model="task.description"
-                              class="rounded-md shadow-sm w-full h-48 border-gray-300 focus:border-gray-400 focus:ring-gray-400"
+                              class="rounded-lg shadow-sm w-full h-48 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
                               :disabled="task.completed_at!==null"
                               maxlength="5000"/>
                 </div>
                 <div class="my-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div class="rounded-lg bg-gray-50 ring-1 ring-gray-200 p-3">
-                        <div class="text-xs text-gray-600 mb-2">Flags :</div>
+                    <div class="rounded-xl bg-brand-surface ring-1 ring-slate-900/[0.05] p-3">
+                        <div class="text-xs font-medium text-gray-500 mb-2">Flags</div>
                         <template v-if="allFlags.length > 0">
                             <div class="flex items-center justify-between gap-2">
                                 <FlagMultiSelect v-model="editFlagIds" :all-flags="allFlags" :disabled="task.completed_at !== null"/>
                                 <Link :href="route('flags')"
-                                      class="text-sm text-gray-600 hover:text-gray-900 underline">
+                                      class="text-sm text-brand-accent-dark hover:text-brand-accent underline">
                                     Update your flags
                                 </Link>
                             </div>
                         </template>
                         <template v-else>
                             <Link :href="route('flags')"
-                                  class="text-sm text-gray-600 hover:text-gray-900 underline">
+                                  class="text-sm text-brand-accent-dark hover:text-brand-accent underline">
                                 Create flags
                             </Link>
                         </template>
                     </div>
 
-                    <div class="rounded-lg bg-gray-50 ring-1 ring-gray-200 p-3">
-                        <div class="text-xs text-gray-600 mb-2">Recurrence :</div>
+                    <div class="rounded-xl bg-brand-surface ring-1 ring-slate-900/[0.05] p-3">
+                        <div class="text-xs font-medium text-gray-500 mb-2">Recurrence</div>
                         <select v-model="task.recurrence_id"
-                                class="h-10 rounded-md shadow-sm w-full border-gray-300 focus:border-gray-400 focus:ring-gray-400 bg-white"
+                                class="h-10 rounded-lg shadow-sm w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition bg-white"
                                 :disabled="task.completed_at!==null">
                             <option :value="null">No recurrence</option>
                             <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
@@ -238,9 +239,9 @@ watch(editFlagIds, (next, prev) => {
                         </select>
                     </div>
                 </div>
-                <div v-if="upcomingItem || task.parent_task_id" class="my-3 border-t border-gray-300 pt-2">
+                <div v-if="upcomingItem || task.parent_task_id" class="my-3 border-t border-gray-100 pt-3">
                     <div v-if="upcomingItem" class="mb-3">
-                        <div class="text-xs text-gray-600">Upcoming occurrence :</div>
+                        <div class="text-xs font-medium text-gray-500">Upcoming occurrence</div>
                         <div class="mt-1 text-xs text-gray-700 flex justify-between gap-3">
                             <div class="truncate">{{ upcomingItem.label }}</div>
                             <div class="shrink-0 text-gray-500">
@@ -248,7 +249,7 @@ watch(editFlagIds, (next, prev) => {
                             </div>
                         </div>
                     </div>
-                    <div class="text-xs text-gray-600">Previous occurrences :</div>
+                    <div class="text-xs font-medium text-gray-500">Previous occurrences</div>
                     <div v-if="historyLoading" class="text-xs text-gray-400">Loading...</div>
                     <div v-else-if="!historyItems.length" class="text-xs text-gray-400">None</div>
                     <div v-else class="mt-1 space-y-1">
@@ -263,16 +264,14 @@ watch(editFlagIds, (next, prev) => {
                 </div>
                 <div class="flex items-start justify-between gap-6">
                     <div class="flex flex-col gap-1 min-w-0">
-                        <div class="text-xs text-gray-400 underline">
-                            Scheduled on:{{ formatDateTime(task.scheduled_at) }}
+                        <div class="text-xs text-gray-400">
+                            Scheduled on {{ formatDateTime(task.scheduled_at) }}
                         </div>
                     </div>
-                    <div class="shrink-0 text-xs text-gray-400 underline text-right whitespace-nowrap">
-                        Updated on:{{ formatDateTime(task.updated_at) }}
+                    <div class="shrink-0 text-xs text-gray-400 text-right whitespace-nowrap">
+                        Updated on {{ formatDateTime(task.updated_at) }}
                     </div>
                 </div>
             </div>
-
-        </div>
     </div>
 </template>

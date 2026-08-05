@@ -10,8 +10,8 @@ const props = defineProps({
 
 const classes = computed(() => {
     return props.active
-        ? 'block w-full ps-3 pe-4 py-2 border-l-4 border-green-900/40 text-start text-base font-medium text-green-900/60 ' +
-        'bg-green-50 focus:outline-none focus:text-green-800/50 focus:bg-green-100 focus:border-green-700 transition ' +
+        ? 'block w-full ps-3 pe-4 py-2 border-l-4 border-brand-accent text-start text-base font-medium text-brand-accent-dark ' +
+        'bg-brand-accent/10 focus:outline-none focus:text-brand-accent-dark focus:bg-brand-accent/15 focus:border-brand-accent transition ' +
         'duration-150 ease-in-out'
         : 'block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-600 ' +
         'hover:text-gray-800 hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:text-gray-800 ' +

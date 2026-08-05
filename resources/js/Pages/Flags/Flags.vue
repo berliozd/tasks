@@ -96,46 +96,48 @@ refreshFlags();
     <AppLayout title="Flags">
 
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight">Flags</h2>
+            <h2 class="font-semibold text-xl leading-tight text-slate-900">Flags</h2>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
-            <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-6 mt-8">
-                <div class="border border-gray-400 m-4 p-2 flex  flex-col">
-                    <div class="flex justify-between align-center items-center gap-2">
+            <div class="surface-card mb-6">
+                <div class="p-4 flex flex-col gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <input type="text" v-model="newFlagLabel" placeholder="New flag label"
-                               class="w-full rounded" @keydown.enter="addFlag">
-                        <input type="color" v-model="selectedColor" class="cursor-pointer">
+                               class="w-full sm:flex-1 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                               @keydown.enter="addFlag">
+                        <input type="color" v-model="selectedColor"
+                               class="h-10 w-10 cursor-pointer rounded-lg border border-gray-300 p-0.5 bg-white">
                         <SaveButton @click="addFlag"/>
                     </div>
-                    <div>
-                        <span class="text-red-600" v-if="errorMsg">{{ errorMsg }}</span>
-                    </div>
+                    <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
                 </div>
             </div>
 
         </div>
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="overflow-hidden shadow-lg sm:rounded-lg bg-gray-200 mb-2">
-                <div v-for="flag in reactiveFlags"
-                     class="flex justify-between align-center gap-2 my-2 mx-4">
-                    <div class="border border-gray-400 bg-gray-100 p-3 w-full">
-                        <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
-                            <input type="text" v-model="flag.name"
-                                   class="h-10 px-2 rounded w-full border border-gray-300"
-                                   maxlength="255">
-                            <div class="flex items-center gap-2">
-                                <input type="color" v-model="flag.color"
-                                       class="h-10 w-10 cursor-pointer rounded border border-gray-300 p-0 bg-transparent">
-                                <DeleteModal @deleted="deleteFlag(flag)"
-                                             label="Are you sure you want to delete this flag?"/>
-                            </div>
-                            <div class="col-span-2 h-3 text-[11px] leading-3">
-                                <span v-if="savingById[flag.id]" class="text-gray-400">Saving...</span>
-                                <span v-else-if="savedById[flag.id]" class="text-emerald-600">Saved</span>
-                                <span v-else class="invisible">Saved</span>
-                            </div>
+            <div class="surface-card overflow-hidden">
+                <div v-if="!reactiveFlags.length" class="p-8 text-center text-sm text-gray-400">
+                    No flags yet. Add one above to start organizing your tasks.
+                </div>
+                <div v-else class="divide-y divide-gray-100">
+                    <div v-for="flag in reactiveFlags" :key="flag.id"
+                         class="flex items-center gap-3 px-4 py-3">
+                        <span class="shrink-0 inline-block w-4 h-4 rounded-full ring-1 ring-black/10"
+                              :style="{ backgroundColor: flag.color }"/>
+                        <input type="text" v-model="flag.name"
+                               class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                               maxlength="255">
+                        <input type="color" v-model="flag.color"
+                               class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-gray-300 p-0.5 bg-white">
+                        <div class="w-16 shrink-0 text-[11px] leading-3 text-center">
+                            <span v-if="savingById[flag.id]" class="text-gray-400">Saving…</span>
+                            <span v-else-if="savedById[flag.id]" class="text-brand-accent-dark font-medium">Saved</span>
+                        </div>
+                        <div class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition">
+                            <DeleteModal @deleted="deleteFlag(flag)"
+                                         label="Are you sure you want to delete this flag?"/>
                         </div>
                     </div>
                 </div>

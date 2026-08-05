@@ -42,7 +42,7 @@ const toggleFlagFilter = (flagId) => {
 </script>
 
 <template>
-    <div class="overflow-hidden shadow-sm sm:rounded-lg bg-white ring-1 ring-gray-200 mb-6" v-if="allFlags.length">
+    <div class="surface-card overflow-hidden mb-6" v-if="allFlags.length">
         <div class="p-4">
             <div class="flex items-center justify-between gap-2">
                 <div class="inline-flex items-center gap-2 min-w-0">
@@ -95,10 +95,12 @@ const toggleFlagFilter = (flagId) => {
                 <button v-for="flag in allFlags"
                         :key="flag.id"
                         type="button"
-                        class="btn btn-sm gap-2 normal-case rounded-full"
-                        :class="selectedFlagIds.includes(flag.id) ? 'btn-neutral' : 'btn-ghost hover:bg-gray-50'"
+                        class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition"
+                        :class="selectedFlagIds.includes(flag.id)
+                            ? 'bg-brand-navy text-white ring-brand-navy'
+                            : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'"
                         @click="toggleFlagFilter(flag.id)">
-                            <span class="inline-block w-3 h-3 border border-gray-700"
+                            <span class="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
                                   :style="{ backgroundColor: flag.color }"/>
                     <span class="truncate max-w-48">{{ flag.name }}</span>
                 </button>

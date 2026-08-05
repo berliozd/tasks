@@ -61,11 +61,11 @@ watch([period, endDate], fetchCompleted, {immediate: true});
 <template>
     <AppLayout title="Completed tasks">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight">Completed tasks</h2>
+            <h2 class="font-semibold text-xl leading-tight text-slate-900">Completed tasks</h2>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white shadow-sm sm:rounded-lg p-4 mt-6 ring-1 ring-gray-200">
+            <div class="surface-card p-4">
                 <div class="flex flex-wrap items-center gap-3">
                     <div class="flex items-center gap-1">
                         <button
@@ -97,19 +97,19 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                         </button>
                     </div>
 
-                    <div class="flex rounded border border-gray-300 overflow-hidden">
-                        <button class="px-3 py-1 text-sm"
-                                :class="period === 'day' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'"
+                    <div class="flex rounded-lg border border-gray-200 overflow-hidden">
+                        <button class="px-3 py-1 text-sm font-medium transition"
+                                :class="period === 'day' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                                 @click="period = 'day'">
                             Day
                         </button>
-                        <button class="px-3 py-1 text-sm border-l border-gray-300"
-                                :class="period === 'week' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'"
+                        <button class="px-3 py-1 text-sm font-medium border-l border-gray-200 transition"
+                                :class="period === 'week' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                                 @click="period = 'week'">
                             Week
                         </button>
-                        <button class="px-3 py-1 text-sm border-l border-gray-300"
-                                :class="period === 'month' ? 'bg-gray-800 text-white' : 'bg-white text-gray-700'"
+                        <button class="px-3 py-1 text-sm font-medium border-l border-gray-200 transition"
+                                :class="period === 'month' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700 hover:bg-gray-50'"
                                 @click="period = 'month'">
                             Month
                         </button>
@@ -118,20 +118,20 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                     <div class="flex items-center gap-2">
                         <div class="text-sm text-gray-600">End date</div>
                         <input type="date" v-model="endDate" :max="maxEndDate"
-                               class="rounded-md border-gray-300 text-sm focus:border-gray-400 focus:ring-gray-400"/>
+                               class="rounded-lg border-gray-300 text-sm focus:border-brand-accent focus:ring-brand-accent transition"/>
                     </div>
 
                     <div v-if="loading" class="text-sm text-gray-400">Loading...</div>
                 </div>
             </div>
 
-            <div class="bg-white shadow-sm sm:rounded-lg mt-4 ring-1 ring-gray-200 overflow-hidden">
-                <div v-if="!loading && !tasks.length" class="p-4 text-sm text-gray-500">
+            <div class="surface-card mt-4 overflow-hidden">
+                <div v-if="!loading && !tasks.length" class="p-8 text-center text-sm text-gray-400">
                     No completed tasks.
                 </div>
                 <div v-else class="divide-y divide-gray-100">
                     <div v-for="task in tasks" :key="task.id"
-                         class="p-3 flex justify-between gap-4 hover:bg-gray-50 transition">
+                         class="p-3 flex justify-between gap-4 hover:bg-brand-surface transition">
                         <div class="min-w-0">
                             <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
                         </div>

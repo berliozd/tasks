@@ -5,3 +5,52 @@
 [x-cloak] {
     display: none;
 }
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply text-slate-800 antialiased;
+        background-color: #F2F6FF;
+        background-image: radial-gradient(circle at top, rgba(1, 19, 66, 0.04), transparent 55%);
+        background-attachment: fixed;
+    }
+
+    ::selection {
+        background-color: #158749;
+        color: #ffffff;
+    }
+
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 transparent;
+    }
+
+    *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    *::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1;
+        border-radius: 9999px;
+        border: 2px solid transparent;
+        background-clip: content-box;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+        background-color: #94a3b8;
+    }
+}
+
+@layer components {
+    .surface-card {
+        @apply bg-white rounded-xl shadow-card ring-1 ring-slate-900/[0.06] transition-shadow duration-200;
+    }
+}

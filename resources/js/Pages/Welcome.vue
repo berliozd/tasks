@@ -33,7 +33,7 @@ function handleImageError() {
 <template>
     <Head title="Welcome"/>
     <GuestLayout :show-home-link="false">
-        <div class="relative w-full text-gray-600 selection:bg-[#FF2D20] selection:text-white">
+        <div class="relative w-full text-gray-600">
             <div class="relative">
                 <header class="grid grid-cols-2 items-center gap-2 py-10 lg:grid-cols-3">
                     <div class="flex lg:justify-center lg:col-start-2 rounded-full">
@@ -68,9 +68,9 @@ function handleImageError() {
                         <a
                             href="/tasks"
                             id="docs-card"
-                            class="flex flex-col items-start gap-6 overflow-hidden rounded-lg shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)]
-                            ring-1 ring-white/[0.05] transition duration-300 hover:text-gray-400/70 hover:ring-black/20 focus:outline-none
-                            focus-visible:ring-[#FF2D20] md:row-span-3 lg:p-10 lg:pb-10 ring-zinc-800"
+                            class="flex flex-col items-start gap-6 overflow-hidden rounded-xl shadow-card
+                            ring-1 ring-slate-900/[0.06] transition duration-300 hover:shadow-card-hover hover:ring-slate-900/10 focus:outline-none
+                            focus-visible:ring-brand-accent md:row-span-3 lg:p-10 lg:pb-10"
                         >
                             <div id="screenshot-container" class="relative flex w-full flex-1 items-stretch">
                                 <img
@@ -79,14 +79,14 @@ function handleImageError() {
                                     class=" aspect-video h-full w-full flex-1 rounded-[10px] object-top object-cover drop-shadow-[0px_4px_34px_rgba(0,0,0,0.25)] block"
                                 />
                                 <div
-                                    class="absolute -bottom-16 -left-16 h-40 w-[calc(100%+8rem)] bg-gradient-to-b from-transparent via-white to-white dark:via-green-600/30 dark:to-green-700/40"
+                                    class="absolute -bottom-16 -left-16 h-40 w-[calc(100%+8rem)] bg-gradient-to-b from-transparent via-white to-white"
                                 ></div>
                             </div>
 
                             <div class="relative flex items-center gap-6 lg:items-end">
                                 <div id="docs-card-content" class="flex items-start gap-6 lg:flex-col">
                                     <div
-                                        class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16">
+                                        class="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand-accent/10 sm:size-16">
                                         <div
                                             class="flex size-12 shrink-0 items-center justify-center rounded-full bg-brand-navy sm:size-16">
                                             <img src="/img/tasks-nobg.png" class="size-8 object-contain" alt="Tasks">
@@ -94,7 +94,7 @@ function handleImageError() {
                                     </div>
 
                                     <div class="pt-3 sm:pt-5 lg:pt-0">
-                                        <h2 class="text-xl font-semibold text-black dark:text-white">Tasks</h2>
+                                        <h2 class="text-xl font-semibold text-black">Tasks</h2>
 
                                         <p class="mt-4 text-sm/relaxed">
                                             Effortless Task Management Made Simple
@@ -104,7 +104,7 @@ function handleImageError() {
                                     </div>
                                 </div>
 
-                                <svg class="size-6 shrink-0 stroke-green-800/50" xmlns="http://www.w3.org/2000/svg"
+                                <svg class="size-6 shrink-0 stroke-brand-accent" xmlns="http://www.w3.org/2000/svg"
                                      fill="none" viewBox="0 0 24 24" stroke-width="1.5">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                           d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/>
@@ -113,7 +113,7 @@ function handleImageError() {
                         </a>
 
                         <div
-                            class="flex items-start gap-4 rounded-lg p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
+                            class="flex items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover lg:pb-10">
                             <BulletLogo/>
                             <div class="pt-3 sm:pt-5">
                                 <h2 class="text-xl font-semibold text-black">Add Tasks for Today</h2>
@@ -125,7 +125,7 @@ function handleImageError() {
                             </div>
                         </div>
                         <div
-                            class="flex items-start gap-4 rounded-lg p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
+                            class="flex items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover lg:pb-10">
                             <BulletLogo/>
                             <div class="pt-3 sm:pt-5">
                                 <h2 class="text-xl font-semibold text-black">Mark Tasks as Done</h2>
@@ -137,7 +137,7 @@ function handleImageError() {
                             </div>
                         </div>
                         <div
-                            class="flex items-start gap-4 rounded-lg p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:ring-zinc-800">
+                            class="flex items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover lg:pb-10">
                             <BulletLogo/>
                             <div class="pt-3 sm:pt-5">
                                 <h2 class="text-xl font-semibold text-black">Recurring Tasks</h2>

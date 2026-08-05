@@ -97,14 +97,14 @@ onBeforeUnmount(() => {
 <template>
     <div class="relative" ref="rootEl">
         <button type="button"
-                class="h-10 btn btn-sm rounded-md border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 normal-case justify-between"
+                class="h-10 btn btn-sm rounded-lg border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 normal-case justify-between"
                 :class="buttonWidthClass"
                 :disabled="disabled || !(allFlags && allFlags.length)"
                 @click="toggle"
                 :aria-expanded="open ? 'true' : 'false'">
             <span class="truncate">{{ label }}</span>
             <span class="inline-flex items-center gap-1">
-                <span class="inline-flex items-center justify-center rounded-full bg-gray-100 text-gray-700 text-xs tabular-nums min-w-6 h-6 px-2"
+                <span class="inline-flex items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent-dark text-xs font-semibold tabular-nums min-w-6 h-6 px-2"
                       :class="(modelValue?.length ?? 0) ? '' : 'opacity-0'">
                     {{ modelValue?.length ?? 0 }}
                 </span>
@@ -117,7 +117,7 @@ onBeforeUnmount(() => {
         </button>
 
         <div v-if="open"
-             class="fixed z-50 rounded-lg bg-white ring-1 ring-gray-200 shadow-lg overflow-hidden"
+             class="fixed z-50 rounded-xl bg-white ring-1 ring-slate-900/[0.06] shadow-card-hover overflow-hidden"
              :style="panelStyle">
             <div class="flex flex-col" :style="{ maxHeight: panelStyle.maxHeight }">
                 <div class="sticky top-0 bg-white flex items-center justify-between gap-2 px-3 py-2 border-b border-gray-100">
@@ -129,12 +129,12 @@ onBeforeUnmount(() => {
 
                 <div class="flex-1 overflow-auto py-2">
                     <label v-for="flag in allFlags" :key="flag.id"
-                           class="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-50 cursor-pointer">
+                           class="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-brand-surface cursor-pointer">
                         <input type="checkbox"
-                               class="checkbox checkbox-sm"
+                               class="checkbox checkbox-sm checkbox-primary"
                                :checked="ids.has(flag.id)"
                                @change="toggleId(flag.id)"/>
-                        <span class="inline-block w-3 h-3 border border-gray-700"
+                        <span class="inline-block w-3 h-3 rounded-full ring-1 ring-black/10"
                               :style="{ backgroundColor: flag.color }"/>
                         <span class="text-sm text-gray-800 truncate">{{ flag.name }}</span>
                     </label>

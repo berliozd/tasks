@@ -62,8 +62,8 @@ Echo.private('my-private-channel')
 
         <Banner/>
 
-        <div class="min-h-screen bg-brand-surface">
-            <nav class="bg-brand-navy border-b border-white/10 text-slate-100">
+        <div class="min-h-screen">
+            <nav class="sticky top-0 z-30 bg-gradient-to-r from-brand-navy to-brand-navy-light shadow-md text-slate-100">
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
@@ -355,14 +355,14 @@ Echo.private('my-private-channel')
             </nav>
 
             <!-- Page Heading -->
-            <header v-if="$slots.header" class="bg-white shadow">
+            <header v-if="$slots.header" class="bg-white/80 backdrop-blur border-b border-slate-900/5 shadow-soft">
                 <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                     <slot name="header"/>
                 </div>
             </header>
 
             <!-- Page Content -->
-            <main>
+            <main class="py-6">
                 <slot/>
             </main>
         </div>

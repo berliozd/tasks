@@ -50,7 +50,7 @@ const close = () => {
             </div>
         </div>
 
-        <div class="flex flex-row justify-end px-6 py-4 bg-gray-100 text-end">
+        <div class="flex flex-row justify-end gap-2 px-6 py-4 bg-slate-50 border-t border-slate-100 text-end">
             <slot name="footer" />
         </div>
     </Modal>
