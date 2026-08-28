@@ -136,8 +136,10 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                             <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
                         </div>
                         <div class="shrink-0 flex items-center gap-3">
-                            <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
-                            <div class="text-xs text-gray-500">
+                            <div class="w-24 flex justify-end">
+                                <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
+                            </div>
+                            <div class="w-32 text-xs text-gray-500 text-right">
                                 {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
                             </div>
                         </div>
