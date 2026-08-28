@@ -61,19 +61,34 @@ const updatePanelPosition = async () => {
 
     const r = btn.getBoundingClientRect()
     const margin = 12
+    const preferredHeight = 240
     const maxWidth = Math.min(288, window.innerWidth - margin * 2) // 18rem = 288px
     const left = Math.min(
         window.innerWidth - margin - maxWidth,
         Math.max(margin, r.right - maxWidth)
     )
-    const top = Math.min(window.innerHeight - margin, r.bottom + 8)
-    const maxHeight = Math.max(160, window.innerHeight - top - margin)
 
-    panelStyle.value = {
-        left: `${left}px`,
-        top: `${top}px`,
-        width: `${maxWidth}px`,
-        maxHeight: `${maxHeight}px`,
+    const spaceBelow = window.innerHeight - r.bottom - margin
+    const spaceAbove = r.top - margin
+    // Flip above the button when there isn't enough room below but there's more room above.
+    const openAbove = spaceBelow < preferredHeight && spaceAbove > spaceBelow
+
+    if (openAbove) {
+        const bottom = Math.max(margin, window.innerHeight - r.top + 8)
+        panelStyle.value = {
+            left: `${left}px`,
+            bottom: `${bottom}px`,
+            width: `${maxWidth}px`,
+            maxHeight: `${Math.max(160, spaceAbove)}px`,
+        }
+    } else {
+        const top = Math.min(window.innerHeight - margin, r.bottom + 8)
+        panelStyle.value = {
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${maxWidth}px`,
+            maxHeight: `${Math.max(160, window.innerHeight - top - margin)}px`,
+        }
     }
 }
 
