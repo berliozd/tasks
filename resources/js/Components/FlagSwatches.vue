@@ -12,9 +12,9 @@ defineProps({
     <div class="flex" :class="gapClass" v-if="flags && flags.length">
         <div v-for="flag in flags"
              :key="flag.id"
-             class="shrink-0"
+             class="shrink-0 tooltip"
              :class="[sizeClass, borderClass]"
              :style="{ 'background-color': flag.color }"
-             :title="flag.name"/>
+             :data-tip="flag.name"/>
     </div>
 </template>

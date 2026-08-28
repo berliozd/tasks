@@ -131,7 +131,7 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                 </div>
                 <div v-else class="divide-y divide-gray-100">
                     <div v-for="task in tasks" :key="task.id"
-                         class="p-3 flex justify-between gap-4 hover:bg-brand-surface transition">
+                         class="p-3 flex items-center justify-between gap-4 hover:bg-brand-surface transition">
                         <div class="min-w-0">
                             <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
                         </div>
