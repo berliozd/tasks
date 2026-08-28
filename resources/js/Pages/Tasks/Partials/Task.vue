@@ -17,6 +17,7 @@ const historyLoading = ref(false);
 const historyItems = ref([]);
 const upcomingItem = ref(null);
 const editFlagIds = ref([]);
+let suppressFlagDiff = false;
 
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
@@ -126,11 +127,16 @@ const toggleEditing = () => {
 
 watch(() => props.task.editing, async (isEditing) => {
     if (!isEditing) return;
+    suppressFlagDiff = true;
     editFlagIds.value = (props.task.flags ?? []).map(f => f.id);
     await loadHistory();
 })
 
 watch(editFlagIds, (next, prev) => {
+    if (suppressFlagDiff) {
+        suppressFlagDiff = false;
+        return;
+    }
     if (!props.task?.editing) return;
     const nextSet = new Set(next ?? []);
     const prevSet = new Set(prev ?? []);

@@ -275,7 +275,7 @@ readonly class TaskService
         if ($task->completed_at !== null) {
             throw new Exception('Completed tasks cannot be updated');
         }
-        $task->flags()->attach($flagId);
+        $task->flags()->syncWithoutDetaching($flagId);
         $task->load('flags');
         return $this->normalizeTaskDates($task);
     }
