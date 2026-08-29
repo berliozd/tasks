@@ -27,6 +27,10 @@ class ProspectAction extends Model
 
     protected $casts = [
         'queued_for_send' => 'boolean',
+        // Without this, scheduled_at round-trips as a naive DB string with no
+        // timezone marker, which the frontend and Carbon::parse() on the way
+        // back in can each misinterpret as local time instead of UTC.
+        'scheduled_at' => 'datetime',
     ];
 
     public function prospect(): BelongsTo

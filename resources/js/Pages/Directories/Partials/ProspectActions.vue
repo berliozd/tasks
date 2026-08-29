@@ -38,6 +38,16 @@ function toDatetimeLocal(date) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// <input type="datetime-local"> hands back a timezone-naive string (the
+// browser's local wall-clock time, e.g. "2026-08-29T14:30"). Convert it to a
+// real UTC instant before sending it anywhere, so the server isn't left to
+// guess a timezone (it would otherwise assume UTC and store the wrong hour).
+function localToUtcIso(localDatetimeString) {
+    if (!localDatetimeString) return null;
+    const d = new Date(localDatetimeString);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
 const countsByStatus = (list) => {
     const counts = Object.fromEntries(STATUSES.map(s => [`${s}_count`, 0]));
     for (const action of list) {
@@ -74,7 +84,8 @@ const logAction = () => {
     if (!newAction.value.message) return;
     errorMsg.value = '';
     logging.value = true;
-    axios.post(route('prospect-actions.store', props.prospectId), newAction.value).then(() => {
+    const payload = {...newAction.value, scheduled_at: localToUtcIso(newAction.value.scheduled_at)};
+    axios.post(route('prospect-actions.store', props.prospectId), payload).then(() => {
         newAction.value = blankAction();
         refreshActions();
     }).catch((error) => {
@@ -210,7 +221,7 @@ refreshTemplates();
                             Auto-send at the scheduled time
                         </label>
                         <input type="datetime-local" :value="toDatetimeLocal(action.scheduled_at)"
-                               @change="e => { action.scheduled_at = e.target.value; updateSchedule(action); }"
+                               @change="e => { action.scheduled_at = localToUtcIso(e.target.value); updateSchedule(action); }"
                                class="h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
                         <input type="email" v-model="action.from_email" @change="updateSchedule(action)"
                                placeholder="From email (optional override)"
