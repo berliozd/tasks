@@ -59,6 +59,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('prospect-actions.update');
     Route::delete('/prospect-actions/{id}', [App\Http\Controllers\Api\ProspectActionController::class, 'destroy'])
         ->name('prospect-actions.destroy');
+    Route::post('/prospect-actions/{id}/send', [App\Http\Controllers\Api\ProspectActionController::class, 'send'])
+        ->name('prospect-actions.send');
 
     Route::get('/directories/{directoryId}/email-templates', [App\Http\Controllers\Api\EmailTemplateController::class, 'index'])
         ->name('email-templates.index');

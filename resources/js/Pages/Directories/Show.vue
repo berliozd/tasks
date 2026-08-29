@@ -12,7 +12,7 @@ import {Link} from "@inertiajs/vue3";
 
 const props = defineProps({directoryId: Number});
 
-const directory = ref({name: '', prompt: '', prospects: []});
+const directory = ref({name: '', prompt: '', default_from_email: '', default_reply_to_email: '', prospects: []});
 const generateCount = ref(5);
 const generating = ref(false);
 const errorMsg = ref('');
@@ -37,9 +37,15 @@ const refreshDirectory = () => {
     });
 }
 
-const cleanDirectory = (d) => JSON.stringify({name: d.name, prompt: d.prompt});
+const cleanDirectory = (d) => JSON.stringify({
+    name: d.name, prompt: d.prompt,
+    default_from_email: d.default_from_email, default_reply_to_email: d.default_reply_to_email,
+});
 
-watch(() => [directory.value.name, directory.value.prompt], () => {
+watch(() => [
+    directory.value.name, directory.value.prompt,
+    directory.value.default_from_email, directory.value.default_reply_to_email,
+], () => {
     if (!watchDirectoryActive) return;
     if (cleanDirectory(directory.value) === storedDirectorySnapshot) return;
     debouncedUpdateDirectory();
@@ -50,6 +56,8 @@ const updateDirectory = () => {
     axios.patch(route('directories.update', props.directoryId), {
         name: directory.value.name,
         prompt: directory.value.prompt,
+        default_from_email: directory.value.default_from_email,
+        default_reply_to_email: directory.value.default_reply_to_email,
     }).then(() => {
         storedDirectorySnapshot = cleanDirectory(directory.value);
         savingDirectory.value = false;
@@ -88,7 +96,32 @@ const deleteProspect = (prospect) => {
     });
 }
 
-const cleanProspect = (p) => JSON.stringify({name: p.name, website: p.website, email: p.email});
+const cleanProspect = (p) => JSON.stringify({name: p.name, website: p.website, email: p.email, won: p.won});
+
+const STATUS_LABELS = {
+    planned: 'planned', sent: 'sent', replied: 'replied', bounced: 'bounced',
+    no_response: 'no response', lost: 'lost',
+};
+const STATUS_COLORS = {
+    replied: 'bg-blue-50 text-blue-700',
+    bounced: 'bg-red-50 text-red-700',
+    no_response: 'bg-red-50 text-red-700',
+    lost: 'bg-red-50 text-red-700',
+    sent: 'bg-brand-accent/10 text-brand-accent-dark',
+    planned: 'bg-gray-100 text-gray-600',
+};
+const STATUS_ORDER = ['sent', 'replied', 'lost', 'bounced', 'no_response', 'planned'];
+
+const actionFlags = (prospect) => {
+    const flags = STATUS_ORDER
+        .map(status => ({status, count: prospect[`${status}_count`] ?? 0}))
+        .filter(s => s.count > 0)
+        .map(s => ({...s, label: `${s.count} ${STATUS_LABELS[s.status]}`, colorClass: STATUS_COLORS[s.status]}));
+    if (prospect.won) {
+        flags.unshift({status: 'won', label: 'Won', colorClass: 'bg-blue-50 text-blue-700 border border-blue-600'});
+    }
+    return flags;
+}
 
 const openProspect = (prospect) => {
     activeProspect.value = prospect;
@@ -99,7 +132,7 @@ const closeProspect = () => {
     activeProspect.value = null;
 }
 
-watch(() => activeProspect.value && [activeProspect.value.name, activeProspect.value.website, activeProspect.value.email], () => {
+watch(() => activeProspect.value && [activeProspect.value.name, activeProspect.value.website, activeProspect.value.email, activeProspect.value.won], () => {
     if (!activeProspect.value) return;
     if (cleanProspect(activeProspect.value) === activeProspectSnapshot) return;
     debouncedUpdateActiveProspect();
@@ -113,6 +146,7 @@ const updateActiveProspect = () => {
         name: prospect.name,
         website: prospect.website,
         email: prospect.email,
+        won: prospect.won,
     }).then(() => {
         activeProspectSnapshot = cleanProspect(prospect);
         savingActive.value = false;
@@ -149,12 +183,25 @@ refreshDirectory();
 
             <div class="surface-card">
                 <div class="p-4 flex flex-col gap-2">
+                    <div class="text-sm font-medium text-gray-900">Directory details</div>
                     <label class="text-xs font-medium text-gray-500">Name</label>
                     <input type="text" v-model="directory.name"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
                     <label class="text-xs font-medium text-gray-500 mt-2">AI prompt / criteria</label>
                     <textarea v-model="directory.prompt" rows="2"
                               class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
+                    <div class="flex flex-col sm:flex-row gap-2 mt-2">
+                        <div class="w-full sm:flex-1 flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500">Default from email</label>
+                            <input type="email" v-model="directory.default_from_email" placeholder="e.g. you@yourcompany.com"
+                                   class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                        </div>
+                        <div class="w-full sm:flex-1 flex flex-col gap-1">
+                            <label class="text-xs font-medium text-gray-500">Default reply-to email</label>
+                            <input type="email" v-model="directory.default_reply_to_email" placeholder="Optional"
+                                   class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                        </div>
+                    </div>
                     <div class="w-16 text-[11px] leading-3 text-gray-500">
                         <span v-if="savingDirectory" class="text-gray-400">Saving…</span>
                         <span v-else-if="savedDirectory" class="text-brand-accent-dark font-medium">Saved</span>
@@ -177,6 +224,7 @@ refreshDirectory();
 
             <div class="surface-card">
                 <div class="p-4 flex flex-col gap-2 border-b border-gray-100">
+                    <div class="text-sm font-medium text-gray-900">Prospects</div>
                     <div class="flex flex-col sm:flex-row gap-2">
                         <input type="text" v-model="newProspect.name" placeholder="Name"
                                class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
@@ -214,10 +262,13 @@ refreshDirectory();
                                 </span>
                             </div>
                         </div>
-                        <span v-if="prospect.actions_count"
-                              class="shrink-0 inline-flex items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent-dark text-xs font-semibold tabular-nums min-w-6 h-6 px-2">
-                            {{ prospect.actions_count }} action{{ prospect.actions_count === 1 ? '' : 's' }}
-                        </span>
+                        <div v-if="actionFlags(prospect).length" class="shrink-0 flex flex-wrap items-center justify-end gap-1">
+                            <span v-for="flag in actionFlags(prospect)" :key="flag.status"
+                                  class="rounded-full text-xs font-semibold px-2 py-1"
+                                  :class="flag.colorClass">
+                                {{ flag.label }}
+                            </span>
+                        </div>
                         <span v-else class="shrink-0 text-xs text-gray-400">No actions yet</span>
                         <div @click.stop>
                             <DeleteConfirmPopover @deleted="deleteProspect(prospect)"
@@ -252,6 +303,11 @@ refreshDirectory();
                     <label class="text-xs font-medium text-gray-500 mt-1">Email</label>
                     <input type="email" v-model="activeProspect.email"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <label class="flex items-center gap-2 mt-1 text-sm text-gray-700">
+                        <input type="checkbox" v-model="activeProspect.won"
+                               class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
+                        Won
+                    </label>
                     <div class="text-[11px] leading-3 text-gray-500 h-3">
                         <span v-if="savingActive" class="text-gray-400">Saving…</span>
                         <span v-else-if="savedActive" class="text-brand-accent-dark font-medium">Saved</span>
@@ -260,7 +316,7 @@ refreshDirectory();
 
                 <div class="border-t border-gray-100 pt-4">
                     <ProspectActions :prospect-id="activeProspect.id" :directory-id="directoryId"
-                                      @count-changed="activeProspect.actions_count = $event"/>
+                                      @counts-changed="Object.assign(activeProspect, $event)"/>
                 </div>
             </div>
         </Modal>

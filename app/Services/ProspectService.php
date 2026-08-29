@@ -53,6 +53,7 @@ readonly class ProspectService
             'name' => $data['name'] ?? $prospect->name,
             'website' => $data['website'] ?? null,
             'email' => $data['email'] ?? null,
+            'won' => array_key_exists('won', $data) ? (bool) $data['won'] : $prospect->won,
         ]);
     }
 

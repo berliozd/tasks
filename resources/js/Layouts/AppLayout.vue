@@ -80,12 +80,30 @@ Echo.private('my-private-channel')
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-                                <NavLink :href="route('tasks')" :active="route().current('tasks')">
-                                    Tasks
-                                </NavLink>
-                                <NavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')">
-                                    Completed
-                                </NavLink>
+                                <Dropdown align="left" width="48">
+                                    <template #trigger>
+                                        <button type="button"
+                                                :class="(route().current('tasks') || route().current('completed-tasks'))
+                                                    ? 'inline-flex items-center px-1 pt-1 border-b-2 border-brand-accent-light text-sm font-medium leading-5 text-white focus:outline-none focus:border-brand-accent-light transition duration-150 ease-in-out'
+                                                    : 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium leading-5 text-slate-300 hover:text-white hover:border-white/30 focus:outline-none focus:text-white focus:border-white/30 transition duration-150 ease-in-out'">
+                                            Tasks
+                                            <svg class="ms-1 size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                 viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                      d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
+                                            </svg>
+                                        </button>
+                                    </template>
+
+                                    <template #content>
+                                        <DropdownLink :href="route('tasks')">
+                                            All tasks
+                                        </DropdownLink>
+                                        <DropdownLink :href="route('completed-tasks')">
+                                            Completed
+                                        </DropdownLink>
+                                    </template>
+                                </Dropdown>
                                 <NavLink :href="route('directories')" :active="route().current('directories*')">
                                     Prospection
                                 </NavLink>
@@ -259,10 +277,13 @@ Echo.private('my-private-channel')
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tasks')" :active="route().current('tasks')">
+                        <div class="block px-4 py-2 text-xs text-gray-400">
                             Tasks
+                        </div>
+                        <ResponsiveNavLink :href="route('tasks')" :active="route().current('tasks')" class="ps-8">
+                            All tasks
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')">
+                        <ResponsiveNavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')" class="ps-8">
                             Completed
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('directories')" :active="route().current('directories*')">

@@ -47,4 +47,16 @@ class ProspectActionController extends Controller
     {
         $this->prospectActionService->destroy((int) $id);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function send(Request $request, string $id)
+    {
+        return $this->prospectActionService->send(
+            (int) $id,
+            $request->input('from_email'),
+            $request->input('reply_to_email'),
+        );
+    }
 }

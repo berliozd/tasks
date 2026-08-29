@@ -19,13 +19,15 @@ defineProps({
                         <ApplicationMark class="block h-9" />
                     </Link>
 
-                    <Link
-                        v-if="showHomeLink"
-                        href="/"
-                        class="text-sm font-medium text-slate-200 hover:text-white transition"
-                    >
-                        Home
-                    </Link>
+                    <slot name="header-right">
+                        <Link
+                            v-if="showHomeLink"
+                            href="/"
+                            class="text-sm font-medium text-slate-200 hover:text-white transition"
+                        >
+                            Home
+                        </Link>
+                    </slot>
                 </div>
             </div>
         </header>

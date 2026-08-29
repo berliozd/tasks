@@ -9,6 +9,7 @@ use App\Repositories\DirectoryRepository;
 use App\Repositories\EmailTemplateRepository;
 use App\Repositories\ProspectActionRepository;
 use App\Repositories\ProspectRepository;
+use App\Services\MailSender\MailSenderInterface;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Collection;
@@ -16,13 +17,13 @@ use Illuminate\Support\Collection;
 readonly class ProspectActionService
 {
     private const TYPES = ['email', 'call', 'linkedin', 'meeting', 'other'];
-    private const STATUSES = ['planned', 'sent', 'replied', 'bounced', 'no_response', 'won', 'lost'];
 
     public function __construct(
         private ProspectActionRepository $prospectActionRepository,
         private ProspectRepository $prospectRepository,
         private DirectoryRepository $directoryRepository,
         private EmailTemplateRepository $emailTemplateRepository,
+        private MailSenderInterface $mailSender,
     ) {
     }
 
@@ -48,13 +49,96 @@ readonly class ProspectActionService
         $this->validateType($type);
         $this->validateStatus($status);
 
+        $subject = $data['subject'] ?? null;
+        $fromEmail = $data['from_email'] ?? null;
+        $replyToEmail = $data['reply_to_email'] ?? null;
+        $message = $data['message'] ?? null;
+
         return $this->prospectActionRepository->create([
             'prospect_id' => $prospect->id,
             'email_template_id' => $this->resolveEmailTemplateId($data['email_template_id'] ?? null, $prospect),
             'type' => $type,
-            'message' => $data['message'] ?? null,
+            'subject' => $subject,
+            'from_email' => $fromEmail,
+            'reply_to_email' => $replyToEmail,
+            'message' => $message,
             'status' => $status,
+            'queued_for_send' => !empty($data['queued_for_send']),
             'scheduled_at' => !empty($data['scheduled_at']) ? Carbon::parse($data['scheduled_at']) : now(),
+        ]);
+    }
+
+    /**
+     * Send an already-logged, still-planned email action now.
+     *
+     * From/reply-to resolve as: explicit override, then the value already
+     * stored on the action, then the owning directory's default. Only
+     * whichever from/reply-to actually get used are persisted back onto
+     * the action, so the log reflects what really went out.
+     *
+     * @throws Exception
+     */
+    public function send(int $id, ?string $fromEmail = null, ?string $replyToEmail = null): ProspectAction
+    {
+        $action = $this->findAction($id);
+        $this->checkPerms($action);
+
+        return $this->sendAction($action, $fromEmail, $replyToEmail);
+    }
+
+    /**
+     * Same as send(), but skips the auth()-based ownership check — for use
+     * by unattended console/scheduled runs where there is no logged-in user.
+     * Never expose this over HTTP.
+     *
+     * @throws Exception
+     */
+    public function sendAsSystem(int $id): ProspectAction
+    {
+        return $this->sendAction($this->findAction($id));
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function sendAction(ProspectAction $action, ?string $fromEmail = null, ?string $replyToEmail = null): ProspectAction
+    {
+        if ($action->type !== 'email') {
+            throw new Exception('Only email actions can be sent');
+        }
+        if ($action->status !== 'planned') {
+            throw new Exception('Only planned actions can be sent');
+        }
+
+        $prospect = $action->prospect ?? $this->findProspect($action->prospect_id);
+        if (empty($prospect->email)) {
+            throw new Exception('This prospect has no email address');
+        }
+
+        $directory = $prospect->directory ?? $this->directoryRepository->find($prospect->directory_id);
+
+        $resolvedFromEmail = $fromEmail ?: $action->from_email ?: $directory?->default_from_email;
+        $resolvedReplyTo = $replyToEmail ?: $action->reply_to_email ?: $directory?->default_reply_to_email;
+
+        if (empty($resolvedFromEmail)) {
+            throw new Exception('A from email is required to send (set one on the action or as a directory default)');
+        }
+
+        $this->mailSender->send(
+            $prospect->email,
+            $prospect->name,
+            $resolvedFromEmail,
+            null,
+            (string) $action->subject,
+            (string) $action->message,
+            $resolvedReplyTo,
+        );
+
+        return $this->prospectActionRepository->update($action, [
+            'status' => 'sent',
+            'queued_for_send' => false,
+            'from_email' => $resolvedFromEmail,
+            'reply_to_email' => $resolvedReplyTo,
         ]);
     }
 
@@ -77,6 +161,18 @@ readonly class ProspectActionService
         }
         if (array_key_exists('message', $data)) {
             $update['message'] = $data['message'];
+        }
+        if (array_key_exists('subject', $data)) {
+            $update['subject'] = $data['subject'];
+        }
+        if (array_key_exists('from_email', $data)) {
+            $update['from_email'] = $data['from_email'];
+        }
+        if (array_key_exists('reply_to_email', $data)) {
+            $update['reply_to_email'] = $data['reply_to_email'];
+        }
+        if (array_key_exists('queued_for_send', $data)) {
+            $update['queued_for_send'] = (bool) $data['queued_for_send'];
         }
         if (array_key_exists('scheduled_at', $data)) {
             $update['scheduled_at'] = !empty($data['scheduled_at']) ? Carbon::parse($data['scheduled_at']) : null;
@@ -131,7 +227,7 @@ readonly class ProspectActionService
      */
     private function validateStatus(string $status): void
     {
-        if (!in_array($status, self::STATUSES, true)) {
+        if (!in_array($status, ProspectAction::STATUSES, true)) {
             throw new Exception('Invalid status');
         }
     }

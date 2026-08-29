@@ -10,13 +10,23 @@ class ProspectAction extends Model
 {
     use HasFactory;
 
+    public const STATUSES = ['planned', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
+
     protected $fillable = [
         'prospect_id',
         'email_template_id',
         'type',
+        'subject',
+        'from_email',
+        'reply_to_email',
         'message',
         'status',
+        'queued_for_send',
         'scheduled_at',
+    ];
+
+    protected $casts = [
+        'queued_for_send' => 'boolean',
     ];
 
     public function prospect(): BelongsTo

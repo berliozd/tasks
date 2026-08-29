@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Services\EmailTemplateGenerator\EmailTemplateGeneratorInterface;
 use App\Services\EmailTemplateGenerator\OpenAiEmailTemplateGenerator;
 use App\Services\EmailTemplateGenerator\StubEmailTemplateGenerator;
+use App\Services\MailSender\LogMailSender;
+use App\Services\MailSender\MailjetMailSender;
+use App\Services\MailSender\MailSenderInterface;
 use App\Services\ProspectGenerator\OpenAiProspectGenerator;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use App\Services\ProspectGenerator\StubProspectGenerator;
@@ -37,6 +40,21 @@ class AppServiceProvider extends ServiceProvider
             return new OpenAiEmailTemplateGenerator(
                 (string) config('services.openai.key'),
                 (string) config('services.openai.model'),
+            );
+        });
+
+        $this->app->bind(MailSenderInterface::class, function () {
+            // Keep tests hermetic (no network calls) regardless of whether keys are configured.
+            if ($this->app->environment('testing')
+                || empty(config('services.mailjet.key'))
+                || empty(config('services.mailjet.secret'))
+            ) {
+                return new LogMailSender();
+            }
+
+            return new MailjetMailSender(
+                (string) config('services.mailjet.key'),
+                (string) config('services.mailjet.secret'),
             );
         });
     }

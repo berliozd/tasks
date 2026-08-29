@@ -15,6 +15,8 @@ class Directory extends Model
         'team_id',
         'name',
         'prompt',
+        'default_from_email',
+        'default_reply_to_email',
     ];
 
     public function team(): BelongsTo

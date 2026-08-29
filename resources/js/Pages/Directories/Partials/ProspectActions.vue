@@ -1,17 +1,21 @@
 <script setup>
-import {ref} from "vue";
+import {reactive, ref} from "vue";
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 
 const props = defineProps({prospectId: Number, directoryId: Number});
-const emit = defineEmits(['count-changed']);
+const emit = defineEmits(['counts-changed']);
 
 const TYPES = ['email', 'call', 'linkedin', 'meeting', 'other'];
-const STATUSES = ['planned', 'sent', 'replied', 'bounced', 'no_response', 'won', 'lost'];
+const STATUSES = ['planned', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
 
 const actions = ref([]);
 const loading = ref(true);
+const logging = ref(false);
+const errorMsg = ref('');
 const templates = ref([]);
 const expandedIds = ref(new Set());
+const sendingIds = ref(new Set());
+const rowErrors = reactive({});
 
 const toggleExpand = (action) => {
     const next = new Set(expandedIds.value);
@@ -19,10 +23,13 @@ const toggleExpand = (action) => {
     else next.add(action.id);
     expandedIds.value = next;
 }
-const newAction = ref({
-    type: 'email', message: '', status: 'planned',
+
+const blankAction = () => ({
+    type: 'email', subject: '', message: '', status: 'planned',
     scheduled_at: toDatetimeLocal(new Date()), email_template_id: '',
 });
+
+const newAction = ref(blankAction());
 
 function toDatetimeLocal(date) {
     const d = new Date(date);
@@ -31,11 +38,20 @@ function toDatetimeLocal(date) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const countsByStatus = (list) => {
+    const counts = Object.fromEntries(STATUSES.map(s => [`${s}_count`, 0]));
+    for (const action of list) {
+        const key = `${action.status}_count`;
+        if (key in counts) counts[key]++;
+    }
+    return counts;
+}
+
 const refreshActions = () => {
     loading.value = true;
     axios.get(route('prospect-actions.index', props.prospectId)).then(response => {
         actions.value = response.data;
-        emit('count-changed', actions.value.length);
+        emit('counts-changed', countsByStatus(actions.value));
     }).finally(() => loading.value = false);
 }
 
@@ -47,25 +63,54 @@ const refreshTemplates = () => {
 }
 
 const onTemplateSelected = () => {
-    // Pre-fill the message from the template body, but don't clobber something already typed.
-    if (newAction.value.message) return;
+    // Pre-fill the subject/message from the template, but don't clobber something already typed.
     const template = templates.value.find(t => t.id === newAction.value.email_template_id);
-    if (template) newAction.value.message = template.body;
+    if (!template) return;
+    if (!newAction.value.subject) newAction.value.subject = template.subject ?? '';
+    if (!newAction.value.message) newAction.value.message = template.body;
 }
 
 const logAction = () => {
     if (!newAction.value.message) return;
+    errorMsg.value = '';
+    logging.value = true;
     axios.post(route('prospect-actions.store', props.prospectId), newAction.value).then(() => {
-        newAction.value = {
-            type: 'email', message: '', status: 'planned',
-            scheduled_at: toDatetimeLocal(new Date()), email_template_id: '',
-        };
+        newAction.value = blankAction();
         refreshActions();
-    });
+    }).catch((error) => {
+        errorMsg.value = error.response?.data?.message ?? 'Could not log action';
+    }).finally(() => logging.value = false);
 }
 
 const updateStatus = (action) => {
-    axios.patch(route('prospect-actions.update', action.id), {status: action.status});
+    axios.patch(route('prospect-actions.update', action.id), {status: action.status}).then(() => {
+        emit('counts-changed', countsByStatus(actions.value));
+    });
+}
+
+const updateSchedule = (action) => {
+    axios.patch(route('prospect-actions.update', action.id), {
+        scheduled_at: action.scheduled_at,
+        queued_for_send: action.queued_for_send,
+        from_email: action.from_email,
+        reply_to_email: action.reply_to_email,
+    });
+}
+
+const sendNow = (action) => {
+    delete rowErrors[action.id];
+    sendingIds.value = new Set(sendingIds.value).add(action.id);
+    axios.post(route('prospect-actions.send', action.id)).then(response => {
+        const index = actions.value.findIndex(a => a.id === action.id);
+        if (index !== -1) actions.value[index] = {...actions.value[index], ...response.data};
+        emit('counts-changed', countsByStatus(actions.value));
+    }).catch(error => {
+        rowErrors[action.id] = error.response?.data?.message ?? 'Could not send email';
+    }).finally(() => {
+        const next = new Set(sendingIds.value);
+        next.delete(action.id);
+        sendingIds.value = next;
+    });
 }
 
 const deleteAction = (action) => {
@@ -95,14 +140,20 @@ refreshTemplates();
                 <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
             </select>
         </div>
+        <input v-if="newAction.type === 'email'" type="text" v-model="newAction.subject" placeholder="Subject"
+               class="h-9 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
         <div class="flex gap-2">
             <textarea v-model="newAction.message" placeholder="Message" rows="2"
                       class="text-sm px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
-            <button type="button" @click="logAction"
-                    class="shrink-0 self-start inline-flex items-center px-3 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
-                Log action
+            <button type="button" @click="logAction" :disabled="logging"
+                    class="shrink-0 self-start inline-flex items-center px-3 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                {{ logging ? 'Logging…' : 'Log action' }}
             </button>
         </div>
+        <div v-if="newAction.type === 'email'" class="text-[11px] text-gray-500">
+            Email actions are logged as planned — send them (or schedule a send) from the list below once created.
+        </div>
+        <div v-if="errorMsg" class="text-xs text-red-600">{{ errorMsg }}</div>
 
         <div v-if="loading" class="text-xs text-gray-400">Loading…</div>
         <div v-else-if="!actions.length" class="text-xs text-gray-400">No actions logged yet.</div>
@@ -118,21 +169,56 @@ refreshTemplates();
                     <span class="shrink-0 text-xs font-medium text-gray-500 w-16 capitalize">{{ action.type }}</span>
                     <span class="shrink-0 text-xs text-gray-400 w-36">
                         {{ action.scheduled_at ? new Date(action.scheduled_at).toLocaleString() : '' }}
+                        <span v-if="action.queued_for_send" class="text-brand-accent-dark">· queued</span>
                     </span>
-                    <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">{{ action.message }}</span>
+                    <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">
+                        {{ action.email_template ? action.email_template.name : action.message }}
+                    </span>
                     <select v-model="action.status" @change="updateStatus(action)" @click.stop
                             class="shrink-0 h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
                         <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
                     </select>
+                    <button v-if="action.type === 'email' && action.status === 'planned'" type="button"
+                            @click.stop="sendNow(action)" :disabled="sendingIds.has(action.id)"
+                            class="shrink-0 inline-flex items-center px-2 py-1 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                        {{ sendingIds.has(action.id) ? 'Sending…' : 'Send now' }}
+                    </button>
                     <div @click.stop class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 transition">
                         <DeleteModal @deleted="deleteAction(action)" label="Delete this logged action?"/>
                     </div>
                 </div>
-                <div v-if="expandedIds.has(action.id)" class="pb-3 pl-6 pr-2">
-                    <span v-if="action.email_template" class="block text-xs text-brand-accent-dark font-medium mb-1">
+                <div v-if="rowErrors[action.id]" class="pb-2 pl-6 pr-2 text-xs text-red-600">
+                    {{ rowErrors[action.id] }}
+                </div>
+                <div v-if="expandedIds.has(action.id)" class="pb-3 pl-6 pr-2 flex flex-col gap-2">
+                    <span v-if="action.email_template" class="block text-xs text-brand-accent-dark font-medium">
                         Template: {{ action.email_template.name }}
                     </span>
+                    <span v-if="action.subject" class="block text-xs text-gray-500 font-medium">
+                        Subject: {{ action.subject }}
+                    </span>
+                    <span v-if="action.from_email" class="block text-xs text-gray-500 font-medium">
+                        From: {{ action.from_email }}<span v-if="action.reply_to_email"> · Reply-to: {{ action.reply_to_email }}</span>
+                    </span>
                     <span class="text-sm text-gray-700 whitespace-pre-wrap">{{ action.message }}</span>
+
+                    <div v-if="action.type === 'email' && action.status === 'planned'"
+                         class="mt-1 pt-2 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
+                            <input type="checkbox" v-model="action.queued_for_send" @change="updateSchedule(action)"
+                                   class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
+                            Auto-send at the scheduled time
+                        </label>
+                        <input type="datetime-local" :value="toDatetimeLocal(action.scheduled_at)"
+                               @change="e => { action.scheduled_at = e.target.value; updateSchedule(action); }"
+                               class="h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                        <input type="email" v-model="action.from_email" @change="updateSchedule(action)"
+                               placeholder="From email (optional override)"
+                               class="h-8 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                        <input type="email" v-model="action.reply_to_email" @change="updateSchedule(action)"
+                               placeholder="Reply-to (optional override)"
+                               class="h-8 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                    </div>
                 </div>
             </div>
         </div>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Directory;
+use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
@@ -38,8 +39,13 @@ readonly class DirectoryService
         // Prospects' actions are lazy-loaded per-prospect via the dedicated
         // endpoint (Partials/ProspectActions.vue) rather than eager-loaded
         // here, so a directory with many prospects stays cheap to open.
-        // A cheap count is still eager-loaded so the list can show "N actions".
-        $directory->load(['prospects' => fn ($query) => $query->withCount('actions')]);
+        // Cheap per-status counts are still eager-loaded so the list can show
+        // a breakdown like "2 sent, 1 replied" instead of a raw total.
+        $statusCounts = collect(ProspectAction::STATUSES)
+            ->mapWithKeys(fn (string $status) => [
+                "actions as {$status}_count" => fn ($query) => $query->where('status', $status),
+            ])->all();
+        $directory->load(['prospects' => fn ($query) => $query->withCount($statusCounts)]);
         return $directory;
     }
 

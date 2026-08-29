@@ -14,7 +14,7 @@ return [
     */
 
     'name' => env('APP_NAME', 'Laravel'),
-    'home-route' => env('APP_HOME_ROUTE', 'home'),
+    'home-route' => env('APP_HOME_ROUTE', 'dashboard'),
     /*
     |--------------------------------------------------------------------------
     | Application Environment

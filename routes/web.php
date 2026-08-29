@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\ProvidersCallbackController;
 use App\Http\Controllers\CompletedTasksController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoriesController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\FlagController;
@@ -25,9 +26,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/tasks', TaskController::class)->name('tasks');
     Route::get('/completed-tasks', CompletedTasksController::class)->name('completed-tasks');
     Route::get('/flags', FlagController::class)->name('flags');

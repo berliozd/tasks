@@ -16,6 +16,11 @@ class Prospect extends Model
         'name',
         'website',
         'email',
+        'won',
+    ];
+
+    protected $casts = [
+        'won' => 'boolean',
     ];
 
     public function directory(): BelongsTo
