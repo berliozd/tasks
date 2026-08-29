@@ -1,9 +1,28 @@
 # Tasks
 
-A personal task management app: add tasks, schedule them, track progress on
-them in real time, mark them done, and set them up to recur automatically.
-Tasks can be tagged with colored **flags** for filtering, and every task
-keeps a history of past occurrences when it recurs.
+A personal task manager for staying on top of day-to-day to-dos without a
+lot of ceremony: quick-add something, schedule it for a day, tag it with a
+colored flag, and check it off. Tasks you do repeatedly (weekly chores,
+recurring errands, etc.) can be set to reschedule themselves automatically
+the moment you complete them, with a history of every past occurrence kept
+alongside. A live progress bar and per-task timer make it easy to see what's
+still outstanding today and how long something actually took.
+
+It's built as a single-user (or small-team, via Jetstream teams) app rather
+than a project-management tool — there are no projects, priorities, or
+boards, just a fast list you can trust to bring recurring things back on
+schedule.
+
+## Table of contents
+
+- [What it does](#what-it-does)
+- [How it's built](#how-its-built)
+  - [Project layout](#project-layout)
+- [Running it locally](#running-it-locally)
+  - [Option A — Docker (Laravel Sail, recommended)](#option-a--docker-laravel-sail-recommended)
+  - [Option B — Native PHP/Node (SQLite, no Docker)](#option-b--native-phpnode-sqlite-no-docker)
+  - [Useful commands](#useful-commands)
+- [Roadmap](#roadmap)
 
 ## What it does
 
@@ -23,6 +42,13 @@ keeps a history of past occurrences when it recurs.
 - **Teams & auth** — built on Laravel Jetstream: registration/login, email
   verification, two-factor auth, teams with invitations, profile & API
   token management, GitHub/Google social login.
+- **Prospection** — a separate, team-shared outreach tool: build
+  **directories** of prospects (name, website, email), optionally seeded
+  from a prompt via a pluggable AI-generator interface (currently a
+  placeholder implementation — see [Roadmap](#roadmap)), then log **actions**
+  against each prospect (type, message, date, status) to track outreach.
+  Unlike Tasks/Flags, directories belong to the current team rather than
+  just the creating user.
 
 ## How it's built
 
@@ -46,8 +72,8 @@ keeps a history of past occurrences when it recurs.
   events.
 - **Database**: MySQL by default via Docker (see `docker-compose.yml`), or
   SQLite for a zero-dependency local setup (see below). Key models:
-  `Task`, `Flag`, `Recurrence`, `TasksProgression`, plus Jetstream's
-  `Team`/`Membership`/`TeamInvitation`/`User`.
+  `Task`, `Flag`, `Recurrence`, `TasksProgression`, `Directory`, `Prospect`,
+  `ProspectAction`, plus Jetstream's `Team`/`Membership`/`TeamInvitation`/`User`.
 - **Tests**: PHPUnit (`tests/Feature`, `tests/Unit`).
 
 ### Project layout
@@ -133,3 +159,12 @@ php artisan migrate:fresh --seed   # reset the database
 ```
 
 The seeder creates a test user: `test@example.com` / `password`.
+
+## Roadmap
+
+- **Real AI-backed prospect generation** — the Prospection tool's directory
+  generator (`App\Services\ProspectGenerator\ProspectGeneratorInterface`) is
+  currently bound to a `StubProspectGenerator` that returns placeholder rows.
+  Swapping in a real provider (e.g. Claude) is a matter of adding an
+  implementation and rebinding it in `AppServiceProvider` — no caller changes
+  needed.

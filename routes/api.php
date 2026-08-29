@@ -35,4 +35,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/flags/{id}', [App\Http\Controllers\Api\FlagController::class, 'destroy'])->name('flags.delete');
 
     Route::get('/recurrences', [RecurrenceController::class, 'index'])->name('recurrences.index');
+
+    Route::get('/directories', [App\Http\Controllers\Api\DirectoryController::class, 'index'])->name('directories.index');
+    Route::post('/directories', [App\Http\Controllers\Api\DirectoryController::class, 'store'])->name('directories.store');
+    Route::get('/directories/{id}', [App\Http\Controllers\Api\DirectoryController::class, 'show'])->name('directories.show');
+    Route::patch('/directories/{id}', [App\Http\Controllers\Api\DirectoryController::class, 'update'])->name('directories.update');
+    Route::delete('/directories/{id}', [App\Http\Controllers\Api\DirectoryController::class, 'destroy'])->name('directories.delete');
+    Route::post('/directories/{id}/generate', [App\Http\Controllers\Api\DirectoryController::class, 'generate'])
+        ->name('directories.generate');
+
+    Route::get('/directories/{directoryId}/prospects', [App\Http\Controllers\Api\ProspectController::class, 'index'])
+        ->name('prospects.index');
+    Route::post('/directories/{directoryId}/prospects', [App\Http\Controllers\Api\ProspectController::class, 'store'])
+        ->name('prospects.store');
+    Route::patch('/prospects/{id}', [App\Http\Controllers\Api\ProspectController::class, 'update'])->name('prospects.update');
+    Route::delete('/prospects/{id}', [App\Http\Controllers\Api\ProspectController::class, 'destroy'])->name('prospects.delete');
+
+    Route::get('/prospects/{prospectId}/actions', [App\Http\Controllers\Api\ProspectActionController::class, 'index'])
+        ->name('prospect-actions.index');
+    Route::post('/prospects/{prospectId}/actions', [App\Http\Controllers\Api\ProspectActionController::class, 'store'])
+        ->name('prospect-actions.store');
+    Route::patch('/prospect-actions/{id}', [App\Http\Controllers\Api\ProspectActionController::class, 'update'])
+        ->name('prospect-actions.update');
+    Route::delete('/prospect-actions/{id}', [App\Http\Controllers\Api\ProspectActionController::class, 'destroy'])
+        ->name('prospect-actions.destroy');
 });

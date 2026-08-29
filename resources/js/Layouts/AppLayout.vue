@@ -86,6 +86,9 @@ Echo.private('my-private-channel')
                                 <NavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')">
                                     Completed
                                 </NavLink>
+                                <NavLink :href="route('directories')" :active="route().current('directories*')">
+                                    Prospection
+                                </NavLink>
                             </div>
                         </div>
 
@@ -261,6 +264,9 @@ Echo.private('my-private-channel')
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')">
                             Completed
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('directories')" :active="route().current('directories*')">
+                            Prospection
                         </ResponsiveNavLink>
                     </div>
 

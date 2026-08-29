@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\ProvidersCallbackController;
 use App\Http\Controllers\CompletedTasksController;
+use App\Http\Controllers\DirectoriesController;
+use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\FlagController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Foundation\Application;
@@ -29,6 +31,8 @@ Route::middleware([
     Route::get('/tasks', TaskController::class)->name('tasks');
     Route::get('/completed-tasks', CompletedTasksController::class)->name('completed-tasks');
     Route::get('/flags', FlagController::class)->name('flags');
+    Route::get('/directories', DirectoriesController::class)->name('directories');
+    Route::get('/directories/{directory}', DirectoryController::class)->name('directories.view');
 
 });
 
