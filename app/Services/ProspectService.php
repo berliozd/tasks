@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Directory;
 use App\Models\Prospect;
+use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
 use Exception;
@@ -24,6 +25,24 @@ readonly class ProspectService
     {
         $this->checkDirectoryPerms($this->findDirectory($directoryId));
         return $this->prospectRepository->getList($directoryId);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function find(int $id): Prospect
+    {
+        $prospect = $this->findProspect($id);
+        $this->checkPerms($prospect);
+
+        $statusCounts = collect(ProspectAction::STATUSES)
+            ->mapWithKeys(fn (string $status) => [
+                "actions as {$status}_count" => fn ($query) => $query->where('status', $status),
+            ])->all();
+        $prospect->loadCount($statusCounts);
+        $prospect->load('directory:id,name');
+
+        return $prospect;
     }
 
     /**

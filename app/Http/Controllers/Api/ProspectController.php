@@ -24,6 +24,14 @@ class ProspectController extends Controller
     /**
      * @throws Exception
      */
+    public function show(string $id)
+    {
+        return $this->prospectService->find((int) $id);
+    }
+
+    /**
+     * @throws Exception
+     */
     public function store(Request $request, string $directoryId)
     {
         return $this->prospectService->create([

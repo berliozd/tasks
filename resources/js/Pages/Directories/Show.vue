@@ -3,12 +3,10 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import {ref, watch} from "vue";
 import SaveButton from "@/Components/SaveButton.vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
-import Modal from "@/Components/Modal.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
-import ProspectActions from "@/Pages/Directories/Partials/ProspectActions.vue";
 import EmailTemplates from "@/Pages/Directories/Partials/EmailTemplates.vue";
 import debounce from "lodash/debounce";
-import {Link} from "@inertiajs/vue3";
+import {Link, router} from "@inertiajs/vue3";
 
 const props = defineProps({directoryId: Number});
 
@@ -22,12 +20,6 @@ let watchDirectoryActive = false;
 const savingDirectory = ref(false);
 const savedDirectory = ref(false);
 let savedDirectoryTimer = null;
-
-const activeProspect = ref(null);
-const savingActive = ref(false);
-const savedActive = ref(false);
-let savedActiveTimer = null;
-let activeProspectSnapshot = null;
 
 const refreshDirectory = () => {
     axios.get(route('directories.show', props.directoryId)).then(response => {
@@ -91,12 +83,13 @@ const addProspect = () => {
 
 const deleteProspect = (prospect) => {
     axios.delete(route('prospects.delete', prospect.id)).then(() => {
-        if (activeProspect.value?.id === prospect.id) activeProspect.value = null;
         refreshDirectory();
     });
 }
 
-const cleanProspect = (p) => JSON.stringify({name: p.name, website: p.website, email: p.email, won: p.won});
+const openProspect = (prospect) => {
+    router.visit(route('prospects.view', [props.directoryId, prospect.id]));
+}
 
 const STATUS_LABELS = {
     planned: 'planned', sent: 'sent', replied: 'replied', bounced: 'bounced',
@@ -122,42 +115,6 @@ const actionFlags = (prospect) => {
     }
     return flags;
 }
-
-const openProspect = (prospect) => {
-    activeProspect.value = prospect;
-    activeProspectSnapshot = cleanProspect(prospect);
-}
-
-const closeProspect = () => {
-    activeProspect.value = null;
-}
-
-watch(() => activeProspect.value && [activeProspect.value.name, activeProspect.value.website, activeProspect.value.email, activeProspect.value.won], () => {
-    if (!activeProspect.value) return;
-    if (cleanProspect(activeProspect.value) === activeProspectSnapshot) return;
-    debouncedUpdateActiveProspect();
-});
-
-const updateActiveProspect = () => {
-    const prospect = activeProspect.value;
-    if (!prospect) return;
-    savingActive.value = true;
-    axios.patch(route('prospects.update', prospect.id), {
-        name: prospect.name,
-        website: prospect.website,
-        email: prospect.email,
-        won: prospect.won,
-    }).then(() => {
-        activeProspectSnapshot = cleanProspect(prospect);
-        savingActive.value = false;
-        savedActive.value = true;
-        if (savedActiveTimer) clearTimeout(savedActiveTimer);
-        savedActiveTimer = setTimeout(() => savedActive.value = false, 1500);
-    }).catch(() => {
-        savingActive.value = false;
-    });
-}
-const debouncedUpdateActiveProspect = debounce(updateActiveProspect, 600);
 
 refreshDirectory();
 </script>
@@ -280,45 +237,5 @@ refreshDirectory();
 
             <EmailTemplates :directory-id="directoryId"/>
         </div>
-
-        <Modal :show="!!activeProspect" @close="closeProspect" max-width="4xl">
-            <div v-if="activeProspect" class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-medium text-gray-900">{{ activeProspect.name || 'Prospect' }}</h3>
-                    <button type="button" @click="closeProspect" class="text-gray-400 hover:text-gray-600 transition">
-                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                             stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <label class="text-xs font-medium text-gray-500">Name</label>
-                    <input type="text" v-model="activeProspect.name"
-                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                    <label class="text-xs font-medium text-gray-500 mt-1">Website</label>
-                    <input type="text" v-model="activeProspect.website"
-                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                    <label class="text-xs font-medium text-gray-500 mt-1">Email</label>
-                    <input type="email" v-model="activeProspect.email"
-                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                    <label class="flex items-center gap-2 mt-1 text-sm text-gray-700">
-                        <input type="checkbox" v-model="activeProspect.won"
-                               class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
-                        Won
-                    </label>
-                    <div class="text-[11px] leading-3 text-gray-500 h-3">
-                        <span v-if="savingActive" class="text-gray-400">Saving…</span>
-                        <span v-else-if="savedActive" class="text-brand-accent-dark font-medium">Saved</span>
-                    </div>
-                </div>
-
-                <div class="border-t border-gray-100 pt-4">
-                    <ProspectActions :prospect-id="activeProspect.id" :directory-id="directoryId"
-                                      @counts-changed="Object.assign(activeProspect, $event)"/>
-                </div>
-            </div>
-        </Modal>
     </AppLayout>
 </template>

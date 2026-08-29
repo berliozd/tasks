@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoriesController;
 use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\FlagController;
+use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,7 @@ Route::middleware([
     Route::get('/flags', FlagController::class)->name('flags');
     Route::get('/directories', DirectoriesController::class)->name('directories');
     Route::get('/directories/{directory}', DirectoryController::class)->name('directories.view');
+    Route::get('/directories/{directory}/prospects/{prospect}', ProspectController::class)->name('prospects.view');
 
 });
 
