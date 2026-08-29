@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\EmailTemplateGenerator\EmailTemplateGeneratorInterface;
+use App\Services\EmailTemplateGenerator\OpenAiEmailTemplateGenerator;
+use App\Services\EmailTemplateGenerator\StubEmailTemplateGenerator;
+use App\Services\ProspectGenerator\OpenAiProspectGenerator;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use App\Services\ProspectGenerator\StubProspectGenerator;
 use Illuminate\Support\ServiceProvider;
@@ -13,7 +17,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind(ProspectGeneratorInterface::class, StubProspectGenerator::class);
+        $this->app->bind(ProspectGeneratorInterface::class, function () {
+            // Keep tests hermetic (no network calls) regardless of whether a key is configured.
+            if ($this->app->environment('testing') || empty(config('services.openai.key'))) {
+                return new StubProspectGenerator();
+            }
+
+            return new OpenAiProspectGenerator(
+                (string) config('services.openai.key'),
+                (string) config('services.openai.model'),
+            );
+        });
+
+        $this->app->bind(EmailTemplateGeneratorInterface::class, function () {
+            if ($this->app->environment('testing') || empty(config('services.openai.key'))) {
+                return new StubEmailTemplateGenerator();
+            }
+
+            return new OpenAiEmailTemplateGenerator(
+                (string) config('services.openai.key'),
+                (string) config('services.openai.model'),
+            );
+        });
     }
 
     /**

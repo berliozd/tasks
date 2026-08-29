@@ -10,16 +10,19 @@ namespace App\Services\ProspectGenerator;
  */
 class StubProspectGenerator implements ProspectGeneratorInterface
 {
-    public function generate(string $prompt, int $count): array
+    public function generate(string $prompt, int $count, array $excludeNames = []): array
     {
         $slug = trim($prompt) !== '' ? $prompt : 'prospect';
+        // Offset the numbering so repeat calls don't just reproduce the same names.
+        $offset = count($excludeNames);
 
         $rows = [];
         for ($i = 1; $i <= $count; $i++) {
+            $n = $offset + $i;
             $rows[] = [
-                'name' => "Prospect $i ({$slug})",
+                'name' => "Prospect $n ({$slug})",
                 'website' => null,
-                'email' => null,
+                'email' => "prospect{$n}@example.com",
             ];
         }
 

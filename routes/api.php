@@ -59,4 +59,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('prospect-actions.update');
     Route::delete('/prospect-actions/{id}', [App\Http\Controllers\Api\ProspectActionController::class, 'destroy'])
         ->name('prospect-actions.destroy');
+
+    Route::get('/directories/{directoryId}/email-templates', [App\Http\Controllers\Api\EmailTemplateController::class, 'index'])
+        ->name('email-templates.index');
+    Route::post('/directories/{directoryId}/email-templates', [App\Http\Controllers\Api\EmailTemplateController::class, 'store'])
+        ->name('email-templates.store');
+    Route::post('/directories/{directoryId}/email-templates/generate', [App\Http\Controllers\Api\EmailTemplateController::class, 'generate'])
+        ->name('email-templates.generate');
+    Route::patch('/email-templates/{id}', [App\Http\Controllers\Api\EmailTemplateController::class, 'update'])
+        ->name('email-templates.update');
+    Route::delete('/email-templates/{id}', [App\Http\Controllers\Api\EmailTemplateController::class, 'destroy'])
+        ->name('email-templates.destroy');
 });

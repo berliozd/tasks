@@ -19,7 +19,10 @@ readonly class ProspectActionRepository
 
     public function getList(int $prospectId): Collection
     {
-        return ProspectAction::where('prospect_id', $prospectId)->orderByDesc('scheduled_at')->get();
+        return ProspectAction::where('prospect_id', $prospectId)
+            ->with('emailTemplate:id,name')
+            ->orderByDesc('scheduled_at')
+            ->get();
     }
 
     public function update(ProspectAction $action, array $data): ProspectAction

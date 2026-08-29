@@ -3,25 +3,25 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import {Link} from '@inertiajs/vue3';
 import {ref, watch} from "vue";
 import SaveButton from "@/Components/SaveButton.vue";
-import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
+import Modal from "@/Components/Modal.vue";
+import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import debounce from "lodash/debounce";
 
-const reactiveDirectories = ref([]);
+const directories = ref([]);
 const newDirectoryName = ref('');
 const newDirectoryPrompt = ref('');
 const errorMsg = ref('');
-let storedDirectories = null;
-let watchActive = false;
-const savingById = ref({});
-const savedById = ref({});
-const savedTimersById = ref({});
+
+const activeDirectory = ref(null);
+const savingActive = ref(false);
+const savedActive = ref(false);
+let savedActiveTimer = null;
+let activeDirectorySnapshot = null;
 
 const refreshDirectories = () => {
     axios.get(route('directories.index'))
         .then(response => {
-            reactiveDirectories.value = response.data;
-            storedDirectories = JSON.parse(JSON.stringify(reactiveDirectories.value));
-            watchActive = true;
+            directories.value = response.data;
         });
 }
 
@@ -49,47 +49,43 @@ const validateInput = () => {
 
 const deleteDirectory = (directory) => {
     axios.delete(route('directories.delete', directory.id)).then(() => {
+        if (activeDirectory.value?.id === directory.id) activeDirectory.value = null;
         refreshDirectories()
     })
 }
 
-const cleanDirectory = (directory) => {
-    // Avoid comparing transient UI fields.
-    const {id, name, prompt} = directory;
-    return {id, name, prompt};
+const cleanDirectory = (d) => JSON.stringify({name: d.name, prompt: d.prompt});
+
+const openDirectory = (directory) => {
+    activeDirectory.value = directory;
+    activeDirectorySnapshot = cleanDirectory(directory);
 }
 
-const updateDirectory = (directory) => {
-    savingById.value[directory.id] = true;
-    axios.patch(route('directories.update', directory.id), {name: directory.name, prompt: directory.prompt}).then(() => {
-        storedDirectories = JSON.parse(JSON.stringify(reactiveDirectories.value));
-        savingById.value[directory.id] = false;
+const closeDirectory = () => {
+    activeDirectory.value = null;
+}
 
-        savedById.value[directory.id] = true;
-        if (savedTimersById.value[directory.id]) {
-            clearTimeout(savedTimersById.value[directory.id]);
-        }
-        savedTimersById.value[directory.id] = setTimeout(() => {
-            savedById.value[directory.id] = false;
-            savedTimersById.value[directory.id] = null;
-        }, 1500);
+watch(() => activeDirectory.value && [activeDirectory.value.name, activeDirectory.value.prompt], () => {
+    if (!activeDirectory.value) return;
+    if (cleanDirectory(activeDirectory.value) === activeDirectorySnapshot) return;
+    debouncedUpdateActiveDirectory();
+});
+
+const updateActiveDirectory = () => {
+    const directory = activeDirectory.value;
+    if (!directory) return;
+    savingActive.value = true;
+    axios.patch(route('directories.update', directory.id), {name: directory.name, prompt: directory.prompt}).then(() => {
+        activeDirectorySnapshot = cleanDirectory(directory);
+        savingActive.value = false;
+        savedActive.value = true;
+        if (savedActiveTimer) clearTimeout(savedActiveTimer);
+        savedActiveTimer = setTimeout(() => savedActive.value = false, 1500);
     }).catch(() => {
-        savingById.value[directory.id] = false;
+        savingActive.value = false;
     });
 }
-
-const debouncedUpdateDirectory = debounce(updateDirectory, 500);
-
-watch(reactiveDirectories, () => {
-    if (!watchActive) return;
-    for (const directory of (reactiveDirectories.value ?? [])) {
-        const stored = (storedDirectories ?? []).find(d => d.id === directory.id);
-        if (!stored) continue;
-        if (JSON.stringify(cleanDirectory(stored)) !== JSON.stringify(cleanDirectory(directory))) {
-            debouncedUpdateDirectory(directory);
-        }
-    }
-}, {deep: true});
+const debouncedUpdateActiveDirectory = debounce(updateActiveDirectory, 600);
 
 refreshDirectories();
 </script>
@@ -122,34 +118,69 @@ refreshDirectories();
         </div>
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="surface-card overflow-hidden">
-                <div v-if="!reactiveDirectories.length" class="p-8 text-center text-sm text-gray-400">
+                <div v-if="!directories.length" class="p-8 text-center text-sm text-gray-400">
                     No directories yet. Add one above to start prospecting.
                 </div>
                 <div v-else class="divide-y divide-gray-100">
-                    <div v-for="directory in reactiveDirectories" :key="directory.id"
-                         class="flex items-center gap-3 px-4 py-3">
-                        <Link :href="route('directories.view', directory.id)"
-                              class="shrink-0 text-sm font-medium text-brand-navy hover:underline">
-                            {{ directory.name || 'Untitled directory' }}
-                        </Link>
-                        <input type="text" v-model="directory.name" placeholder="Name"
-                               class="h-10 px-2 rounded-lg w-full max-w-xs border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                        <input type="text" v-model="directory.prompt" placeholder="AI prompt"
-                               class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <div v-for="directory in directories" :key="directory.id"
+                         class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
+                         @click="openDirectory(directory)">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-gray-900 truncate">
+                                {{ directory.name || 'Untitled directory' }}
+                            </div>
+                            <div class="text-xs text-gray-500 truncate">
+                                {{ directory.prompt || 'No AI prompt set' }}
+                            </div>
+                        </div>
                         <span class="shrink-0 inline-flex items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent-dark text-xs font-semibold tabular-nums min-w-6 h-6 px-2">
                             {{ directory.prospects_count ?? 0 }}
                         </span>
-                        <div class="w-16 shrink-0 text-[11px] leading-3 text-center">
-                            <span v-if="savingById[directory.id]" class="text-gray-400">Saving…</span>
-                            <span v-else-if="savedById[directory.id]" class="text-brand-accent-dark font-medium">Saved</span>
-                        </div>
-                        <div class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition">
-                            <DeleteModal @deleted="deleteDirectory(directory)"
-                                         label="Are you sure you want to delete this directory? All its prospects and logged actions will be deleted too."/>
+                        <Link :href="route('directories.view', directory.id)" @click.stop
+                              class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                            Open →
+                        </Link>
+                        <div @click.stop>
+                            <DeleteConfirmPopover @deleted="deleteDirectory(directory)"
+                                                   label="Delete this directory? All its prospects and logged actions will be deleted too."/>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <Modal :show="!!activeDirectory" @close="closeDirectory">
+            <div v-if="activeDirectory" class="p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">{{ activeDirectory.name || 'Directory' }}</h3>
+                    <button type="button" @click="closeDirectory" class="text-gray-400 hover:text-gray-600 transition">
+                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                             stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-medium text-gray-500">Name</label>
+                    <input type="text" v-model="activeDirectory.name"
+                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <label class="text-xs font-medium text-gray-500 mt-1">AI prompt / criteria</label>
+                    <textarea v-model="activeDirectory.prompt" rows="3"
+                              class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
+                    <div class="text-[11px] leading-3 text-gray-500 h-3">
+                        <span v-if="savingActive" class="text-gray-400">Saving…</span>
+                        <span v-else-if="savedActive" class="text-brand-accent-dark font-medium">Saved</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4">
+                    <Link :href="route('directories.view', activeDirectory.id)"
+                          class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
+                        Open prospects →
+                    </Link>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>

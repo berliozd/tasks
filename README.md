@@ -22,7 +22,6 @@ schedule.
   - [Option A — Docker (Laravel Sail, recommended)](#option-a--docker-laravel-sail-recommended)
   - [Option B — Native PHP/Node (SQLite, no Docker)](#option-b--native-phpnode-sqlite-no-docker)
   - [Useful commands](#useful-commands)
-- [Roadmap](#roadmap)
 
 ## What it does
 
@@ -44,11 +43,15 @@ schedule.
   token management, GitHub/Google social login.
 - **Prospection** — a separate, team-shared outreach tool: build
   **directories** of prospects (name, website, email), optionally seeded
-  from a prompt via a pluggable AI-generator interface (currently a
-  placeholder implementation — see [Roadmap](#roadmap)), then log **actions**
-  against each prospect (type, message, date, status) to track outreach.
-  Unlike Tasks/Flags, directories belong to the current team rather than
-  just the creating user.
+  from a prompt via OpenAI (`gpt-4o-mini` by default — requires
+  `OPENAI_API_KEY`, see [Running it locally](#running-it-locally); falls
+  back to a placeholder generator when unset), then log **actions** against
+  each prospect (type, message, date, status) to track outreach. Each
+  directory also has its own **email templates** — a name, subject and body
+  (with `{{name}}`/`{{company}}` placeholders), either written by hand or
+  drafted by AI from a short goal prompt plus the directory's own audience
+  context. Unlike Tasks/Flags, directories belong to the current team rather than just the
+  creating user.
 
 ## How it's built
 
@@ -73,7 +76,8 @@ schedule.
 - **Database**: MySQL by default via Docker (see `docker-compose.yml`), or
   SQLite for a zero-dependency local setup (see below). Key models:
   `Task`, `Flag`, `Recurrence`, `TasksProgression`, `Directory`, `Prospect`,
-  `ProspectAction`, plus Jetstream's `Team`/`Membership`/`TeamInvitation`/`User`.
+  `ProspectAction`, `EmailTemplate`, plus Jetstream's
+  `Team`/`Membership`/`TeamInvitation`/`User`.
 - **Tests**: PHPUnit (`tests/Feature`, `tests/Unit`).
 
 ### Project layout
@@ -160,11 +164,8 @@ php artisan migrate:fresh --seed   # reset the database
 
 The seeder creates a test user: `test@example.com` / `password`.
 
-## Roadmap
-
-- **Real AI-backed prospect generation** — the Prospection tool's directory
-  generator (`App\Services\ProspectGenerator\ProspectGeneratorInterface`) is
-  currently bound to a `StubProspectGenerator` that returns placeholder rows.
-  Swapping in a real provider (e.g. Claude) is a matter of adding an
-  implementation and rebinding it in `AppServiceProvider` — no caller changes
-  needed.
+Set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, default `gpt-4o-mini`)
+to enable real AI prospect generation; without a key it falls back to a
+placeholder generator (`App\Services\ProspectGenerator\StubProspectGenerator`).
+Restart the app container/server after changing `.env` for the new value to
+take effect (`php artisan serve` caches env per worker process).

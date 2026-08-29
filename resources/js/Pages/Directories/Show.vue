@@ -2,8 +2,11 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import {ref, watch} from "vue";
 import SaveButton from "@/Components/SaveButton.vue";
-import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
+import SavedLabel from "@/Components/SavedLabel.vue";
+import Modal from "@/Components/Modal.vue";
+import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import ProspectActions from "@/Pages/Directories/Partials/ProspectActions.vue";
+import EmailTemplates from "@/Pages/Directories/Partials/EmailTemplates.vue";
 import debounce from "lodash/debounce";
 import {Link} from "@inertiajs/vue3";
 
@@ -14,26 +17,23 @@ const generateCount = ref(5);
 const generating = ref(false);
 const errorMsg = ref('');
 const newProspect = ref({name: '', website: '', email: ''});
-const expandedProspectId = ref(null);
 let storedDirectorySnapshot = null;
 let watchDirectoryActive = false;
 const savingDirectory = ref(false);
 const savedDirectory = ref(false);
 let savedDirectoryTimer = null;
 
-const savingProspectById = ref({});
-const savedProspectById = ref({});
-const savedProspectTimersById = ref({});
-let storedProspects = null;
-let watchProspectsActive = false;
+const activeProspect = ref(null);
+const savingActive = ref(false);
+const savedActive = ref(false);
+let savedActiveTimer = null;
+let activeProspectSnapshot = null;
 
 const refreshDirectory = () => {
     axios.get(route('directories.show', props.directoryId)).then(response => {
         directory.value = response.data;
         storedDirectorySnapshot = cleanDirectory(directory.value);
-        storedProspects = JSON.parse(JSON.stringify(directory.value.prospects ?? []));
         watchDirectoryActive = true;
-        watchProspectsActive = true;
     });
 }
 
@@ -83,50 +83,47 @@ const addProspect = () => {
 
 const deleteProspect = (prospect) => {
     axios.delete(route('prospects.delete', prospect.id)).then(() => {
-        if (expandedProspectId.value === prospect.id) expandedProspectId.value = null;
+        if (activeProspect.value?.id === prospect.id) activeProspect.value = null;
         refreshDirectory();
     });
 }
 
-const toggleExpand = (prospect) => {
-    expandedProspectId.value = expandedProspectId.value === prospect.id ? null : prospect.id;
+const cleanProspect = (p) => JSON.stringify({name: p.name, website: p.website, email: p.email});
+
+const openProspect = (prospect) => {
+    activeProspect.value = prospect;
+    activeProspectSnapshot = cleanProspect(prospect);
 }
 
-const cleanProspect = (p) => {
-    const {id, name, website, email} = p;
-    return {id, name, website, email};
+const closeProspect = () => {
+    activeProspect.value = null;
 }
 
-const updateProspect = (prospect) => {
-    savingProspectById.value[prospect.id] = true;
+watch(() => activeProspect.value && [activeProspect.value.name, activeProspect.value.website, activeProspect.value.email], () => {
+    if (!activeProspect.value) return;
+    if (cleanProspect(activeProspect.value) === activeProspectSnapshot) return;
+    debouncedUpdateActiveProspect();
+});
+
+const updateActiveProspect = () => {
+    const prospect = activeProspect.value;
+    if (!prospect) return;
+    savingActive.value = true;
     axios.patch(route('prospects.update', prospect.id), {
         name: prospect.name,
         website: prospect.website,
         email: prospect.email,
     }).then(() => {
-        storedProspects = JSON.parse(JSON.stringify(directory.value.prospects ?? []));
-        savingProspectById.value[prospect.id] = false;
-        savedProspectById.value[prospect.id] = true;
-        if (savedProspectTimersById.value[prospect.id]) clearTimeout(savedProspectTimersById.value[prospect.id]);
-        savedProspectTimersById.value[prospect.id] = setTimeout(() => {
-            savedProspectById.value[prospect.id] = false;
-        }, 1500);
+        activeProspectSnapshot = cleanProspect(prospect);
+        savingActive.value = false;
+        savedActive.value = true;
+        if (savedActiveTimer) clearTimeout(savedActiveTimer);
+        savedActiveTimer = setTimeout(() => savedActive.value = false, 1500);
     }).catch(() => {
-        savingProspectById.value[prospect.id] = false;
+        savingActive.value = false;
     });
 }
-const debouncedUpdateProspect = debounce(updateProspect, 600);
-
-watch(() => directory.value.prospects, () => {
-    if (!watchProspectsActive) return;
-    for (const prospect of (directory.value.prospects ?? [])) {
-        const stored = (storedProspects ?? []).find(p => p.id === prospect.id);
-        if (!stored) continue;
-        if (JSON.stringify(cleanProspect(stored)) !== JSON.stringify(cleanProspect(prospect))) {
-            debouncedUpdateProspect(prospect);
-        }
-    }
-}, {deep: true});
+const debouncedUpdateActiveProspect = debounce(updateActiveProspect, 600);
 
 refreshDirectory();
 </script>
@@ -145,6 +142,10 @@ refreshDirectory();
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col gap-6">
+
+            <div class="min-h-6">
+                <SavedLabel/>
+            </div>
 
             <div class="surface-card">
                 <div class="p-4 flex flex-col gap-2">
@@ -167,7 +168,7 @@ refreshDirectory();
                             {{ generating ? 'Generating…' : 'Generate with AI' }}
                         </button>
                         <span class="text-xs text-gray-400">
-                            Placeholder generator for now — set a prompt above, this doesn't call a real AI yet.
+                            Set a prompt above describing the kind of prospects you want.
                         </span>
                     </div>
                     <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
@@ -194,38 +195,74 @@ refreshDirectory();
                     No prospects yet. Add one above, or generate some with AI.
                 </div>
                 <div v-else class="divide-y divide-gray-100">
-                    <div v-for="prospect in directory.prospects" :key="prospect.id">
-                        <div class="flex items-center gap-3 px-4 py-3">
-                            <button type="button" @click="toggleExpand(prospect)"
-                                    class="shrink-0 w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-700 transition">
-                                <svg class="size-4 transition-transform"
-                                     :class="expandedProspectId === prospect.id ? 'rotate-90' : ''"
-                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                                </svg>
-                            </button>
-                            <input type="text" v-model="prospect.name" placeholder="Name"
-                                   class="h-10 px-2 rounded-lg w-full max-w-xs border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                            <input type="text" v-model="prospect.website" placeholder="Website"
-                                   class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                            <input type="email" v-model="prospect.email" placeholder="Email"
-                                   class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                            <div class="w-16 shrink-0 text-[11px] leading-3 text-center">
-                                <span v-if="savingProspectById[prospect.id]" class="text-gray-400">Saving…</span>
-                                <span v-else-if="savedProspectById[prospect.id]" class="text-brand-accent-dark font-medium">Saved</span>
+                    <div v-for="prospect in directory.prospects" :key="prospect.id"
+                         class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
+                         @click="openProspect(prospect)">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-gray-900 truncate">
+                                {{ prospect.name || 'Untitled prospect' }}
                             </div>
-                            <div class="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition">
-                                <DeleteModal @deleted="deleteProspect(prospect)"
-                                             label="Are you sure you want to delete this prospect? Its logged actions will be deleted too."/>
+                            <div class="text-xs text-gray-500 truncate">
+                                <a v-if="prospect.website" :href="prospect.website" target="_blank" rel="noopener"
+                                   @click.stop class="hover:underline hover:text-brand-accent-dark">
+                                    {{ prospect.website }}
+                                </a>
+                                <span v-if="prospect.website && prospect.email"> · </span>
+                                <span v-if="prospect.email">{{ prospect.email }}</span>
+                                <span v-if="!prospect.website && !prospect.email" class="text-gray-300">
+                                    No website or email yet
+                                </span>
                             </div>
                         </div>
-                        <div v-if="expandedProspectId === prospect.id" class="px-4 pb-4 pl-12">
-                            <ProspectActions :prospect-id="prospect.id"/>
+                        <span v-if="prospect.actions_count"
+                              class="shrink-0 inline-flex items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent-dark text-xs font-semibold tabular-nums min-w-6 h-6 px-2">
+                            {{ prospect.actions_count }} action{{ prospect.actions_count === 1 ? '' : 's' }}
+                        </span>
+                        <span v-else class="shrink-0 text-xs text-gray-400">No actions yet</span>
+                        <div @click.stop>
+                            <DeleteConfirmPopover @deleted="deleteProspect(prospect)"
+                                                   label="Delete this prospect? Its logged actions will be deleted too."/>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <EmailTemplates :directory-id="directoryId"/>
         </div>
+
+        <Modal :show="!!activeProspect" @close="closeProspect" max-width="4xl">
+            <div v-if="activeProspect" class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">{{ activeProspect.name || 'Prospect' }}</h3>
+                    <button type="button" @click="closeProspect" class="text-gray-400 hover:text-gray-600 transition">
+                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                             stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                    <label class="text-xs font-medium text-gray-500">Name</label>
+                    <input type="text" v-model="activeProspect.name"
+                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <label class="text-xs font-medium text-gray-500 mt-1">Website</label>
+                    <input type="text" v-model="activeProspect.website"
+                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <label class="text-xs font-medium text-gray-500 mt-1">Email</label>
+                    <input type="email" v-model="activeProspect.email"
+                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <div class="text-[11px] leading-3 text-gray-500 h-3">
+                        <span v-if="savingActive" class="text-gray-400">Saving…</span>
+                        <span v-else-if="savedActive" class="text-brand-accent-dark font-medium">Saved</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-100 pt-4">
+                    <ProspectActions :prospect-id="activeProspect.id" :directory-id="directoryId"
+                                      @count-changed="activeProspect.actions_count = $event"/>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>

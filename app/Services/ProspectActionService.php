@@ -6,6 +6,7 @@ use App\Models\Directory;
 use App\Models\Prospect;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
+use App\Repositories\EmailTemplateRepository;
 use App\Repositories\ProspectActionRepository;
 use App\Repositories\ProspectRepository;
 use Carbon\Carbon;
@@ -21,6 +22,7 @@ readonly class ProspectActionService
         private ProspectActionRepository $prospectActionRepository,
         private ProspectRepository $prospectRepository,
         private DirectoryRepository $directoryRepository,
+        private EmailTemplateRepository $emailTemplateRepository,
     ) {
     }
 
@@ -48,6 +50,7 @@ readonly class ProspectActionService
 
         return $this->prospectActionRepository->create([
             'prospect_id' => $prospect->id,
+            'email_template_id' => $this->resolveEmailTemplateId($data['email_template_id'] ?? null, $prospect),
             'type' => $type,
             'message' => $data['message'] ?? null,
             'status' => $status,
@@ -78,6 +81,10 @@ readonly class ProspectActionService
         if (array_key_exists('scheduled_at', $data)) {
             $update['scheduled_at'] = !empty($data['scheduled_at']) ? Carbon::parse($data['scheduled_at']) : null;
         }
+        if (array_key_exists('email_template_id', $data)) {
+            $prospect = $action->prospect ?? $this->findProspect($action->prospect_id);
+            $update['email_template_id'] = $this->resolveEmailTemplateId($data['email_template_id'], $prospect);
+        }
 
         return $this->prospectActionRepository->update($action, $update);
     }
@@ -90,6 +97,23 @@ readonly class ProspectActionService
         $action = $this->findAction($id);
         $this->checkPerms($action);
         $this->prospectActionRepository->destroy($action);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function resolveEmailTemplateId(mixed $emailTemplateId, Prospect $prospect): ?int
+    {
+        if (empty($emailTemplateId)) {
+            return null;
+        }
+
+        $template = $this->emailTemplateRepository->find((int) $emailTemplateId);
+        if (!$template || (int) $template->directory_id !== (int) $prospect->directory_id) {
+            throw new Exception('Email template does not belong to this prospect\'s directory');
+        }
+
+        return $template->id;
     }
 
     /**

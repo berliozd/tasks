@@ -26,4 +26,9 @@ class Directory extends Model
     {
         return $this->hasMany(Prospect::class);
     }
+
+    public function emailTemplates(): HasMany
+    {
+        return $this->hasMany(EmailTemplate::class);
+    }
 }

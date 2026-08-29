@@ -12,6 +12,7 @@ class ProspectAction extends Model
 
     protected $fillable = [
         'prospect_id',
+        'email_template_id',
         'type',
         'message',
         'status',
@@ -21,5 +22,10 @@ class ProspectAction extends Model
     public function prospect(): BelongsTo
     {
         return $this->belongsTo(Prospect::class);
+    }
+
+    public function emailTemplate(): BelongsTo
+    {
+        return $this->belongsTo(EmailTemplate::class);
     }
 }

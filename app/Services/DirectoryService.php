@@ -38,7 +38,8 @@ readonly class DirectoryService
         // Prospects' actions are lazy-loaded per-prospect via the dedicated
         // endpoint (Partials/ProspectActions.vue) rather than eager-loaded
         // here, so a directory with many prospects stays cheap to open.
-        $directory->load('prospects');
+        // A cheap count is still eager-loaded so the list can show "N actions".
+        $directory->load(['prospects' => fn ($query) => $query->withCount('actions')]);
         return $directory;
     }
 
@@ -90,14 +91,29 @@ readonly class DirectoryService
         }
 
         $count = max(1, min(50, $count));
-        $rows = $this->prospectGenerator->generate($directory->prompt, $count);
 
-        $created = collect($rows)->map(fn (array $row) => $this->prospectRepository->create([
-            'directory_id' => $directory->id,
-            'name' => $row['name'],
-            'website' => $row['website'] ?? null,
-            'email' => $row['email'] ?? null,
-        ]));
+        $existingNames = $directory->prospects()->pluck('name')->all();
+        $seenNames = array_map(fn (string $name) => mb_strtolower(trim($name)), $existingNames);
+
+        $rows = $this->prospectGenerator->generate($directory->prompt, $count, $existingNames);
+
+        $created = collect($rows)
+            ->filter(function (array $row) use (&$seenNames) {
+                $name = mb_strtolower(trim((string) ($row['name'] ?? '')));
+                // Require a contact email, and skip anything already in the directory
+                // (or repeated within this same generated batch).
+                if ($name === '' || empty($row['email']) || in_array($name, $seenNames, true)) {
+                    return false;
+                }
+                $seenNames[] = $name;
+                return true;
+            })
+            ->map(fn (array $row) => $this->prospectRepository->create([
+                'directory_id' => $directory->id,
+                'name' => $row['name'],
+                'website' => $row['website'] ?? null,
+                'email' => $row['email'],
+            ]));
 
         return $created;
     }
