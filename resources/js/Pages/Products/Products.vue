@@ -7,14 +7,16 @@ export default {
 </script>
 
 <script setup>
-import {Head, router} from '@inertiajs/vue3';
+import {Head, Link, router} from '@inertiajs/vue3';
 import {ref} from "vue";
+import {format} from 'date-fns';
 import Modal from "@/Components/Modal.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import {useStore} from "@/Composables/store.js";
 import {statusFlags} from "@/Composables/prospectActionStatus.js";
 
 const products = ref([]);
+const plannedActions = ref([]);
 const showAddModal = ref(false);
 const newProduct = ref({name: '', website_url: '', brief: ''});
 const adding = ref(false);
@@ -28,6 +30,17 @@ const refreshProducts = () => {
             products.value = response.data;
         });
 }
+
+const refreshPlannedActions = () => {
+    axios.get(route('prospect-actions.planned'))
+        .then(response => {
+            plannedActions.value = response.data;
+        });
+}
+
+const formatScheduled = (date) => date ? format(new Date(date), 'MMM d, HH:mm') : '';
+
+const truncate = (text, length) => text && text.length > length ? text.slice(0, length) + '…' : text;
 
 const openAddModal = () => {
     newProduct.value = {name: '', website_url: '', brief: ''};
@@ -75,13 +88,20 @@ const openProduct = (product) => {
 }
 
 refreshProducts();
+refreshPlannedActions();
 </script>
 
 <template>
     <Head title="Prospection"/>
 
     <div class="surface-card overflow-hidden">
-        <div class="p-4 text-sm font-medium text-gray-900 border-b border-gray-100">Products</div>
+        <div class="p-4 flex items-center gap-2 border-b border-gray-100">
+            <span class="text-sm font-medium text-gray-900">Products</span>
+            <button type="button" @click="openAddModal" title="Add a product"
+                    class="ml-auto shrink-0 inline-flex items-center justify-center size-9 rounded-full bg-brand-accent text-white text-xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                +
+            </button>
+        </div>
         <div v-if="!products.length" class="p-8 text-center text-sm text-gray-400">
             No products yet. Add one to start organizing directories.
         </div>
@@ -118,10 +138,38 @@ refreshProducts();
         </div>
     </div>
 
-    <button type="button" @click="openAddModal" title="Add a product"
-            class="mt-4 w-1/2 mx-auto h-16 flex items-center justify-center rounded-lg border-2 border-brand-accent text-brand-accent text-3xl leading-none hover:bg-brand-accent/10 active:scale-95 transition">
-        +
-    </button>
+    <div class="surface-card overflow-hidden mt-4">
+        <div class="p-4 text-sm font-medium text-gray-900 border-b border-gray-100">Planned actions</div>
+        <div v-if="!plannedActions.length" class="p-8 text-center text-sm text-gray-400">
+            No actions currently queued for auto-send.
+        </div>
+        <div v-else class="divide-y divide-gray-100">
+            <Link v-for="action in plannedActions" :key="action.id"
+                  :href="route('prospects.view', [action.prospect.directory.id, action.prospect.id])"
+                  class="flex flex-col gap-1 px-4 py-3 text-sm hover:bg-brand-surface transition">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="shrink-0 font-medium text-gray-900 truncate max-w-[45%] sm:max-w-[180px]">
+                        {{ action.prospect?.directory?.product?.name || 'Untitled product' }}
+                    </span>
+                    <span class="shrink-0 text-gray-500 truncate max-w-[45%] sm:max-w-[180px]">
+                        {{ action.prospect?.directory?.name || 'Untitled directory' }}
+                    </span>
+                    <span class="shrink-0 text-gray-700 truncate max-w-[45%] sm:max-w-[180px]">
+                        {{ action.prospect?.name || 'Untitled prospect' }}
+                    </span>
+                    <span class="ml-auto shrink-0 text-xs text-gray-400 tabular-nums">
+                        {{ formatScheduled(action.scheduled_at) }}
+                    </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                    <span class="shrink-0 font-medium text-gray-500 capitalize">{{ action.type }}</span>
+                    <span class="truncate max-w-[60%] sm:max-w-none">To: {{ action.prospect?.email || '—' }}</span>
+                    <span v-if="action.subject" class="truncate max-w-[60%] sm:max-w-none">Subject: {{ truncate(action.subject, 30) }}</span>
+                    <span v-if="action.from_label" class="truncate max-w-[60%] sm:max-w-none">From: {{ action.from_label }}</span>
+                </div>
+            </Link>
+        </div>
+    </div>
 
     <Modal :show="showAddModal" @close="closeAddModal" max-width="md">
         <div class="p-4 flex flex-col gap-2">
