@@ -97,7 +97,7 @@ readonly class DirectoryService
     /**
      * @throws Exception
      */
-    public function generate(int $id, int $count): Collection
+    public function generate(int $id, int $count): array
     {
         $directory = $this->directoryRepository->find($id);
         if (!$directory) {
@@ -128,8 +128,15 @@ readonly class DirectoryService
         $candidateUrls = collect($rows)->pluck('website')->filter()->unique()->values()->all();
         $reachable = $this->reachableWebsites($candidateUrls);
 
+        // Tallied so the frontend can explain *why* fewer prospects came back
+        // than requested — a generation that silently returns nothing is
+        // confusing otherwise.
+        $skippedIncomplete = 0;
+        $skippedDuplicate = 0;
+        $skippedUnreachable = 0;
+
         $created = collect($rows)
-            ->filter(function (array $row) use (&$seenEmails, $reachable) {
+            ->filter(function (array $row) use (&$seenEmails, $reachable, &$skippedIncomplete, &$skippedDuplicate, &$skippedUnreachable) {
                 $name = mb_strtolower(trim((string) ($row['name'] ?? '')));
                 $email = mb_strtolower(trim((string) ($row['email'] ?? '')));
                 // Require a contact email, skip anything whose email is already used
@@ -137,10 +144,16 @@ readonly class DirectoryService
                 // batch), and — since the AI can still claim a website that doesn't
                 // actually exist — drop any prospect whose website didn't come back
                 // with a real 200 when we checked it.
-                if ($name === '' || $email === '' || in_array($email, $seenEmails, true)) {
+                if ($name === '' || $email === '') {
+                    $skippedIncomplete++;
+                    return false;
+                }
+                if (in_array($email, $seenEmails, true)) {
+                    $skippedDuplicate++;
                     return false;
                 }
                 if (!empty($row['website']) && !($reachable[$row['website']] ?? false)) {
+                    $skippedUnreachable++;
                     return false;
                 }
                 $seenEmails[] = $email;
@@ -151,9 +164,17 @@ readonly class DirectoryService
                 'name' => $row['name'],
                 'website' => $row['website'] ?? null,
                 'email' => $row['email'],
-            ]));
+            ]))
+            ->values();
 
-        return $created;
+        return [
+            'requested' => $count,
+            'created_count' => $created->count(),
+            'skipped_duplicate_count' => $skippedDuplicate,
+            'skipped_unreachable_count' => $skippedUnreachable,
+            'skipped_incomplete_count' => $skippedIncomplete,
+            'prospects' => $created,
+        ];
     }
 
     /**

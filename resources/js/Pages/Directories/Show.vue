@@ -39,6 +39,7 @@ watchEffect(() => {
 const generateCount = ref(5);
 const generating = ref(false);
 const errorMsg = ref('');
+const generateResultMsg = ref('');
 const newProspect = ref({name: '', website: '', email: ''});
 let storedDirectorySnapshot = null;
 let watchDirectoryActive = false;
@@ -87,11 +88,36 @@ const updateDirectory = () => {
 }
 const debouncedUpdateDirectory = debounce(updateDirectory, 600);
 
+// Explains what actually happened — the AI can suggest names that turn out
+// to be already-known contacts or unreachable websites, so a batch can come
+// back with fewer prospects than requested, or none at all. Silently doing
+// nothing in that case is confusing, so always summarize the outcome.
+const describeGenerateResult = (result) => {
+    const created = result.created_count ?? 0;
+    const reasons = [];
+    if (result.skipped_duplicate_count) reasons.push(`${result.skipped_duplicate_count} already known`);
+    if (result.skipped_unreachable_count) reasons.push(`${result.skipped_unreachable_count} with an unreachable website`);
+    if (result.skipped_incomplete_count) reasons.push(`${result.skipped_incomplete_count} incomplete`);
+    const skipped = reasons.length ? (result.skipped_duplicate_count ?? 0) + (result.skipped_unreachable_count ?? 0) + (result.skipped_incomplete_count ?? 0) : 0;
+
+    if (created === 0) {
+        return skipped
+            ? `No new prospects — all ${skipped} suggestion${skipped === 1 ? '' : 's'} ${skipped === 1 ? 'was' : 'were'} skipped (${reasons.join(', ')}).`
+            : 'No new prospects were generated — try a different prompt.';
+    }
+
+    let message = `Added ${created} new prospect${created === 1 ? '' : 's'}.`;
+    if (skipped) message += ` Skipped ${skipped} (${reasons.join(', ')}).`;
+    return message;
+}
+
 const generateProspects = () => {
     generating.value = true;
     errorMsg.value = '';
+    generateResultMsg.value = '';
     axios.post(route('directories.generate', props.directoryId), {count: generateCount.value})
-        .then(() => {
+        .then((response) => {
+            generateResultMsg.value = describeGenerateResult(response.data);
             refreshDirectory();
             useStore().refreshProspectionTree();
         })
@@ -329,6 +355,7 @@ refreshTemplates();
                         </span>
                     </div>
                     <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
+                    <div v-else-if="generateResultMsg" class="text-sm text-gray-500">{{ generateResultMsg }}</div>
                 </div>
 
                 <div v-if="!(directory.prospects ?? []).length" class="p-8 text-center text-sm text-gray-400">
