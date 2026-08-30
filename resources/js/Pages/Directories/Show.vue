@@ -285,19 +285,6 @@ refreshTemplates();
                         <span v-if="savingDirectory" class="text-gray-400">Saving…</span>
                         <span v-else-if="savedDirectory" class="text-brand-accent-dark font-medium">Saved</span>
                     </div>
-
-                    <div class="flex items-center gap-2 mt-2">
-                        <input type="number" v-model.number="generateCount" min="1" max="50"
-                               class="h-10 w-20 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                        <button type="button" @click="generateProspects" :disabled="generating || !directory.prompt"
-                                class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                            {{ generating ? 'Generating…' : 'Generate with AI' }}
-                        </button>
-                        <span class="text-xs text-gray-400">
-                            Set a prompt above describing the kind of prospects you want.
-                        </span>
-                    </div>
-                    <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
         </CollapsibleSection>
 
             <CollapsibleSection title="Email templates" flush>
@@ -330,6 +317,18 @@ refreshTemplates();
                                @keydown.enter="addProspect">
                         <SaveButton @click="addProspect"/>
                     </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <input type="number" v-model.number="generateCount" min="1" max="50"
+                               class="h-10 w-20 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                        <button type="button" @click="generateProspects" :disabled="generating || !directory.prompt"
+                                class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                            {{ generating ? 'Generating…' : 'Generate with AI' }}
+                        </button>
+                        <span class="text-xs text-gray-400">
+                            Set a prompt in Directory details describing the kind of prospects you want.
+                        </span>
+                    </div>
+                    <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
                 </div>
 
                 <div v-if="!(directory.prospects ?? []).length" class="p-8 text-center text-sm text-gray-400">

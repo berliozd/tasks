@@ -155,6 +155,7 @@ refreshTree();
                         </div>
                         <Link v-for="prospect in prospectsByDirectory[directory.id]" :key="prospect.id"
                               :href="route('prospects.view', [directory.id, prospect.id])"
+                              preserve-scroll
                               class="min-w-0 truncate px-2 py-1 rounded-lg text-[11px] font-medium transition"
                               :class="activeProspectId === prospect.id
                                   ? 'bg-brand-accent/10 text-brand-accent-dark'

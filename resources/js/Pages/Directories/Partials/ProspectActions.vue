@@ -200,23 +200,23 @@ refreshTemplates();
         <div v-else-if="!actions.length" class="text-xs text-gray-400">No actions logged yet.</div>
         <div v-else class="flex flex-col divide-y divide-gray-200">
             <div v-for="action in actions" :key="action.id">
-                <div class="flex items-center gap-3 py-2 cursor-pointer" @click="toggleExpand(action)">
+                <div class="flex items-center flex-wrap gap-x-2 gap-y-1 sm:gap-3 py-2 cursor-pointer" @click="toggleExpand(action)">
                     <svg class="shrink-0 size-3.5 text-gray-400 transition-transform"
                          :class="expandedIds.has(action.id) ? 'rotate-90' : ''"
                          xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                          stroke-width="2.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                     </svg>
-                    <span class="shrink-0 text-xs font-medium text-gray-500 w-16 capitalize">{{ action.type }}</span>
-                    <span class="shrink-0 text-xs text-gray-400 w-36">
+                    <span class="shrink-0 text-xs font-medium text-gray-500 sm:w-16 capitalize">{{ action.type }}</span>
+                    <span class="hidden sm:block shrink-0 text-xs text-gray-400 sm:w-36">
                         {{ action.scheduled_at ? new Date(action.scheduled_at).toLocaleString() : '' }}
                         <span v-if="action.queued_for_send" class="text-brand-accent-dark">· queued</span>
                     </span>
-                    <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">
+                    <span class="text-sm text-gray-700 flex-1 min-w-0 basis-full sm:basis-0 order-last sm:order-none truncate">
                         {{ action.email_template ? action.email_template.name : action.message }}
                     </span>
                     <select v-if="!action.queued_for_send" v-model="action.status" @change="updateStatus(action)" @click.stop
-                            class="shrink-0 h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                            class="shrink-0 h-8 pl-1 pr-6 sm:px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs max-w-[6.5rem] sm:max-w-none">
                         <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
                     </select>
                     <span v-else class="shrink-0 text-xs text-brand-accent-dark font-medium capitalize">{{ action.status }}</span>

@@ -88,7 +88,7 @@ refreshProspect();
 
     <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
         <template v-else-if="prospect">
-                <CollapsibleSection title="Prospect details">
+                <CollapsibleSection title="Prospect details" default-open>
                     <label class="text-xs font-medium text-gray-500">Name</label>
                     <input type="text" v-model="prospect.name"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
