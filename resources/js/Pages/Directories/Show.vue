@@ -144,6 +144,7 @@ const toggleSelectAllProspects = () => {
 const templates = ref([]);
 const showScheduleModal = ref(false);
 const scheduleTemplateId = ref('');
+const scheduleDatetime = ref('');
 const scheduling = ref(false);
 const scheduleError = ref('');
 
@@ -153,8 +154,27 @@ const refreshTemplates = () => {
     });
 }
 
+function toDatetimeLocal(date) {
+    const d = new Date(date);
+    if (isNaN(d)) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// <input type="datetime-local"> hands back a timezone-naive string (the
+// browser's local wall-clock time). Convert it to a real UTC instant before
+// sending it anywhere, so the server isn't left to guess a timezone.
+function localToUtcIso(localDatetimeString) {
+    if (!localDatetimeString) return null;
+    const d = new Date(localDatetimeString);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+const defaultScheduleDate = () => new Date(Date.now() + 5 * 60 * 1000);
+
 const openScheduleModal = () => {
     scheduleTemplateId.value = '';
+    scheduleDatetime.value = toDatetimeLocal(defaultScheduleDate());
     scheduleError.value = '';
     showScheduleModal.value = true;
 }
@@ -173,9 +193,11 @@ const submitSchedule = async () => {
 
     scheduling.value = true;
     scheduleError.value = '';
-    // Not asked for a specific time here — queue a few minutes out, same
-    // convention as checking "auto-send" on a single action.
-    const scheduledAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    // If left blank, or set to something not safely in the future, fall
+    // back to a few minutes out — same convention as checking "auto-send"
+    // on a single action.
+    const chosen = localToUtcIso(scheduleDatetime.value);
+    const scheduledAt = (chosen && new Date(chosen) > new Date()) ? chosen : defaultScheduleDate().toISOString();
     const ids = Array.from(selectedProspectIds.value);
 
     try {
@@ -377,6 +399,12 @@ refreshTemplates();
                         <span v-if="!templates.length" class="text-[11px] text-gray-400">
                             No email templates yet — add one below first.
                         </span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-medium text-gray-500">Send at</label>
+                        <input type="datetime-local" v-model="scheduleDatetime"
+                               class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                        <span class="text-[11px] text-gray-400">Leave as-is (or blank) to send a few minutes from now.</span>
                     </div>
                     <div v-if="scheduleError" class="text-sm text-red-600">{{ scheduleError }}</div>
                     <div class="flex justify-end gap-2">
