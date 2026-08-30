@@ -7,10 +7,13 @@ export default {
 </script>
 
 <script setup>
-import {ref, watch, watchEffect} from "vue";
+import {computed, ref, watch, watchEffect} from "vue";
 import SaveButton from "@/Components/SaveButton.vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import CollapsibleSection from "@/Components/CollapsibleSection.vue";
+import Modal from "@/Components/Modal.vue";
+import PrimaryButton from "@/Components/PrimaryButton.vue";
+import SecondaryButton from "@/Components/SecondaryButton.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import EmailTemplates from "@/Pages/Directories/Partials/EmailTemplates.vue";
 import debounce from "lodash/debounce";
@@ -118,6 +121,84 @@ const openProspect = (prospect) => {
     router.visit(route('prospects.view', [props.directoryId, prospect.id]));
 }
 
+const selectedProspectIds = ref(new Set());
+
+const toggleProspectSelected = (prospect) => {
+    const next = new Set(selectedProspectIds.value);
+    if (next.has(prospect.id)) next.delete(prospect.id);
+    else next.add(prospect.id);
+    selectedProspectIds.value = next;
+}
+
+const allProspectsSelected = computed(() => {
+    const prospects = directory.value.prospects ?? [];
+    return prospects.length > 0 && prospects.every(p => selectedProspectIds.value.has(p.id));
+});
+
+const toggleSelectAllProspects = () => {
+    selectedProspectIds.value = allProspectsSelected.value
+        ? new Set()
+        : new Set((directory.value.prospects ?? []).map(p => p.id));
+}
+
+const templates = ref([]);
+const showScheduleModal = ref(false);
+const scheduleTemplateId = ref('');
+const scheduling = ref(false);
+const scheduleError = ref('');
+
+const refreshTemplates = () => {
+    axios.get(route('email-templates.index', props.directoryId)).then(response => {
+        templates.value = response.data;
+    });
+}
+
+const openScheduleModal = () => {
+    scheduleTemplateId.value = '';
+    scheduleError.value = '';
+    showScheduleModal.value = true;
+}
+
+const closeScheduleModal = () => {
+    showScheduleModal.value = false;
+}
+
+const submitSchedule = async () => {
+    if (!scheduleTemplateId.value) {
+        scheduleError.value = 'Select a template';
+        return;
+    }
+    const template = templates.value.find(t => t.id === scheduleTemplateId.value);
+    if (!template) return;
+
+    scheduling.value = true;
+    scheduleError.value = '';
+    // Not asked for a specific time here — queue a few minutes out, same
+    // convention as checking "auto-send" on a single action.
+    const scheduledAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const ids = Array.from(selectedProspectIds.value);
+
+    try {
+        await Promise.all(ids.map(prospectId => axios.post(route('prospect-actions.store', prospectId), {
+            type: 'email',
+            email_template_id: template.id,
+            subject: template.subject,
+            message: template.body,
+            status: 'planned',
+            queued_for_send: true,
+            scheduled_at: scheduledAt,
+        })));
+        selectedProspectIds.value = new Set();
+        showScheduleModal.value = false;
+        refreshDirectory();
+        useStore().setSaved(`Scheduled ${ids.length} email${ids.length === 1 ? '' : 's'}`);
+    } catch (error) {
+        scheduleError.value = error.response?.data?.message ?? 'Could not schedule sending';
+    } finally {
+        scheduling.value = false;
+    }
+}
+
 const STATUS_LABELS = {
     pending: 'pending', planned: 'planned', sent: 'sent', replied: 'replied', bounced: 'bounced',
     no_response: 'no response', lost: 'lost',
@@ -145,6 +226,7 @@ const actionFlags = (prospect) => {
 }
 
 refreshDirectory();
+refreshTemplates();
 </script>
 
 <template>
@@ -202,7 +284,18 @@ refreshDirectory();
 
             <div class="surface-card">
                 <div class="p-4 flex flex-col gap-2 border-b border-gray-100">
-                    <div class="text-sm font-medium text-gray-900">Prospects</div>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-sm font-medium text-gray-900">Prospects</div>
+                        <div v-if="selectedProspectIds.size" class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">
+                                {{ selectedProspectIds.size }} selected
+                            </span>
+                            <button type="button" @click="openScheduleModal"
+                                    class="inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
+                                Schedule sending
+                            </button>
+                        </div>
+                    </div>
                     <div class="flex flex-col sm:flex-row gap-2">
                         <input type="text" v-model="newProspect.name" placeholder="Name"
                                class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
@@ -220,10 +313,21 @@ refreshDirectory();
                 <div v-if="!(directory.prospects ?? []).length" class="p-8 text-center text-sm text-gray-400">
                     No prospects yet. Add one above, or generate some with AI.
                 </div>
-                <div v-else class="divide-y divide-gray-100">
+                <template v-else>
+                    <label class="flex items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                        <input type="checkbox" :checked="allProspectsSelected" @change="toggleSelectAllProspects"
+                               class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
+                        Select all
+                    </label>
+                    <div class="divide-y divide-gray-100">
                     <div v-for="prospect in directory.prospects" :key="prospect.id"
                          class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
                          @click="openProspect(prospect)">
+                        <div @click.stop>
+                            <input type="checkbox" :checked="selectedProspectIds.has(prospect.id)"
+                                   @change="toggleProspectSelected(prospect)"
+                                   class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
+                        </div>
                         <div class="min-w-0 flex-1">
                             <div class="text-sm font-medium text-gray-900 truncate">
                                 {{ prospect.name || 'Untitled prospect' }}
@@ -253,6 +357,34 @@ refreshDirectory();
                                                    label="Delete this prospect? Its logged actions will be deleted too."/>
                         </div>
                     </div>
-                </div>
+                    </div>
+                </template>
             </div>
+
+            <Modal :show="showScheduleModal" @close="closeScheduleModal">
+                <div class="p-6 flex flex-col gap-4">
+                    <h3 class="text-lg font-medium text-gray-900">Schedule sending</h3>
+                    <p class="text-sm text-gray-500">
+                        {{ selectedProspectIds.size }} prospect{{ selectedProspectIds.size === 1 ? '' : 's' }} selected.
+                    </p>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-xs font-medium text-gray-500">Email template</label>
+                        <select v-model="scheduleTemplateId"
+                                class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                            <option value="" disabled>Select a template</option>
+                            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                        <span v-if="!templates.length" class="text-[11px] text-gray-400">
+                            No email templates yet — add one below first.
+                        </span>
+                    </div>
+                    <div v-if="scheduleError" class="text-sm text-red-600">{{ scheduleError }}</div>
+                    <div class="flex justify-end gap-2">
+                        <SecondaryButton @click="closeScheduleModal">Cancel</SecondaryButton>
+                        <PrimaryButton @click="submitSchedule" :disabled="scheduling">
+                            {{ scheduling ? 'Scheduling…' : 'Schedule' }}
+                        </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
 </template>
