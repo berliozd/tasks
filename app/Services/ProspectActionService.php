@@ -110,8 +110,8 @@ readonly class ProspectActionService
         if ($action->type !== 'email') {
             throw new Exception('Only email actions can be sent');
         }
-        if ($action->status !== 'pending') {
-            throw new Exception('Only pending actions can be sent');
+        if (!in_array($action->status, ['pending', 'planned'], true)) {
+            throw new Exception('Only pending or planned actions can be sent');
         }
 
         $prospect = $action->prospect ?? $this->findProspect($action->prospect_id);

@@ -6,7 +6,7 @@ const props = defineProps({prospectId: Number, directoryId: Number});
 const emit = defineEmits(['counts-changed']);
 
 const TYPES = ['email', 'call', 'linkedin', 'meeting', 'other'];
-const STATUSES = ['pending', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
+const STATUSES = ['pending', 'planned', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
 
 const actions = ref([]);
 const loading = ref(true);
@@ -120,16 +120,18 @@ const updateMessage = (action) => {
 }
 
 const updateSchedule = (action) => {
-    // Queuing an action for auto-send puts its status back under automatic
-    // management (the row-level status select is hidden while queued).
+    // Queuing an action for auto-send marks it planned (the row-level status
+    // select is hidden while queued); unqueuing drops it back to pending.
     if (action.queued_for_send) {
-        action.status = 'pending';
+        action.status = 'planned';
         // A schedule that isn't safely in the future would fire immediately
         // (or never, if already past) — bump it a few minutes out instead.
         const scheduled = action.scheduled_at ? new Date(action.scheduled_at) : null;
         if (!scheduled || isNaN(scheduled.getTime()) || scheduled <= new Date()) {
             action.scheduled_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
         }
+    } else if (action.status === 'planned') {
+        action.status = 'pending';
     }
     axios.patch(route('prospect-actions.update', action.id), {
         scheduled_at: action.scheduled_at,
@@ -217,8 +219,8 @@ refreshTemplates();
                             class="shrink-0 h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
                         <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
                     </select>
-                    <span v-else class="shrink-0 text-xs text-brand-accent-dark font-medium">Queued</span>
-                    <button v-if="action.type === 'email' && action.status === 'pending'" type="button"
+                    <span v-else class="shrink-0 text-xs text-brand-accent-dark font-medium capitalize">{{ action.status }}</span>
+                    <button v-if="action.type === 'email' && (action.status === 'pending' || action.status === 'planned')" type="button"
                             @click.stop="sendNow(action)" :disabled="sendingIds.has(action.id)"
                             class="shrink-0 inline-flex items-center px-2 py-1 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
                         {{ sendingIds.has(action.id) ? 'Sending…' : 'Send now' }}
@@ -255,7 +257,7 @@ refreshTemplates();
                               @change="updateMessage(action)" @click.stop
                               class="text-sm text-gray-700 px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
 
-                    <div v-if="action.type === 'email' && action.status === 'pending'"
+                    <div v-if="action.type === 'email' && (action.status === 'pending' || action.status === 'planned')"
                          class="mt-1 pt-2 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center gap-2">
                         <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
                             <input type="checkbox" v-model="action.queued_for_send" @change="updateSchedule(action)"

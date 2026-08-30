@@ -199,4 +199,29 @@ class ProspectActionSendTest extends TestCase
 
         $this->postJson("/api/prospect-actions/{$action->id}/send")->assertSuccessful();
     }
+
+    public function test_a_planned_action_can_be_sent(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $directory = Directory::factory()->create(['team_id' => $user->currentTeam->id]);
+        $prospect = Prospect::factory()->create(['directory_id' => $directory->id, 'email' => 'prospect@example.com']);
+        $action = ProspectAction::factory()->create([
+            'prospect_id' => $prospect->id,
+            'subject' => 'Hello',
+            'message' => 'Hi there',
+            'status' => 'planned',
+            'queued_for_send' => true,
+        ]);
+
+        $this->mock(MailSenderInterface::class, function ($mock) {
+            $mock->shouldReceive('send')->once();
+        });
+
+        $this->postJson("/api/prospect-actions/{$action->id}/send")->assertSuccessful();
+
+        $action->refresh();
+        $this->assertEquals('sent', $action->status);
+        $this->assertFalse($action->queued_for_send);
+    }
 }
