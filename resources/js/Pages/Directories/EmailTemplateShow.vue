@@ -1,10 +1,17 @@
-<script setup>
+<script>
 import ProspectionLayout from '@/Layouts/ProspectionLayout.vue';
-import {ref, watch} from "vue";
+
+export default {
+    layout: ProspectionLayout,
+};
+</script>
+
+<script setup>
+import {ref, watch, watchEffect} from "vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 import debounce from "lodash/debounce";
-import {Link, router} from "@inertiajs/vue3";
+import {Head, router} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
 
 const props = defineProps({directoryId: Number, templateId: Number});
@@ -14,6 +21,21 @@ const LANGUAGES = {fr: 'French', en: 'English', de: 'German', da: 'Danish', sv: 
 const directory = ref({name: '', product: null});
 const template = ref(null);
 const loading = ref(true);
+
+watchEffect(() => {
+    const crumbs = [{label: 'Prospection', href: route('products')}];
+    if (directory.value.product) {
+        crumbs.push({label: directory.value.product.name, href: route('products.view', directory.value.product.id)});
+    }
+    crumbs.push({label: directory.value.name || '...', href: route('directories.view', props.directoryId)});
+    crumbs.push({label: 'Email templates', href: route('directories.email-templates', props.directoryId)});
+    crumbs.push({label: template.value?.name || (loading.value ? '...' : 'Email template'), href: null});
+    useStore().setProspectionActive({
+        productId: directory.value.product?.id,
+        directoryId: props.directoryId,
+        breadcrumb: crumbs,
+    });
+});
 const savingActive = ref(false);
 const savedActive = ref(false);
 let savedActiveTimer = null;
@@ -84,38 +106,12 @@ refreshTemplate();
 </script>
 
 <template>
-    <ProspectionLayout :title="template?.name || 'Email template'" :active-product-id="directory.product?.id"
-                        :active-directory-id="directoryId">
+    <Head :title="template?.name || 'Email template'"/>
 
-        <template #header>
-            <div class="flex items-center gap-2 flex-wrap">
-                <Link :href="route('products')" class="text-sm text-gray-500 hover:text-gray-700">
-                    Prospection
-                </Link>
-                <span class="text-gray-300">/</span>
-                <Link v-if="directory.product" :href="route('products.view', directory.product.id)"
-                      class="text-sm text-gray-500 hover:text-gray-700">
-                    {{ directory.product.name }}
-                </Link>
-                <span class="text-gray-300">/</span>
-                <Link :href="route('directories.view', directoryId)" class="text-sm text-gray-500 hover:text-gray-700">
-                    {{ directory.name || '...' }}
-                </Link>
-                <span class="text-gray-300">/</span>
-                <Link :href="route('directories.email-templates', directoryId)" class="text-sm text-gray-500 hover:text-gray-700">
-                    Email templates
-                </Link>
-                <span class="text-gray-300">/</span>
-                <h2 class="font-semibold text-xl leading-tight text-slate-900">
-                    {{ template?.name || (loading ? '...' : 'Email template') }}
-                </h2>
-            </div>
-        </template>
+    <SavedLabel/>
 
-        <SavedLabel/>
-
-        <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
-        <div v-else-if="template" class="surface-card">
+    <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
+    <div v-else-if="template" class="surface-card">
                 <div class="p-4 flex flex-col gap-2">
                     <div class="flex items-center justify-between">
                         <div class="text-sm font-medium text-gray-900">Template details</div>
@@ -155,5 +151,4 @@ refreshTemplate();
                     </div>
                 </div>
             </div>
-    </ProspectionLayout>
 </template>

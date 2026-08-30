@@ -1,18 +1,38 @@
-<script setup>
+<script>
 import ProspectionLayout from '@/Layouts/ProspectionLayout.vue';
-import {ref, watch} from "vue";
+
+export default {
+    layout: ProspectionLayout,
+};
+</script>
+
+<script setup>
+import {ref, watch, watchEffect} from "vue";
 import SaveButton from "@/Components/SaveButton.vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import CollapsibleSection from "@/Components/CollapsibleSection.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import EmailTemplates from "@/Pages/Directories/Partials/EmailTemplates.vue";
 import debounce from "lodash/debounce";
-import {Link, router} from "@inertiajs/vue3";
+import {Head, router} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
 
 const props = defineProps({directoryId: Number});
 
 const directory = ref({name: '', prompt: '', from_label: '', default_reply_to_email: '', product: null, prospects: []});
+
+watchEffect(() => {
+    const crumbs = [{label: 'Prospection', href: route('products')}];
+    if (directory.value.product) {
+        crumbs.push({label: directory.value.product.name, href: route('products.view', directory.value.product.id)});
+    }
+    crumbs.push({label: directory.value.name || '...', href: null});
+    useStore().setProspectionActive({
+        productId: directory.value.product?.id,
+        directoryId: props.directoryId,
+        breadcrumb: crumbs,
+    });
+});
 const generateCount = ref(5);
 const generating = ref(false);
 const errorMsg = ref('');
@@ -127,27 +147,11 @@ refreshDirectory();
 </script>
 
 <template>
-    <ProspectionLayout :title="directory.name || 'Directory'" :active-product-id="directory.product?.id"
-                        :active-directory-id="directoryId">
+    <Head :title="directory.name || 'Directory'"/>
 
-        <template #header>
-            <div class="flex items-center gap-2">
-                <Link :href="route('products')" class="text-sm text-gray-500 hover:text-gray-700">
-                    Prospection
-                </Link>
-                <span class="text-gray-300">/</span>
-                <Link v-if="directory.product" :href="route('products.view', directory.product.id)"
-                      class="text-sm text-gray-500 hover:text-gray-700">
-                    {{ directory.product.name }}
-                </Link>
-                <span class="text-gray-300">/</span>
-                <h2 class="font-semibold text-xl leading-tight text-slate-900">{{ directory.name || '...' }}</h2>
-            </div>
-        </template>
+    <SavedLabel/>
 
-        <SavedLabel/>
-
-        <CollapsibleSection title="Directory details">
+    <CollapsibleSection title="Directory details">
                     <label class="text-xs font-medium text-gray-500">Name</label>
                     <input type="text" v-model="directory.name"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
@@ -250,5 +254,4 @@ refreshDirectory();
                     </div>
                 </div>
             </div>
-    </ProspectionLayout>
 </template>

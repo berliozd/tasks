@@ -1,16 +1,42 @@
-<script setup>
+<script>
 import ProspectionLayout from '@/Layouts/ProspectionLayout.vue';
-import {ref, watch} from "vue";
+
+export default {
+    layout: ProspectionLayout,
+};
+</script>
+
+<script setup>
+import {ref, watch, watchEffect} from "vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import CollapsibleSection from "@/Components/CollapsibleSection.vue";
 import ProspectActions from "@/Pages/Directories/Partials/ProspectActions.vue";
 import debounce from "lodash/debounce";
-import {Link} from "@inertiajs/vue3";
+import {Head} from "@inertiajs/vue3";
+import {useStore} from "@/Composables/store.js";
 
 const props = defineProps({directoryId: Number, prospectId: Number});
 
 const prospect = ref(null);
 const loading = ref(true);
+
+watchEffect(() => {
+    const crumbs = [{label: 'Prospection', href: route('products')}];
+    if (prospect.value?.directory?.product) {
+        crumbs.push({
+            label: prospect.value.directory.product.name,
+            href: route('products.view', prospect.value.directory.product.id),
+        });
+    }
+    crumbs.push({label: prospect.value?.directory?.name || '...', href: route('directories.view', props.directoryId)});
+    crumbs.push({label: prospect.value?.name || (loading.value ? '...' : 'Prospect'), href: null});
+    useStore().setProspectionActive({
+        productId: prospect.value?.directory?.product?.id,
+        directoryId: props.directoryId,
+        prospectId: props.prospectId,
+        breadcrumb: crumbs,
+    });
+});
 const savingActive = ref(false);
 const savedActive = ref(false);
 let savedActiveTimer = null;
@@ -56,34 +82,12 @@ refreshProspect();
 </script>
 
 <template>
-    <ProspectionLayout :title="prospect?.name || 'Prospect'" :active-product-id="prospect?.directory?.product?.id"
-                        :active-directory-id="directoryId" :active-prospect-id="prospectId">
+    <Head :title="prospect?.name || 'Prospect'"/>
 
-        <template #header>
-            <div class="flex items-center gap-2">
-                <Link :href="route('products')" class="text-sm text-gray-500 hover:text-gray-700">
-                    Prospection
-                </Link>
-                <span class="text-gray-300">/</span>
-                <Link v-if="prospect?.directory?.product" :href="route('products.view', prospect.directory.product.id)"
-                      class="text-sm text-gray-500 hover:text-gray-700">
-                    {{ prospect.directory.product.name }}
-                </Link>
-                <span class="text-gray-300">/</span>
-                <Link :href="route('directories.view', directoryId)" class="text-sm text-gray-500 hover:text-gray-700">
-                    {{ prospect?.directory?.name || '...' }}
-                </Link>
-                <span class="text-gray-300">/</span>
-                <h2 class="font-semibold text-xl leading-tight text-slate-900">
-                    {{ prospect?.name || (loading ? '...' : 'Prospect') }}
-                </h2>
-            </div>
-        </template>
+    <SavedLabel/>
 
-        <SavedLabel/>
-
-        <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
-            <template v-else-if="prospect">
+    <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
+        <template v-else-if="prospect">
                 <CollapsibleSection title="Prospect details">
                     <label class="text-xs font-medium text-gray-500">Name</label>
                     <input type="text" v-model="prospect.name"
@@ -111,5 +115,4 @@ refreshProspect();
                                       @counts-changed="Object.assign(prospect, $event)"/>
                 </div>
             </template>
-    </ProspectionLayout>
 </template>
