@@ -18,7 +18,7 @@ const props = defineProps({
 });
 
 const STATUS_LABELS = {
-    planned: 'planned', sent: 'sent', replied: 'replied', bounced: 'bounced',
+    pending: 'pending', sent: 'sent', replied: 'replied', bounced: 'bounced',
     no_response: 'no response', lost: 'lost',
 };
 const STATUS_COLORS = {
@@ -27,9 +27,9 @@ const STATUS_COLORS = {
     no_response: 'bg-red-50 text-red-700',
     lost: 'bg-red-50 text-red-700',
     sent: 'bg-brand-accent/10 text-brand-accent-dark',
-    planned: 'bg-gray-100 text-gray-600',
+    pending: 'bg-gray-100 text-gray-600',
 };
-const STATUS_ORDER = ['sent', 'replied', 'lost', 'bounced', 'no_response', 'planned'];
+const STATUS_ORDER = ['sent', 'replied', 'lost', 'bounced', 'no_response', 'pending'];
 
 const statusFlags = () => STATUS_ORDER
     .map(status => ({status, count: props.prospection.status_counts?.[status] ?? 0}))

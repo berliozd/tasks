@@ -158,7 +158,7 @@ defineProps({
                                 <div>
                                     <h3 class="text-base font-semibold text-black">Outreach Log</h3>
                                     <p class="mt-2 text-sm/relaxed">
-                                        Log every call and email against a prospect with a status — planned,
+                                        Log every call and email against a prospect with a status — pending,
                                         sent, replied, bounced and more.
                                     </p>
                                 </div>

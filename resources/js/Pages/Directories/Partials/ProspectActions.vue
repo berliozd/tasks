@@ -6,7 +6,7 @@ const props = defineProps({prospectId: Number, directoryId: Number});
 const emit = defineEmits(['counts-changed']);
 
 const TYPES = ['email', 'call', 'linkedin', 'meeting', 'other'];
-const STATUSES = ['planned', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
+const STATUSES = ['pending', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
 
 const actions = ref([]);
 const loading = ref(true);
@@ -14,8 +14,11 @@ const logging = ref(false);
 const errorMsg = ref('');
 const templates = ref([]);
 const expandedIds = ref(new Set());
+const expandedContentIds = ref(new Set());
+const savedContentIds = ref(new Set());
 const sendingIds = ref(new Set());
 const rowErrors = reactive({});
+const savedContentTimers = {};
 
 const toggleExpand = (action) => {
     const next = new Set(expandedIds.value);
@@ -24,9 +27,15 @@ const toggleExpand = (action) => {
     expandedIds.value = next;
 }
 
+const toggleContent = (action) => {
+    const next = new Set(expandedContentIds.value);
+    if (next.has(action.id)) next.delete(action.id);
+    else next.add(action.id);
+    expandedContentIds.value = next;
+}
+
 const blankAction = () => ({
-    type: 'email', subject: '', message: '', status: 'planned',
-    scheduled_at: toDatetimeLocal(new Date()), email_template_id: '',
+    type: 'email', subject: '', message: '', email_template_id: '',
 });
 
 const newAction = ref(blankAction());
@@ -84,8 +93,7 @@ const logAction = () => {
     if (!newAction.value.message) return;
     errorMsg.value = '';
     logging.value = true;
-    const payload = {...newAction.value, scheduled_at: localToUtcIso(newAction.value.scheduled_at)};
-    axios.post(route('prospect-actions.store', props.prospectId), payload).then(() => {
+    axios.post(route('prospect-actions.store', props.prospectId), newAction.value).then(() => {
         newAction.value = blankAction();
         refreshActions();
     }).catch((error) => {
@@ -99,12 +107,38 @@ const updateStatus = (action) => {
     });
 }
 
+const updateMessage = (action) => {
+    axios.patch(route('prospect-actions.update', action.id), {message: action.message}).then(() => {
+        savedContentIds.value = new Set(savedContentIds.value).add(action.id);
+        if (savedContentTimers[action.id]) clearTimeout(savedContentTimers[action.id]);
+        savedContentTimers[action.id] = setTimeout(() => {
+            const next = new Set(savedContentIds.value);
+            next.delete(action.id);
+            savedContentIds.value = next;
+        }, 1500);
+    });
+}
+
 const updateSchedule = (action) => {
+    // Queuing an action for auto-send puts its status back under automatic
+    // management (the row-level status select is hidden while queued).
+    if (action.queued_for_send) {
+        action.status = 'pending';
+        // A schedule that isn't safely in the future would fire immediately
+        // (or never, if already past) — bump it a few minutes out instead.
+        const scheduled = action.scheduled_at ? new Date(action.scheduled_at) : null;
+        if (!scheduled || isNaN(scheduled.getTime()) || scheduled <= new Date()) {
+            action.scheduled_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+        }
+    }
     axios.patch(route('prospect-actions.update', action.id), {
         scheduled_at: action.scheduled_at,
         queued_for_send: action.queued_for_send,
+        status: action.status,
         from_label: action.from_label,
         reply_to_email: action.reply_to_email,
+    }).then(() => {
+        emit('counts-changed', countsByStatus(actions.value));
     });
 }
 
@@ -139,12 +173,6 @@ refreshTemplates();
                     class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
                 <option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option>
             </select>
-            <input type="datetime-local" v-model="newAction.scheduled_at"
-                   class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
-            <select v-model="newAction.status"
-                    class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
-                <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
-            </select>
             <select v-model="newAction.email_template_id" @change="onTemplateSelected"
                     class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
                 <option value="">No template</option>
@@ -162,7 +190,7 @@ refreshTemplates();
             </button>
         </div>
         <div v-if="newAction.type === 'email'" class="text-[11px] text-gray-500">
-            Email actions are logged as planned — send them (or schedule a send) from the list below once created.
+            Email actions are logged as pending — send them (or schedule a send) from the list below once created.
         </div>
         <div v-if="errorMsg" class="text-xs text-red-600">{{ errorMsg }}</div>
 
@@ -185,11 +213,12 @@ refreshTemplates();
                     <span class="text-sm text-gray-700 flex-1 min-w-0 truncate">
                         {{ action.email_template ? action.email_template.name : action.message }}
                     </span>
-                    <select v-model="action.status" @change="updateStatus(action)" @click.stop
+                    <select v-if="!action.queued_for_send" v-model="action.status" @change="updateStatus(action)" @click.stop
                             class="shrink-0 h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
                         <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
                     </select>
-                    <button v-if="action.type === 'email' && action.status === 'planned'" type="button"
+                    <span v-else class="shrink-0 text-xs text-brand-accent-dark font-medium">Queued</span>
+                    <button v-if="action.type === 'email' && action.status === 'pending'" type="button"
                             @click.stop="sendNow(action)" :disabled="sendingIds.has(action.id)"
                             class="shrink-0 inline-flex items-center px-2 py-1 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
                         {{ sendingIds.has(action.id) ? 'Sending…' : 'Send now' }}
@@ -213,9 +242,20 @@ refreshTemplates();
                         <span v-if="action.from_label && action.reply_to_email"> · </span>
                         <template v-if="action.reply_to_email">Reply-to: {{ action.reply_to_email }}</template>
                     </span>
-                    <span class="text-sm text-gray-700 whitespace-pre-wrap">{{ action.message }}</span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="toggleContent(action)"
+                                class="self-start text-xs font-medium text-brand-navy hover:underline">
+                            {{ expandedContentIds.has(action.id) ? 'Hide content' : 'Show content' }}
+                        </button>
+                        <span v-if="savedContentIds.has(action.id)" class="text-xs text-brand-accent-dark font-medium">
+                            Saved
+                        </span>
+                    </div>
+                    <textarea v-if="expandedContentIds.has(action.id)" v-model="action.message" rows="4"
+                              @change="updateMessage(action)" @click.stop
+                              class="text-sm text-gray-700 px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
 
-                    <div v-if="action.type === 'email' && action.status === 'planned'"
+                    <div v-if="action.type === 'email' && action.status === 'pending'"
                          class="mt-1 pt-2 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center gap-2">
                         <label class="flex items-center gap-2 text-xs text-gray-600 shrink-0">
                             <input type="checkbox" v-model="action.queued_for_send" @change="updateSchedule(action)"

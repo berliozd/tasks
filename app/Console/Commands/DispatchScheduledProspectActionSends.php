@@ -12,13 +12,13 @@ class DispatchScheduledProspectActionSends extends Command
 {
     protected $signature = 'prospect-actions:dispatch-scheduled-sends';
 
-    protected $description = 'Send planned, queued email actions whose scheduled time has arrived';
+    protected $description = 'Send pending, queued email actions whose scheduled time has arrived';
 
     public function handle(ProspectActionService $prospectActionService): int
     {
         $due = ProspectAction::query()
             ->where('type', 'email')
-            ->where('status', 'planned')
+            ->where('status', 'pending')
             ->where('queued_for_send', true)
             ->where('scheduled_at', '<=', now())
             ->get();
@@ -40,7 +40,7 @@ class DispatchScheduledProspectActionSends extends Command
                     'error' => $e->getMessage(),
                 ]);
                 $this->error("Failed action #{$action->id}: {$e->getMessage()}");
-                // Left as planned/queued so it's retried on the next run.
+                // Left as pending/queued so it's retried on the next run.
             }
         }
 

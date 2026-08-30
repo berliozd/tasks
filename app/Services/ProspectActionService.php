@@ -45,7 +45,7 @@ readonly class ProspectActionService
         $this->checkProspectPerms($prospect);
 
         $type = $data['type'] ?? 'email';
-        $status = $data['status'] ?? 'planned';
+        $status = $data['status'] ?? 'pending';
         $this->validateType($type);
         $this->validateStatus($status);
 
@@ -69,7 +69,7 @@ readonly class ProspectActionService
     }
 
     /**
-     * Send an already-logged, still-planned email action now.
+     * Send an already-logged, still-pending email action now.
      *
      * From email resolves as: explicit override, then the platform's own
      * sending address (emails always send from the platform mailbox —
@@ -110,8 +110,8 @@ readonly class ProspectActionService
         if ($action->type !== 'email') {
             throw new Exception('Only email actions can be sent');
         }
-        if ($action->status !== 'planned') {
-            throw new Exception('Only planned actions can be sent');
+        if ($action->status !== 'pending') {
+            throw new Exception('Only pending actions can be sent');
         }
 
         $prospect = $action->prospect ?? $this->findProspect($action->prospect_id);

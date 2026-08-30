@@ -21,7 +21,7 @@ class ProspectActionFactory extends Factory
             'prospect_id' => Prospect::factory(),
             'type' => 'email',
             'message' => $this->faker->sentence(8),
-            'status' => 'planned',
+            'status' => 'pending',
             'scheduled_at' => now(),
         ];
     }
