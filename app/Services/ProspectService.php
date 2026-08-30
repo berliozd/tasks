@@ -46,6 +46,10 @@ readonly class ProspectService
     public function find(int $id): Prospect
     {
         $prospect = $this->findProspect($id);
+        // Load directory (+ product) once, before the perm check, so
+        // checkPerms() reuses this instead of triggering its own separate
+        // lazy-load query for the same relation.
+        $prospect->load(['directory:id,team_id,name,product_id', 'directory.product:id,name']);
         $this->checkPerms($prospect);
 
         $statusCounts = collect(ProspectAction::STATUSES)
@@ -53,7 +57,6 @@ readonly class ProspectService
                 "actions as {$status}_count" => fn ($query) => $query->where('status', $status),
             ])->all();
         $prospect->loadCount($statusCounts);
-        $prospect->load(['directory:id,name,product_id', 'directory.product:id,name']);
 
         return $prospect;
     }
