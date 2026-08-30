@@ -1,6 +1,7 @@
 <script setup>
 import {reactive, ref} from "vue";
 import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
+import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({prospectId: Number, directoryId: Number});
 const emit = defineEmits(['counts-changed']);
@@ -19,6 +20,7 @@ const savedContentIds = ref(new Set());
 const sendingIds = ref(new Set());
 const rowErrors = reactive({});
 const savedContentTimers = {};
+const showLogModal = ref(false);
 
 const toggleExpand = (action) => {
     const next = new Set(expandedIds.value);
@@ -39,6 +41,16 @@ const blankAction = () => ({
 });
 
 const newAction = ref(blankAction());
+
+const openLogModal = () => {
+    newAction.value = blankAction();
+    errorMsg.value = '';
+    showLogModal.value = true;
+}
+
+const closeLogModal = () => {
+    showLogModal.value = false;
+}
 
 function toDatetimeLocal(date) {
     const d = new Date(date);
@@ -94,7 +106,7 @@ const logAction = () => {
     errorMsg.value = '';
     logging.value = true;
     axios.post(route('prospect-actions.store', props.prospectId), newAction.value).then(() => {
-        newAction.value = blankAction();
+        closeLogModal();
         refreshActions();
     }).catch((error) => {
         errorMsg.value = error.response?.data?.message ?? 'Could not log action';
@@ -169,33 +181,47 @@ refreshTemplates();
 </script>
 
 <template>
-    <div class="rounded-lg bg-brand-surface p-3 flex flex-col gap-3">
-        <div class="flex flex-col sm:flex-row gap-2">
-            <select v-model="newAction.type"
-                    class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
-                <option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option>
-            </select>
-            <select v-model="newAction.email_template_id" @change="onTemplateSelected"
-                    class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
-                <option value="">No template</option>
-                <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
-            </select>
-        </div>
-        <input v-if="newAction.type === 'email'" type="text" v-model="newAction.subject" placeholder="Subject"
-               class="h-9 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
-        <div class="flex gap-2">
-            <textarea v-model="newAction.message" placeholder="Message" rows="2"
-                      class="text-sm px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
-            <button type="button" @click="logAction" :disabled="logging"
-                    class="shrink-0 self-start inline-flex items-center px-3 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                {{ logging ? 'Logging…' : 'Log action' }}
-            </button>
-        </div>
-        <div v-if="newAction.type === 'email'" class="text-[11px] text-gray-500">
-            Email actions are logged as pending — send them (or schedule a send) from the list below once created.
-        </div>
-        <div v-if="errorMsg" class="text-xs text-red-600">{{ errorMsg }}</div>
+    <button type="button" @click="openLogModal"
+            class="w-full h-14 flex items-center justify-center rounded-lg border-2 border-brand-accent text-brand-accent text-sm font-semibold uppercase tracking-widest hover:bg-brand-accent/10 active:scale-95 transition">
+        + Log action
+    </button>
 
+    <Modal :show="showLogModal" @close="closeLogModal" max-width="md">
+        <div class="p-4 flex flex-col gap-2">
+            <div class="text-sm font-medium text-gray-900">Log a new action</div>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <select v-model="newAction.type"
+                        class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                    <option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option>
+                </select>
+                <select v-model="newAction.email_template_id" @change="onTemplateSelected"
+                        class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                    <option value="">No template</option>
+                    <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
+            </div>
+            <input v-if="newAction.type === 'email'" type="text" v-model="newAction.subject" placeholder="Subject"
+                   class="h-9 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+            <textarea v-model="newAction.message" placeholder="Message" rows="4"
+                      class="text-sm px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
+            <div v-if="newAction.type === 'email'" class="text-[11px] text-gray-500">
+                Email actions are logged as pending — send them (or schedule a send) from the list below once created.
+            </div>
+            <div v-if="errorMsg" class="text-xs text-red-600">{{ errorMsg }}</div>
+            <div class="flex justify-end gap-2 mt-2">
+                <button type="button" @click="closeLogModal"
+                        class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-xs text-gray-600 uppercase tracking-widest hover:bg-gray-100 transition">
+                    Cancel
+                </button>
+                <button type="button" @click="logAction" :disabled="logging"
+                        class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                    {{ logging ? 'Logging…' : 'Log action' }}
+                </button>
+            </div>
+        </div>
+    </Modal>
+
+    <div class="rounded-lg bg-brand-surface p-3 mt-3 flex flex-col gap-3">
         <div v-if="loading" class="text-xs text-gray-400">Loading…</div>
         <div v-else-if="!actions.length" class="text-xs text-gray-400">No actions logged yet.</div>
         <div v-else class="flex flex-col divide-y divide-gray-200">
