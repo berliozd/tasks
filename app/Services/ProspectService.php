@@ -28,6 +28,19 @@ readonly class ProspectService
     }
 
     /**
+     * Lightweight id/name list used by the prospection navigation tree —
+     * avoids pulling every prospect's full details (and actions) just to
+     * render a label in the sidebar.
+     *
+     * @throws Exception
+     */
+    public function getTreeList(int $directoryId): Collection
+    {
+        $this->checkDirectoryPerms($this->findDirectory($directoryId));
+        return $this->prospectRepository->getTreeList($directoryId);
+    }
+
+    /**
      * @throws Exception
      */
     public function find(int $id): Prospect

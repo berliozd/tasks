@@ -24,6 +24,14 @@ class ProspectController extends Controller
     /**
      * @throws Exception
      */
+    public function tree(string $directoryId)
+    {
+        return $this->prospectService->getTreeList((int) $directoryId);
+    }
+
+    /**
+     * @throws Exception
+     */
     public function show(string $id)
     {
         return $this->prospectService->find((int) $id);

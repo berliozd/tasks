@@ -22,6 +22,14 @@ readonly class ProspectRepository
         return Prospect::where('directory_id', $directoryId)->with('actions')->get();
     }
 
+    public function getTreeList(int $directoryId): Collection
+    {
+        return Prospect::where('directory_id', $directoryId)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+    }
+
     public function update(Prospect $prospect, array $data): Prospect
     {
         $prospect->fill($data);

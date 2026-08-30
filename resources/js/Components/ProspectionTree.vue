@@ -32,7 +32,7 @@ const loadProspects = (directoryId, force = false) => {
     if (loadingDirectories.value.has(directoryId)) return;
     if (!force && prospectsByDirectory[directoryId]) return;
     loadingDirectories.value = new Set(loadingDirectories.value).add(directoryId);
-    axios.get(route('prospects.index', directoryId)).then(response => {
+    axios.get(route('prospects.tree', directoryId)).then(response => {
         prospectsByDirectory[directoryId] = response.data;
     }).finally(() => {
         const next = new Set(loadingDirectories.value);

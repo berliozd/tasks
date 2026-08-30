@@ -53,6 +53,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/directories/{directoryId}/prospects', [App\Http\Controllers\Api\ProspectController::class, 'index'])
         ->name('prospects.index');
+    Route::get('/directories/{directoryId}/prospects/tree', [App\Http\Controllers\Api\ProspectController::class, 'tree'])
+        ->name('prospects.tree');
     Route::post('/directories/{directoryId}/prospects', [App\Http\Controllers\Api\ProspectController::class, 'store'])
         ->name('prospects.store');
     Route::get('/prospects/{id}', [App\Http\Controllers\Api\ProspectController::class, 'show'])->name('prospects.show');
