@@ -40,7 +40,7 @@ readonly class ProspectService
                 "actions as {$status}_count" => fn ($query) => $query->where('status', $status),
             ])->all();
         $prospect->loadCount($statusCounts);
-        $prospect->load('directory:id,name');
+        $prospect->load(['directory:id,name,product_id', 'directory.product:id,name']);
 
         return $prospect;
     }

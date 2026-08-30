@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Directory;
+use App\Models\EmailTemplate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,6 +21,7 @@ class EmailTemplateFactory extends Factory
         return [
             'name' => $this->faker->sentence(3),
             'subject' => $this->faker->sentence(5),
+            'language' => $this->faker->randomElement(array_keys(EmailTemplate::LANGUAGES)),
             'body' => $this->faker->paragraphs(2, true),
             'directory_id' => Directory::factory(),
         ];

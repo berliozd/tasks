@@ -5,6 +5,10 @@ export const useStore = defineStore('store', {
         return {
             saved: false,
             savedText: null,
+            // Bumped whenever a product/directory/prospect is added or removed
+            // elsewhere on the page, so the (separately-mounted) prospection
+            // tree sidebar knows to refetch instead of going stale.
+            prospectionTreeVersion: 0,
         }
     },
     actions: {
@@ -15,6 +19,9 @@ export const useStore = defineStore('store', {
                 this.saved = false
                 this.savedText = null
             }, delayBeforeHiding);
+        },
+        refreshProspectionTree() {
+            this.prospectionTreeVersion++
         }
     }
 })

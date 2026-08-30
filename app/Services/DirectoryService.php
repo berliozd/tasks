@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Directory;
+use App\Models\Product;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
@@ -21,9 +22,10 @@ readonly class DirectoryService
     ) {
     }
 
-    public function getAll(): Collection
+    public function getAll(?int $productId = null): Collection
     {
         return Directory::where('team_id', auth()->user()->currentTeam->id)
+            ->when($productId, fn ($query) => $query->where('product_id', $productId))
             ->withCount('prospects')
             ->get();
     }
@@ -47,13 +49,21 @@ readonly class DirectoryService
             ->mapWithKeys(fn (string $status) => [
                 "actions as {$status}_count" => fn ($query) => $query->where('status', $status),
             ])->all();
-        $directory->load(['prospects' => fn ($query) => $query->withCount($statusCounts)]);
+        $directory->load(['product', 'prospects' => fn ($query) => $query->withCount($statusCounts)]);
         return $directory;
     }
 
+    /**
+     * @throws Exception
+     */
     public function create(array $data): Directory
     {
-        $data['team_id'] = auth()->user()->currentTeam->id;
+        $teamId = auth()->user()->currentTeam->id;
+        $product = Product::find($data['product_id'] ?? null);
+        if (!$product || (int) $product->team_id !== (int) $teamId) {
+            throw new Exception('Product not found');
+        }
+        $data['team_id'] = $teamId;
         return $this->directoryRepository->create($data);
     }
 

@@ -3,9 +3,12 @@
 use App\Http\Controllers\Auth\ProvidersCallbackController;
 use App\Http\Controllers\CompletedTasksController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DirectoriesController;
 use App\Http\Controllers\DirectoryController;
+use App\Http\Controllers\EmailTemplateController;
+use App\Http\Controllers\EmailTemplatesController;
 use App\Http\Controllers\FlagController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\ProspectController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Foundation\Application;
@@ -31,8 +34,12 @@ Route::middleware([
     Route::get('/tasks', TaskController::class)->name('tasks');
     Route::get('/completed-tasks', CompletedTasksController::class)->name('completed-tasks');
     Route::get('/flags', FlagController::class)->name('flags');
-    Route::get('/directories', DirectoriesController::class)->name('directories');
+    Route::get('/products', ProductsController::class)->name('products');
+    Route::get('/products/{product}', ProductController::class)->name('products.view');
     Route::get('/directories/{directory}', DirectoryController::class)->name('directories.view');
+    Route::get('/directories/{directory}/email-templates', EmailTemplatesController::class)->name('directories.email-templates');
+    Route::get('/directories/{directory}/email-templates/{template}', EmailTemplateController::class)
+        ->name('email-templates.view');
     Route::get('/directories/{directory}/prospects/{prospect}', ProspectController::class)->name('prospects.view');
 
 });

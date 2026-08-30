@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Directory;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,15 +16,18 @@ class DirectoryTest extends TestCase
     {
         $user = User::factory()->withPersonalTeam()->create();
         $this->actingAs($user);
+        $product = Product::factory()->create(['team_id' => $user->currentTeam->id]);
 
         $this->postJson('/api/directories', [
             'name' => 'SaaS in Paris',
             'prompt' => 'SaaS companies based in Paris',
+            'product_id' => $product->id,
         ])->assertSuccessful();
 
         $directory = Directory::first();
         $this->assertNotNull($directory);
         $this->assertEquals($user->currentTeam->id, $directory->team_id);
+        $this->assertEquals($product->id, $directory->product_id);
 
         $this->getJson('/api/directories')
             ->assertSuccessful()
@@ -35,6 +39,22 @@ class DirectoryTest extends TestCase
 
         $this->deleteJson("/api/directories/{$directory->id}")->assertSuccessful();
         $this->assertNull(Directory::find($directory->id));
+    }
+
+    public function test_user_cannot_create_a_directory_under_another_teams_product(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+        $product = Product::factory()->create(['team_id' => $owner->currentTeam->id]);
+
+        $intruder = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($intruder);
+
+        $this->postJson('/api/directories', [
+            'name' => 'Hijacked directory',
+            'product_id' => $product->id,
+        ])->assertServerError();
+
+        $this->assertEquals(0, $product->directories()->count());
     }
 
     public function test_user_cannot_view_or_modify_another_teams_directory(): void

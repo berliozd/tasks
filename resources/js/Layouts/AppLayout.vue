@@ -104,7 +104,8 @@ Echo.private('my-private-channel')
                                         </DropdownLink>
                                     </template>
                                 </Dropdown>
-                                <NavLink :href="route('directories')" :active="route().current('directories*')">
+                                <NavLink :href="route('products')"
+                                         :active="route().current('products*') || route().current('directories*')">
                                     Prospection
                                 </NavLink>
                             </div>
@@ -286,7 +287,8 @@ Echo.private('my-private-channel')
                         <ResponsiveNavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')" class="ps-8">
                             Completed
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('directories')" :active="route().current('directories*')">
+                        <ResponsiveNavLink :href="route('products')"
+                                            :active="route().current('products*') || route().current('directories*')">
                             Prospection
                         </ResponsiveNavLink>
                     </div>

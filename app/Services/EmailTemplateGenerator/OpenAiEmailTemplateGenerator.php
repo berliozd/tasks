@@ -18,16 +18,31 @@ class OpenAiEmailTemplateGenerator implements EmailTemplateGeneratorInterface
     /**
      * @throws Exception
      */
-    public function generate(string $prompt, ?string $audienceContext = null): array
-    {
+    public function generate(
+        string $prompt,
+        ?string $audienceContext = null,
+        ?array $product = null,
+        string $language = 'English'
+    ): array {
         if (empty($this->apiKey)) {
             throw new Exception('OPENAI_API_KEY is not configured');
         }
 
         $userMessage = "Write an outreach email template for this goal: {$prompt}";
+        if (!empty($product['name'])) {
+            $userMessage .= "\n\nThe product being pitched is \"{$product['name']}\"";
+            $userMessage .= !empty($product['brief']) ? ": {$product['brief']}" : '.';
+            $userMessage .= " Mention the product name \"{$product['name']}\" more than once in the body"
+                . " (e.g. once in the opening and once in the closing / signature).";
+            if (!empty($product['website_url'])) {
+                $userMessage .= " Also include the website URL {$product['website_url']} more than once in the body"
+                    . " (e.g. once in the pitch and once as a call to action).";
+            }
+        }
         if (!empty($audienceContext)) {
             $userMessage .= "\n\nIt will be sent to prospects matching: {$audienceContext}";
         }
+        $userMessage .= "\n\nWrite the subject and body in {$language}.";
 
         $response = Http::withToken($this->apiKey)
             ->timeout(60)

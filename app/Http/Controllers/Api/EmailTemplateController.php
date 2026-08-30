@@ -24,6 +24,14 @@ class EmailTemplateController extends Controller
     /**
      * @throws Exception
      */
+    public function show(string $id)
+    {
+        return $this->emailTemplateService->find((int) $id);
+    }
+
+    /**
+     * @throws Exception
+     */
     public function store(Request $request, string $directoryId)
     {
         return $this->emailTemplateService->create([
@@ -53,6 +61,10 @@ class EmailTemplateController extends Controller
      */
     public function generate(Request $request, string $directoryId)
     {
-        return $this->emailTemplateService->generate((int) $directoryId, (string) $request->input('prompt', ''));
+        return $this->emailTemplateService->generate(
+            (int) $directoryId,
+            (string) $request->input('prompt', ''),
+            $request->input('language')
+        );
     }
 }

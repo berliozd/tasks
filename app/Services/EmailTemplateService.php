@@ -31,6 +31,16 @@ readonly class EmailTemplateService
     /**
      * @throws Exception
      */
+    public function find(int $id): EmailTemplate
+    {
+        $template = $this->findTemplate($id);
+        $this->checkPerms($template);
+        return $template;
+    }
+
+    /**
+     * @throws Exception
+     */
     public function create(array $data): EmailTemplate
     {
         $directory = $this->findDirectory((int) ($data['directory_id'] ?? 0));
@@ -40,6 +50,7 @@ readonly class EmailTemplateService
             'directory_id' => $directory->id,
             'name' => $data['name'] ?? 'Untitled template',
             'subject' => $data['subject'] ?? null,
+            'language' => $this->resolveLanguage($data['language'] ?? null),
             'body' => $data['body'] ?? '',
         ]);
     }
@@ -54,6 +65,8 @@ readonly class EmailTemplateService
         return $this->emailTemplateRepository->update($template, [
             'name' => $data['name'] ?? $template->name,
             'subject' => $data['subject'] ?? null,
+            // Language is fixed at creation time — not editable afterwards.
+            'language' => $template->language,
             'body' => $data['body'] ?? $template->body,
         ]);
     }
@@ -71,7 +84,7 @@ readonly class EmailTemplateService
     /**
      * @throws Exception
      */
-    public function generate(int $directoryId, string $prompt): EmailTemplate
+    public function generate(int $directoryId, string $prompt, ?string $language = null): EmailTemplate
     {
         $directory = $this->findDirectory($directoryId);
         $this->checkDirectoryPerms($directory);
@@ -80,12 +93,20 @@ readonly class EmailTemplateService
             throw new Exception('A prompt is required to generate a template');
         }
 
-        $row = $this->emailTemplateGenerator->generate($prompt, $directory->prompt);
+        $language = $this->resolveLanguage($language);
+        $product = $directory->product;
+        $row = $this->emailTemplateGenerator->generate(
+            $prompt,
+            $directory->prompt,
+            $product ? ['name' => $product->name, 'website_url' => $product->website_url, 'brief' => $product->brief] : null,
+            EmailTemplate::LANGUAGES[$language]
+        );
 
         return $this->emailTemplateRepository->create([
             'directory_id' => $directory->id,
             'name' => $row['name'],
             'subject' => $row['subject'] ?? null,
+            'language' => $language,
             'body' => $row['body'],
         ]);
     }
@@ -131,5 +152,17 @@ readonly class EmailTemplateService
     {
         $directory = $template->directory ?? $this->findDirectory($template->directory_id);
         $this->checkDirectoryPerms($directory);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function resolveLanguage(?string $language): string
+    {
+        $language = $language ?: 'en';
+        if (!array_key_exists($language, EmailTemplate::LANGUAGES)) {
+            throw new Exception('Invalid language');
+        }
+        return $language;
     }
 }

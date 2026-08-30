@@ -6,16 +6,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
-class Directory extends Model
+class Product extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'team_id',
-        'product_id',
         'name',
-        'prompt',
+        'website_url',
+        'brief',
         'from_label',
         'default_reply_to_email',
     ];
@@ -25,18 +26,13 @@ class Directory extends Model
         return $this->belongsTo(Team::class);
     }
 
-    public function product(): BelongsTo
+    public function directories(): HasMany
     {
-        return $this->belongsTo(Product::class);
+        return $this->hasMany(Directory::class);
     }
 
-    public function prospects(): HasMany
+    public function prospects(): HasManyThrough
     {
-        return $this->hasMany(Prospect::class);
-    }
-
-    public function emailTemplates(): HasMany
-    {
-        return $this->hasMany(EmailTemplate::class);
+        return $this->hasManyThrough(Prospect::class, Directory::class);
     }
 }

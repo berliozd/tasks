@@ -17,7 +17,7 @@ class ProspectAction extends Model
         'email_template_id',
         'type',
         'subject',
-        'from_email',
+        'from_label',
         'reply_to_email',
         'message',
         'status',

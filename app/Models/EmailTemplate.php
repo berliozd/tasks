@@ -11,10 +11,21 @@ class EmailTemplate extends Model
 {
     use HasFactory;
 
+    public const LANGUAGES = [
+        'fr' => 'French',
+        'en' => 'English',
+        'de' => 'German',
+        'da' => 'Danish',
+        'sv' => 'Swedish',
+        'fi' => 'Finnish',
+        'no' => 'Norwegian',
+    ];
+
     protected $fillable = [
         'directory_id',
         'name',
         'subject',
+        'language',
         'body',
     ];
 

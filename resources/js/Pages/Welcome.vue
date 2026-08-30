@@ -131,7 +131,7 @@ defineProps({
                                 Find leads, track outreach and send real emails — powered by AI, shared with
                                 your whole team.
                             </p>
-                            <a href="/directories"
+                            <a href="/products"
                                class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand-accent-dark hover:underline">
                                 Explore Prospection
                                 <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none"

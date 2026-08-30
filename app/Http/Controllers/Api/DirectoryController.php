@@ -13,9 +13,10 @@ class DirectoryController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return $this->directoryService->getAll();
+        $productId = $request->query('product_id');
+        return $this->directoryService->getAll($productId !== null ? (int) $productId : null);
     }
 
     /**

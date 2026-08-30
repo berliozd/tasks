@@ -36,6 +36,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/recurrences', [RecurrenceController::class, 'index'])->name('recurrences.index');
 
+    Route::get('/products', [App\Http\Controllers\Api\ProductController::class, 'index'])->name('products.index');
+    Route::post('/products', [App\Http\Controllers\Api\ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/tree', [App\Http\Controllers\Api\ProductController::class, 'tree'])->name('products.tree');
+    Route::get('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'show'])->name('products.show');
+    Route::patch('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'update'])->name('products.update');
+    Route::delete('/products/{id}', [App\Http\Controllers\Api\ProductController::class, 'destroy'])->name('products.delete');
+
     Route::get('/directories', [App\Http\Controllers\Api\DirectoryController::class, 'index'])->name('directories.index');
     Route::post('/directories', [App\Http\Controllers\Api\DirectoryController::class, 'store'])->name('directories.store');
     Route::get('/directories/{id}', [App\Http\Controllers\Api\DirectoryController::class, 'show'])->name('directories.show');
@@ -69,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('email-templates.store');
     Route::post('/directories/{directoryId}/email-templates/generate', [App\Http\Controllers\Api\EmailTemplateController::class, 'generate'])
         ->name('email-templates.generate');
+    Route::get('/email-templates/{id}', [App\Http\Controllers\Api\EmailTemplateController::class, 'show'])
+        ->name('email-templates.show');
     Route::patch('/email-templates/{id}', [App\Http\Controllers\Api\EmailTemplateController::class, 'update'])
         ->name('email-templates.update');
     Route::delete('/email-templates/{id}', [App\Http\Controllers\Api\EmailTemplateController::class, 'destroy'])

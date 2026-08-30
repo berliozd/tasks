@@ -50,7 +50,7 @@ readonly class ProspectActionService
         $this->validateStatus($status);
 
         $subject = $data['subject'] ?? null;
-        $fromEmail = $data['from_email'] ?? null;
+        $fromLabel = $data['from_label'] ?? null;
         $replyToEmail = $data['reply_to_email'] ?? null;
         $message = $data['message'] ?? null;
 
@@ -59,7 +59,7 @@ readonly class ProspectActionService
             'email_template_id' => $this->resolveEmailTemplateId($data['email_template_id'] ?? null, $prospect),
             'type' => $type,
             'subject' => $subject,
-            'from_email' => $fromEmail,
+            'from_label' => $fromLabel,
             'reply_to_email' => $replyToEmail,
             'message' => $message,
             'status' => $status,
@@ -71,10 +71,14 @@ readonly class ProspectActionService
     /**
      * Send an already-logged, still-planned email action now.
      *
-     * From/reply-to resolve as: explicit override, then the value already
-     * stored on the action, then the owning directory's default. Only
-     * whichever from/reply-to actually get used are persisted back onto
-     * the action, so the log reflects what really went out.
+     * From email resolves as: explicit override, then the platform's own
+     * sending address (emails always send from the platform mailbox —
+     * actions/directories/products don't own a from address). The from
+     * label and reply-to resolve as: explicit override (reply-to only),
+     * then the value stored on the action, then the directory's own
+     * setting, then the owning product's setting as a fallback default.
+     * Only whichever from label/reply-to actually get used are persisted
+     * back onto the action, so the log reflects what really went out.
      *
      * @throws Exception
      */
@@ -116,19 +120,22 @@ readonly class ProspectActionService
         }
 
         $directory = $prospect->directory ?? $this->directoryRepository->find($prospect->directory_id);
+        $product = $directory?->product;
 
-        $resolvedFromEmail = $fromEmail ?: $action->from_email ?: $directory?->default_from_email;
-        $resolvedReplyTo = $replyToEmail ?: $action->reply_to_email ?: $directory?->default_reply_to_email;
+        $resolvedFromEmail = $fromEmail ?: (string) config('services.prospection.from_email');
+        $resolvedFromLabel = $action->from_label ?: $directory?->from_label ?: $product?->from_label;
+        $resolvedReplyTo = $replyToEmail ?: $action->reply_to_email
+            ?: $directory?->default_reply_to_email ?: $product?->default_reply_to_email;
 
         if (empty($resolvedFromEmail)) {
-            throw new Exception('A from email is required to send (set one on the action or as a directory default)');
+            throw new Exception('A from email is required to send (set one on the action, or configure PROSPECTION_FROM_EMAIL)');
         }
 
         $this->mailSender->send(
             $prospect->email,
             $prospect->name,
             $resolvedFromEmail,
-            null,
+            $resolvedFromLabel,
             (string) $action->subject,
             (string) $action->message,
             $resolvedReplyTo,
@@ -137,7 +144,7 @@ readonly class ProspectActionService
         return $this->prospectActionRepository->update($action, [
             'status' => 'sent',
             'queued_for_send' => false,
-            'from_email' => $resolvedFromEmail,
+            'from_label' => $resolvedFromLabel,
             'reply_to_email' => $resolvedReplyTo,
         ]);
     }
@@ -165,8 +172,8 @@ readonly class ProspectActionService
         if (array_key_exists('subject', $data)) {
             $update['subject'] = $data['subject'];
         }
-        if (array_key_exists('from_email', $data)) {
-            $update['from_email'] = $data['from_email'];
+        if (array_key_exists('from_label', $data)) {
+            $update['from_label'] = $data['from_label'];
         }
         if (array_key_exists('reply_to_email', $data)) {
             $update['reply_to_email'] = $data['reply_to_email'];

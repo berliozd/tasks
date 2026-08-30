@@ -54,4 +54,11 @@ return [
         'secret' => env('MAILJET_APISECRET'),
     ],
 
+    'prospection' => [
+        // The platform mailbox all prospecting emails send from. Directories
+        // customize how they appear via their own "from label" instead of
+        // owning their own sending address.
+        'from_email' => env('PROSPECTION_FROM_EMAIL', 'no-reply@addeos.com'),
+    ],
+
 ];

@@ -103,7 +103,7 @@ const updateSchedule = (action) => {
     axios.patch(route('prospect-actions.update', action.id), {
         scheduled_at: action.scheduled_at,
         queued_for_send: action.queued_for_send,
-        from_email: action.from_email,
+        from_label: action.from_label,
         reply_to_email: action.reply_to_email,
     });
 }
@@ -208,8 +208,10 @@ refreshTemplates();
                     <span v-if="action.subject" class="block text-xs text-gray-500 font-medium">
                         Subject: {{ action.subject }}
                     </span>
-                    <span v-if="action.from_email" class="block text-xs text-gray-500 font-medium">
-                        From: {{ action.from_email }}<span v-if="action.reply_to_email"> · Reply-to: {{ action.reply_to_email }}</span>
+                    <span v-if="action.from_label || action.reply_to_email" class="block text-xs text-gray-500 font-medium">
+                        <template v-if="action.from_label">From label: {{ action.from_label }}</template>
+                        <span v-if="action.from_label && action.reply_to_email"> · </span>
+                        <template v-if="action.reply_to_email">Reply-to: {{ action.reply_to_email }}</template>
                     </span>
                     <span class="text-sm text-gray-700 whitespace-pre-wrap">{{ action.message }}</span>
 
@@ -223,8 +225,8 @@ refreshTemplates();
                         <input type="datetime-local" :value="toDatetimeLocal(action.scheduled_at)"
                                @change="e => { action.scheduled_at = localToUtcIso(e.target.value); updateSchedule(action); }"
                                class="h-8 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
-                        <input type="email" v-model="action.from_email" @change="updateSchedule(action)"
-                               placeholder="From email (optional override)"
+                        <input type="text" v-model="action.from_label" @change="updateSchedule(action)"
+                               placeholder="From label (optional override)"
                                class="h-8 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
                         <input type="email" v-model="action.reply_to_email" @change="updateSchedule(action)"
                                placeholder="Reply-to (optional override)"
