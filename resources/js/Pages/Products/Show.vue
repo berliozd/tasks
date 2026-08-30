@@ -116,7 +116,7 @@ refreshProduct();
 
     <SavedLabel/>
 
-    <CollapsibleSection title="Product details">
+    <CollapsibleSection title="Product details" default-open>
         <label class="text-xs font-medium text-gray-500">Name</label>
         <input type="text" v-model="product.name"
                class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
