@@ -6,7 +6,7 @@ import {useStore} from '@/Composables/store.js';
 import {storeToRefs} from 'pinia';
 import {nextTick, onMounted, onUnmounted} from 'vue';
 
-const {activeProductId, activeDirectoryId, activeProspectId, breadcrumb} = storeToRefs(useStore());
+const {activeProductId, activeDirectoryId, breadcrumb} = storeToRefs(useStore());
 
 // On mobile the tree renders above the page content (stacked layout), so
 // after navigating to a prospect, bring the content into view instead of
@@ -49,8 +49,7 @@ onUnmounted(() => {
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex flex-col lg:flex-row gap-6">
                 <aside class="lg:w-64 shrink-0">
-                    <ProspectionTree :active-product-id="activeProductId" :active-directory-id="activeDirectoryId"
-                                      :active-prospect-id="activeProspectId"/>
+                    <ProspectionTree :active-product-id="activeProductId" :active-directory-id="activeDirectoryId"/>
                 </aside>
                 <div id="prospection-content" class="min-w-0 flex-1 flex flex-col gap-6">
                     <slot/>
