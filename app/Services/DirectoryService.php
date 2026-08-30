@@ -8,7 +8,9 @@ use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use Exception;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 
 readonly class DirectoryService
 {
@@ -103,12 +105,20 @@ readonly class DirectoryService
 
         $rows = $this->prospectGenerator->generate($directory->prompt, $count, $existingNames);
 
+        $candidateUrls = collect($rows)->pluck('website')->filter()->unique()->values()->all();
+        $reachable = $this->reachableWebsites($candidateUrls);
+
         $created = collect($rows)
-            ->filter(function (array $row) use (&$seenNames) {
+            ->filter(function (array $row) use (&$seenNames, $reachable) {
                 $name = mb_strtolower(trim((string) ($row['name'] ?? '')));
-                // Require a contact email, and skip anything already in the directory
-                // (or repeated within this same generated batch).
+                // Require a contact email, skip anything already in the directory (or
+                // repeated within this same generated batch), and — since the AI can
+                // still claim a website that doesn't actually exist — drop any prospect
+                // whose website didn't come back with a real 200 when we checked it.
                 if ($name === '' || empty($row['email']) || in_array($name, $seenNames, true)) {
+                    return false;
+                }
+                if (!empty($row['website']) && !($reachable[$row['website']] ?? false)) {
                     return false;
                 }
                 $seenNames[] = $name;
@@ -122,6 +132,35 @@ readonly class DirectoryService
             ]));
 
         return $created;
+    }
+
+    /**
+     * Actually visit each candidate URL (concurrently, so checking several
+     * doesn't multiply the wait) and return [url => bool] for whether it
+     * genuinely responded 200 — the AI can claim a real-looking website that
+     * doesn't actually exist or answer, so this is a real check, not a guess.
+     *
+     * @param array<int, string> $urls
+     * @return array<string, bool>
+     */
+    private function reachableWebsites(array $urls): array
+    {
+        if (empty($urls)) {
+            return [];
+        }
+
+        $responses = Http::pool(fn ($pool) => collect($urls)->map(
+            fn (string $url) => $pool->as($url)
+                ->withHeaders(['User-Agent' => 'Mozilla/5.0 (compatible; ProspectionBot/1.0)'])
+                ->timeout(5)
+                ->connectTimeout(3)
+                ->get($url)
+        )->all());
+
+        return collect($urls)->mapWithKeys(function (string $url) use ($responses) {
+            $response = $responses[$url] ?? null;
+            return [$url => $response instanceof Response && $response->status() === 200];
+        })->all();
     }
 
     /**
