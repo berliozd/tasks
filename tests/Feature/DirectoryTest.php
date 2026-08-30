@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Directory;
 use App\Models\Product;
+use App\Models\Prospect;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -88,6 +89,31 @@ class DirectoryTest extends TestCase
         $this->postJson("/api/directories/{$directory->id}/prospects", [
             'name' => 'Acme Inc',
         ])->assertServerError();
+
+        $this->assertEquals(0, $directory->prospects()->count());
+    }
+
+    public function test_generating_prospects_skips_emails_already_used_elsewhere_in_the_same_product(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $product = Product::factory()->create(['team_id' => $user->currentTeam->id]);
+
+        $otherDirectory = Directory::factory()->create(['team_id' => $user->currentTeam->id, 'product_id' => $product->id]);
+        Prospect::factory()->create(['directory_id' => $otherDirectory->id, 'email' => 'prospect1@example.com']);
+
+        $directory = Directory::factory()->create([
+            'team_id' => $user->currentTeam->id,
+            'product_id' => $product->id,
+            'prompt' => 'SaaS companies',
+        ]);
+
+        // The stub generator deterministically produces prospect1@example.com
+        // as its first row when nothing is excluded by name yet — which
+        // already belongs to another prospect under the same product.
+        $this->postJson("/api/directories/{$directory->id}/generate", ['count' => 1])
+            ->assertSuccessful()
+            ->assertJson([]);
 
         $this->assertEquals(0, $directory->prospects()->count());
     }

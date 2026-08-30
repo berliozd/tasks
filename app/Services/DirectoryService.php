@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Directory;
 use App\Models\Product;
+use App\Models\Prospect;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
@@ -111,7 +112,16 @@ readonly class DirectoryService
         $count = max(1, min(50, $count));
 
         $existingNames = $directory->prospects()->pluck('name')->all();
-        $seenNames = array_map(fn (string $name) => mb_strtolower(trim($name)), $existingNames);
+
+        // Emails are checked across every directory under this same product,
+        // not just the current one, so the same contact doesn't get generated
+        // twice into two different directories of the same product.
+        $productDirectoryIds = Directory::where('product_id', $directory->product_id)->pluck('id');
+        $existingEmails = Prospect::whereIn('directory_id', $productDirectoryIds)
+            ->whereNotNull('email')
+            ->pluck('email')
+            ->all();
+        $seenEmails = array_map(fn (string $email) => mb_strtolower(trim($email)), $existingEmails);
 
         $rows = $this->prospectGenerator->generate($directory->prompt, $count, $existingNames);
 
@@ -119,19 +129,21 @@ readonly class DirectoryService
         $reachable = $this->reachableWebsites($candidateUrls);
 
         $created = collect($rows)
-            ->filter(function (array $row) use (&$seenNames, $reachable) {
+            ->filter(function (array $row) use (&$seenEmails, $reachable) {
                 $name = mb_strtolower(trim((string) ($row['name'] ?? '')));
-                // Require a contact email, skip anything already in the directory (or
-                // repeated within this same generated batch), and — since the AI can
-                // still claim a website that doesn't actually exist — drop any prospect
-                // whose website didn't come back with a real 200 when we checked it.
-                if ($name === '' || empty($row['email']) || in_array($name, $seenNames, true)) {
+                $email = mb_strtolower(trim((string) ($row['email'] ?? '')));
+                // Require a contact email, skip anything whose email is already used
+                // elsewhere in the product (or repeated within this same generated
+                // batch), and — since the AI can still claim a website that doesn't
+                // actually exist — drop any prospect whose website didn't come back
+                // with a real 200 when we checked it.
+                if ($name === '' || $email === '' || in_array($email, $seenEmails, true)) {
                     return false;
                 }
                 if (!empty($row['website']) && !($reachable[$row['website']] ?? false)) {
                     return false;
                 }
-                $seenNames[] = $name;
+                $seenEmails[] = $email;
                 return true;
             })
             ->map(fn (array $row) => $this->prospectRepository->create([
