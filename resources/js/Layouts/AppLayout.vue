@@ -35,6 +35,10 @@ const logout = () => {
     router.post(route('logout'));
 };
 
+const goBack = () => {
+    window.history.back();
+};
+
 Echo.channel('my-public-channel')
     .subscribed(() => {
         console.log('subscribed to my-public-channel');
@@ -385,8 +389,17 @@ Echo.private('my-private-channel')
 
             <!-- Page Heading -->
             <header v-if="$slots.header" class="bg-white/80 backdrop-blur border-b border-slate-900/5 shadow-soft">
-                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                    <slot name="header"/>
+                <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center gap-2">
+                    <button type="button" @click="goBack" title="Go back"
+                            class="shrink-0 inline-flex items-center justify-center size-8 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
+                        <svg class="size-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                             stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="min-w-0 flex-1">
+                        <slot name="header"/>
+                    </div>
                 </div>
             </header>
 
