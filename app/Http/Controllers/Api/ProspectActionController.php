@@ -21,6 +21,11 @@ class ProspectActionController extends Controller
         return $this->prospectActionService->getList((int) $prospectId);
     }
 
+    public function planned()
+    {
+        return $this->prospectActionService->getPlanned();
+    }
+
     /**
      * @throws Exception
      */

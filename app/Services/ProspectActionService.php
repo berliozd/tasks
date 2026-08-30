@@ -36,6 +36,11 @@ readonly class ProspectActionService
         return $this->prospectActionRepository->getList($prospectId);
     }
 
+    public function getPlanned(): Collection
+    {
+        return $this->prospectActionRepository->getPlannedForTeam(auth()->user()->currentTeam->id);
+    }
+
     /**
      * @throws Exception
      */

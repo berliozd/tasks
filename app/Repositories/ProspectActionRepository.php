@@ -25,6 +25,24 @@ readonly class ProspectActionRepository
             ->get();
     }
 
+    /**
+     * All actions currently queued for auto-send across a team, with the
+     * product/directory/prospect they belong to, soonest first.
+     */
+    public function getPlannedForTeam(int $teamId): Collection
+    {
+        return ProspectAction::query()
+            ->where('status', 'planned')
+            ->whereHas('prospect.directory', fn ($query) => $query->where('team_id', $teamId))
+            ->with([
+                'prospect:id,name,email,directory_id',
+                'prospect.directory:id,name,product_id',
+                'prospect.directory.product:id,name',
+            ])
+            ->orderBy('scheduled_at')
+            ->get();
+    }
+
     public function update(ProspectAction $action, array $data): ProspectAction
     {
         $action->fill($data);
