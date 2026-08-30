@@ -220,13 +220,15 @@ refreshTemplates();
                         <option v-for="s in STATUSES" :key="s" :value="s">{{ s }}</option>
                     </select>
                     <span v-else class="shrink-0 text-xs text-brand-accent-dark font-medium capitalize">{{ action.status }}</span>
-                    <button v-if="action.type === 'email' && (action.status === 'pending' || action.status === 'planned')" type="button"
-                            @click.stop="sendNow(action)" :disabled="sendingIds.has(action.id)"
-                            class="shrink-0 inline-flex items-center px-2 py-1 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                        {{ sendingIds.has(action.id) ? 'Sending…' : 'Send now' }}
-                    </button>
-                    <div @click.stop class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 transition">
-                        <DeleteModal @deleted="deleteAction(action)" label="Delete this logged action?"/>
+                    <div class="ml-auto flex items-center gap-2">
+                        <button v-if="action.type === 'email' && (action.status === 'pending' || action.status === 'planned')" type="button"
+                                @click.stop="sendNow(action)" :disabled="sendingIds.has(action.id)"
+                                class="shrink-0 inline-flex items-center px-2 py-1 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                            {{ sendingIds.has(action.id) ? 'Sending…' : 'Send now' }}
+                        </button>
+                        <div @click.stop class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-50 transition">
+                            <DeleteModal @deleted="deleteAction(action)" label="Delete this logged action?"/>
+                        </div>
                     </div>
                 </div>
                 <div v-if="rowErrors[action.id]" class="pb-2 pl-6 pr-2 text-xs text-red-600">
