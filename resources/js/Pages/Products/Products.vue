@@ -12,6 +12,7 @@ import {ref} from "vue";
 import Modal from "@/Components/Modal.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import {useStore} from "@/Composables/store.js";
+import {statusFlags} from "@/Composables/prospectActionStatus.js";
 
 const products = ref([]);
 const showAddModal = ref(false);
@@ -86,22 +87,32 @@ refreshProducts();
         </div>
         <div v-else class="divide-y divide-gray-100">
             <div v-for="product in products" :key="product.id"
-                 class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
+                 class="flex flex-col gap-1.5 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
                  @click="openProduct(product)">
-                <div class="min-w-0 flex-1">
-                    <div class="text-sm font-medium text-gray-900 truncate">
-                        {{ product.name || 'Untitled product' }}
+                <div class="flex items-center gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-gray-900 truncate">
+                            {{ product.name || 'Untitled product' }}
+                        </div>
+                        <div class="text-xs text-gray-500 truncate">
+                            {{ product.website_url || product.brief || 'No details yet' }}
+                        </div>
                     </div>
-                    <div class="text-xs text-gray-500 truncate">
-                        {{ product.website_url || product.brief || 'No details yet' }}
+                    <span class="shrink-0 flex items-center gap-1 text-xs text-gray-400 tabular-nums">
+                        <span>{{ product.directories_count }} director{{ product.directories_count === 1 ? 'y' : 'ies' }}</span>
+                        <span class="text-gray-300">/</span>
+                        <span>{{ product.prospects_count }} prospect{{ product.prospects_count === 1 ? '' : 's' }}</span>
+                    </span>
+                    <div @click.stop>
+                        <DeleteConfirmPopover @deleted="deleteProduct(product)"
+                                               label="Delete this product? All its directories, prospects and logged actions will be deleted too."/>
                     </div>
                 </div>
-                <span class="shrink-0 inline-flex items-center justify-center rounded-full bg-brand-accent/10 text-brand-accent-dark text-xs font-semibold tabular-nums min-w-6 h-6 px-2">
-                    {{ product.directories_count ?? 0 }}
-                </span>
-                <div @click.stop>
-                    <DeleteConfirmPopover @deleted="deleteProduct(product)"
-                                           label="Delete this product? All its directories, prospects and logged actions will be deleted too."/>
+                <div v-if="statusFlags(product.action_status_counts).length" class="flex flex-wrap gap-1">
+                    <span v-for="flag in statusFlags(product.action_status_counts)" :key="flag.status"
+                          class="rounded-full text-[11px] font-medium px-2 py-0.5" :class="flag.colorClass">
+                        {{ flag.label }}
+                    </span>
                 </div>
             </div>
         </div>

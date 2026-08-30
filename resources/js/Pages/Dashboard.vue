@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import {Link} from '@inertiajs/vue3';
 import {format} from 'date-fns';
 import FlagSwatches from '@/Components/FlagSwatches.vue';
+import {statusFlags} from '@/Composables/prospectActionStatus.js';
 
 const props = defineProps({
     todayTasks: {type: Array, default: () => []},
@@ -16,26 +17,6 @@ const props = defineProps({
         }),
     },
 });
-
-const STATUS_LABELS = {
-    pending: 'pending', planned: 'planned', sent: 'sent', replied: 'replied', bounced: 'bounced',
-    no_response: 'no response', lost: 'lost',
-};
-const STATUS_COLORS = {
-    replied: 'bg-blue-50 text-blue-700',
-    bounced: 'bg-red-50 text-red-700',
-    no_response: 'bg-red-50 text-red-700',
-    lost: 'bg-red-50 text-red-700',
-    sent: 'bg-brand-accent/10 text-brand-accent-dark',
-    planned: 'bg-brand-accent/10 text-brand-accent-dark',
-    pending: 'bg-gray-100 text-gray-600',
-};
-const STATUS_ORDER = ['sent', 'replied', 'lost', 'bounced', 'no_response', 'planned', 'pending'];
-
-const statusFlags = () => STATUS_ORDER
-    .map(status => ({status, count: props.prospection.status_counts?.[status] ?? 0}))
-    .filter(s => s.count > 0)
-    .map(s => ({...s, label: `${s.count} ${STATUS_LABELS[s.status]}`, colorClass: STATUS_COLORS[s.status]}));
 
 const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
 </script>
@@ -131,7 +112,7 @@ const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
                                       class="rounded-full text-xs font-semibold px-2 py-1 bg-blue-50 text-blue-700 border border-blue-600">
                                     {{ prospection.won_count }} won
                                 </span>
-                                <span v-for="flag in statusFlags()" :key="flag.status"
+                                <span v-for="flag in statusFlags(prospection.status_counts)" :key="flag.status"
                                       class="rounded-full text-xs font-semibold px-2 py-1" :class="flag.colorClass">
                                     {{ flag.label }}
                                 </span>
@@ -147,15 +128,25 @@ const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
                             <div v-if="prospection.top_products?.length" class="flex flex-col divide-y divide-gray-100 -mx-4 -mb-4">
                                 <Link v-for="product in prospection.top_products" :key="product.id"
                                       :href="route('products.view', product.id)"
-                                      class="flex items-center gap-3 px-4 py-2 hover:bg-brand-surface transition">
-                                    <span class="text-sm text-gray-900 flex-1 min-w-0 truncate">{{ product.name }}</span>
-                                    <span v-if="product.won_count"
-                                          class="shrink-0 text-xs font-semibold text-blue-700">
-                                        {{ product.won_count }} won
-                                    </span>
-                                    <span class="shrink-0 text-xs text-gray-400 tabular-nums w-24 text-right">
-                                        {{ product.prospects_count }} prospect{{ product.prospects_count === 1 ? '' : 's' }}
-                                    </span>
+                                      class="flex flex-col gap-1 px-4 py-2 hover:bg-brand-surface transition">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm text-gray-900 flex-1 min-w-0 truncate">{{ product.name }}</span>
+                                        <span v-if="product.won_count"
+                                              class="shrink-0 text-xs font-semibold text-blue-700">
+                                            {{ product.won_count }} won
+                                        </span>
+                                        <span class="shrink-0 flex items-center gap-1 text-xs text-gray-400 tabular-nums">
+                                            <span>{{ product.directories_count }} director{{ product.directories_count === 1 ? 'y' : 'ies' }}</span>
+                                            <span class="text-gray-300">/</span>
+                                            <span>{{ product.prospects_count }} prospect{{ product.prospects_count === 1 ? '' : 's' }}</span>
+                                        </span>
+                                    </div>
+                                    <div v-if="statusFlags(product.action_status_counts).length" class="flex flex-wrap gap-1">
+                                        <span v-for="flag in statusFlags(product.action_status_counts)" :key="flag.status"
+                                              class="rounded-full text-[11px] font-medium px-2 py-0.5" :class="flag.colorClass">
+                                            {{ flag.label }}
+                                        </span>
+                                    </div>
                                 </Link>
                             </div>
                         </template>

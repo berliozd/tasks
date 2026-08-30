@@ -37,8 +37,13 @@ readonly class ProspectionSummaryService
             ])
             ->orderByDesc('prospects_count')
             ->take(5)
-            ->get(['id', 'name'])
-            ->toArray();
+            ->get(['id', 'name']);
+
+        $actionStatusCountsByProduct = $this->getActionStatusCountsByProduct($topProducts->pluck('id'));
+        $topProducts = $topProducts->map(function (Product $product) use ($actionStatusCountsByProduct) {
+            $product->action_status_counts = $actionStatusCountsByProduct->get($product->id, []);
+            return $product;
+        })->toArray();
 
         return [
             'products_count' => Product::where('team_id', $teamId)->count(),
@@ -50,5 +55,28 @@ readonly class ProspectionSummaryService
                 ->all(),
             'top_products' => $topProducts,
         ];
+    }
+
+    /**
+     * Logged-action counts by status for each given product, keyed by
+     * product id, e.g. [7 => ['pending' => 1, 'planned' => 4, ...]].
+     */
+    public function getActionStatusCountsByProduct(Collection $productIds): Collection
+    {
+        $counts = ProspectAction::query()
+            ->join('prospects', 'prospects.id', '=', 'prospect_actions.prospect_id')
+            ->join('directories', 'directories.id', '=', 'prospects.directory_id')
+            ->whereIn('directories.product_id', $productIds)
+            ->selectRaw('directories.product_id, prospect_actions.status, count(*) as aggregate')
+            ->groupBy('directories.product_id', 'prospect_actions.status')
+            ->get()
+            ->groupBy('product_id');
+
+        return $productIds->mapWithKeys(function (int $productId) use ($counts) {
+            $rowCounts = $counts->get($productId, Collection::make())->pluck('aggregate', 'status');
+            return [$productId => Collection::make(ProspectAction::STATUSES)
+                ->mapWithKeys(fn (string $status) => [$status => (int) ($rowCounts[$status] ?? 0)])
+                ->all()];
+        });
     }
 }

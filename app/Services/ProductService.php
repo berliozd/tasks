@@ -11,14 +11,21 @@ readonly class ProductService
 {
     public function __construct(
         private ProductRepository $productRepository,
+        private ProspectionSummaryService $prospectionSummaryService,
     ) {
     }
 
     public function getAll(): Collection
     {
-        return Product::where('team_id', auth()->user()->currentTeam->id)
-            ->withCount('directories')
+        $products = Product::where('team_id', auth()->user()->currentTeam->id)
+            ->withCount(['directories', 'prospects'])
             ->get();
+
+        $actionStatusCountsByProduct = $this->prospectionSummaryService->getActionStatusCountsByProduct($products->pluck('id'));
+        return $products->map(function (Product $product) use ($actionStatusCountsByProduct) {
+            $product->action_status_counts = $actionStatusCountsByProduct->get($product->id, []);
+            return $product;
+        });
     }
 
     /**
