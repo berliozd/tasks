@@ -8,6 +8,7 @@ use App\Models\Prospect;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
+use App\Services\ProfileSearch\ProfileSearchInterface;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use Exception;
 use Illuminate\Http\Client\Response;
@@ -20,6 +21,7 @@ readonly class DirectoryService
         private DirectoryRepository $directoryRepository,
         private ProspectRepository $prospectRepository,
         private ProspectGeneratorInterface $prospectGenerator,
+        private ProfileSearchInterface $profileSearch,
     ) {
     }
 
@@ -175,6 +177,54 @@ readonly class DirectoryService
             'skipped_incomplete_count' => $skippedIncomplete,
             'prospects' => $created,
         ];
+    }
+
+    /**
+     * Search the web for LinkedIn profiles matching this directory's prompt.
+     * Results are suggestions only — nothing is persisted here, the caller
+     * adds whichever ones it wants as prospects via the normal create flow.
+     *
+     * @return array<int, array{name: string, profile_url: string, snippet: ?string}>
+     *
+     * @throws Exception
+     */
+    public function searchLinkedInProfiles(int $id, int $count): array
+    {
+        $directory = $this->directoryRepository->find($id);
+        if (!$directory) {
+            throw new Exception('Directory not found');
+        }
+        $this->checkPerms($directory);
+
+        if (empty($directory->prompt)) {
+            throw new Exception('Directory has no prompt to search from');
+        }
+
+        $count = max(1, min(20, $count));
+
+        $product = $directory->product;
+        $query = trim($directory->prompt . ($product?->name ? " {$product->name}" : ''))
+            . ' site:linkedin.com/in';
+
+        $results = $this->profileSearch->search($query, $count);
+
+        // Don't resurface a profile already known anywhere in this product's
+        // directories, same scope as the AI-generation email dedup below.
+        $productDirectoryIds = Directory::where('product_id', $directory->product_id)->pluck('id');
+        $existingUrls = Prospect::whereIn('directory_id', $productDirectoryIds)
+            ->whereNotNull('website')
+            ->pluck('website')
+            ->map(fn (string $url) => rtrim(mb_strtolower(trim($url)), '/'))
+            ->all();
+
+        return collect($results)
+            ->reject(fn (array $row) => in_array(
+                rtrim(mb_strtolower(trim($row['profile_url'])), '/'),
+                $existingUrls,
+                true,
+            ))
+            ->values()
+            ->all();
     }
 
     /**

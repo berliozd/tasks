@@ -8,6 +8,9 @@ use App\Services\EmailTemplateGenerator\StubEmailTemplateGenerator;
 use App\Services\MailSender\LogMailSender;
 use App\Services\MailSender\MailjetMailSender;
 use App\Services\MailSender\MailSenderInterface;
+use App\Services\ProfileSearch\BraveProfileSearchService;
+use App\Services\ProfileSearch\ProfileSearchInterface;
+use App\Services\ProfileSearch\StubProfileSearchService;
 use App\Services\ProspectGenerator\OpenAiProspectGenerator;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use App\Services\ProspectGenerator\StubProspectGenerator;
@@ -41,6 +44,15 @@ class AppServiceProvider extends ServiceProvider
                 (string) config('services.openai.key'),
                 (string) config('services.openai.model'),
             );
+        });
+
+        $this->app->bind(ProfileSearchInterface::class, function () {
+            // Keep tests hermetic (no network calls) regardless of whether a key is configured.
+            if ($this->app->environment('testing') || empty(config('services.brave_search.key'))) {
+                return new StubProfileSearchService();
+            }
+
+            return new BraveProfileSearchService((string) config('services.brave_search.key'));
         });
 
         $this->app->bind(MailSenderInterface::class, function () {

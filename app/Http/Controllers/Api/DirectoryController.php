@@ -56,4 +56,13 @@ class DirectoryController extends Controller
         $count = (int) $request->input('count', 5);
         return $this->directoryService->generate((int) $id, $count);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function searchLinkedInProfiles(Request $request, string $id)
+    {
+        $count = (int) $request->input('count', 10);
+        return $this->directoryService->searchLinkedInProfiles((int) $id, $count);
+    }
 }

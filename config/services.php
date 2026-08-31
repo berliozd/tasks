@@ -54,6 +54,10 @@ return [
         'secret' => env('MAILJET_APISECRET'),
     ],
 
+    'brave_search' => [
+        'key' => env('BRAVE_SEARCH_API_KEY'),
+    ],
+
     'prospection' => [
         // The platform mailbox all prospecting emails send from. Directories
         // customize how they appear via their own "from label" instead of

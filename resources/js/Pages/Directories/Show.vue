@@ -127,6 +127,42 @@ const generateProspects = () => {
         .finally(() => generating.value = false);
 }
 
+const linkedinResults = ref([]);
+const searchingLinkedIn = ref(false);
+const linkedinError = ref('');
+const addingLinkedInUrls = ref(new Set());
+
+const searchLinkedIn = () => {
+    searchingLinkedIn.value = true;
+    linkedinError.value = '';
+    axios.post(route('directories.linkedin-search', props.directoryId), {count: 10})
+        .then((response) => {
+            linkedinResults.value = response.data;
+            if (!response.data.length) {
+                linkedinError.value = 'No new LinkedIn profiles found for this prompt.';
+            }
+        })
+        .catch((error) => {
+            linkedinError.value = error.response?.data?.message ?? 'Could not search LinkedIn';
+        })
+        .finally(() => searchingLinkedIn.value = false);
+}
+
+const addLinkedInProspect = (result) => {
+    addingLinkedInUrls.value = new Set(addingLinkedInUrls.value).add(result.profile_url);
+    axios.post(route('prospects.store', props.directoryId), {name: result.name, website: result.profile_url})
+        .then(() => {
+            linkedinResults.value = linkedinResults.value.filter(r => r.profile_url !== result.profile_url);
+            refreshDirectory();
+            useStore().refreshProspectionTree();
+        })
+        .finally(() => {
+            const next = new Set(addingLinkedInUrls.value);
+            next.delete(result.profile_url);
+            addingLinkedInUrls.value = next;
+        });
+}
+
 const addProspect = () => {
     if (!newProspect.value.name) return;
     axios.post(route('prospects.store', props.directoryId), newProspect.value).then(() => {
@@ -397,6 +433,35 @@ refreshTemplates();
                     </div>
                     <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
                     <div v-else-if="generateResultMsg" class="text-sm text-gray-500">{{ generateResultMsg }}</div>
+
+                    <div class="flex items-center gap-2 mt-2">
+                        <button type="button" @click="searchLinkedIn" :disabled="searchingLinkedIn || !directory.prompt"
+                                class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
+                            {{ searchingLinkedIn ? 'Searching…' : 'Search LinkedIn' }}
+                        </button>
+                        <span class="text-xs text-gray-400">
+                            Finds public LinkedIn profiles to check and add manually — nothing is added automatically.
+                        </span>
+                    </div>
+                    <div v-if="linkedinError" class="text-sm text-red-600">{{ linkedinError }}</div>
+                </div>
+
+                <div v-if="linkedinResults.length" class="border-b border-gray-100 divide-y divide-gray-100">
+                    <div v-for="result in linkedinResults" :key="result.profile_url"
+                         class="flex items-center gap-3 px-4 py-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
+                            <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.profile_url }}</div>
+                        </div>
+                        <a :href="result.profile_url" target="_blank" rel="noopener"
+                           class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                            View profile ↗
+                        </a>
+                        <button type="button" @click="addLinkedInProspect(result)" :disabled="addingLinkedInUrls.has(result.profile_url)"
+                                class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                            {{ addingLinkedInUrls.has(result.profile_url) ? 'Adding…' : 'Add as prospect' }}
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="!(directory.prospects ?? []).length" class="p-8 text-center text-sm text-gray-400">

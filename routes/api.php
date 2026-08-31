@@ -50,6 +50,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/directories/{id}', [App\Http\Controllers\Api\DirectoryController::class, 'destroy'])->name('directories.delete');
     Route::post('/directories/{id}/generate', [App\Http\Controllers\Api\DirectoryController::class, 'generate'])
         ->name('directories.generate');
+    Route::post('/directories/{id}/linkedin-search', [App\Http\Controllers\Api\DirectoryController::class, 'searchLinkedInProfiles'])
+        ->name('directories.linkedin-search');
 
     Route::get('/directories/{directoryId}/prospects', [App\Http\Controllers\Api\ProspectController::class, 'index'])
         ->name('prospects.index');
