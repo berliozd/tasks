@@ -31,10 +31,22 @@ const updatePosition = async () => {
     const r = btn.getBoundingClientRect();
     const margin = 8;
     const width = 224;
+    const preferredHeight = 160;
     const left = Math.min(window.innerWidth - margin - width, Math.max(margin, r.right - width));
-    const top = Math.min(window.innerHeight - margin, r.bottom + 6);
 
-    panelStyle.value = {left: `${left}px`, top: `${top}px`, width: `${width}px`};
+    const spaceBelow = window.innerHeight - r.bottom - margin;
+    const spaceAbove = r.top - margin;
+    // Flip above the trigger when there isn't enough room below (e.g. the last
+    // row in a grid) but there's more room above.
+    const openAbove = spaceBelow < preferredHeight && spaceAbove > spaceBelow;
+
+    if (openAbove) {
+        const bottom = Math.max(margin, window.innerHeight - r.top + 6);
+        panelStyle.value = {left: `${left}px`, bottom: `${bottom}px`, width: `${width}px`};
+    } else {
+        const top = Math.min(window.innerHeight - margin, r.bottom + 6);
+        panelStyle.value = {left: `${left}px`, top: `${top}px`, width: `${width}px`};
+    }
 }
 
 const onDocPointerDown = (e) => {
