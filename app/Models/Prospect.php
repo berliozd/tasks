@@ -17,10 +17,12 @@ class Prospect extends Model
         'website',
         'email',
         'won',
+        'is_excluded',
     ];
 
     protected $casts = [
         'won' => 'boolean',
+        'is_excluded' => 'boolean',
     ];
 
     public function directory(): BelongsTo

@@ -149,6 +149,20 @@ const openProspect = (prospect) => {
 
 const selectedProspectIds = ref(new Set());
 
+// 'all' | 'yes' | 'no'
+const excludedFilter = ref('all');
+// '' (any) | one of ProspectAction status values
+const statusFilter = ref('');
+
+const filteredProspects = computed(() => {
+    return (directory.value.prospects ?? []).filter(p => {
+        if (excludedFilter.value === 'yes' && !p.is_excluded) return false;
+        if (excludedFilter.value === 'no' && p.is_excluded) return false;
+        if (statusFilter.value && !(p[`${statusFilter.value}_count`] > 0)) return false;
+        return true;
+    });
+});
+
 const toggleProspectSelected = (prospect) => {
     const next = new Set(selectedProspectIds.value);
     if (next.has(prospect.id)) next.delete(prospect.id);
@@ -157,14 +171,14 @@ const toggleProspectSelected = (prospect) => {
 }
 
 const allProspectsSelected = computed(() => {
-    const prospects = directory.value.prospects ?? [];
+    const prospects = filteredProspects.value;
     return prospects.length > 0 && prospects.every(p => selectedProspectIds.value.has(p.id));
 });
 
 const toggleSelectAllProspects = () => {
     selectedProspectIds.value = allProspectsSelected.value
         ? new Set()
-        : new Set((directory.value.prospects ?? []).map(p => p.id));
+        : new Set(filteredProspects.value.map(p => p.id));
 }
 
 const templates = ref([]);
@@ -270,7 +284,26 @@ const actionFlags = (prospect) => {
     if (prospect.won) {
         flags.unshift({status: 'won', label: 'Won', colorClass: 'bg-blue-50 text-blue-700 border border-blue-600'});
     }
+    if (prospect.is_excluded) {
+        flags.unshift({status: 'excluded', label: 'Excluded', colorClass: 'bg-gray-100 text-gray-500 border border-gray-300'});
+    }
     return flags;
+}
+
+const settingExcluded = ref(false);
+
+const setExcludedForSelected = async (excluded) => {
+    const ids = Array.from(selectedProspectIds.value);
+    if (!ids.length) return;
+    settingExcluded.value = true;
+    try {
+        await Promise.all(ids.map(id => axios.patch(route('prospects.update', id), {is_excluded: excluded})));
+        selectedProspectIds.value = new Set();
+        refreshDirectory();
+        useStore().setSaved(`${excluded ? 'Excluded' : 'Included'} ${ids.length} prospect${ids.length === 1 ? '' : 's'}`);
+    } finally {
+        settingExcluded.value = false;
+    }
 }
 
 refreshDirectory();
@@ -329,6 +362,14 @@ refreshTemplates();
                                     class="inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
                                 Schedule sending
                             </button>
+                            <button type="button" @click="setExcludedForSelected(true)" :disabled="settingExcluded"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-[11px] text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
+                                Exclude
+                            </button>
+                            <button type="button" @click="setExcludedForSelected(false)" :disabled="settingExcluded"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-[11px] text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
+                                Include
+                            </button>
                         </div>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2">
@@ -362,13 +403,35 @@ refreshTemplates();
                     No prospects yet. Add one above, or generate some with AI.
                 </div>
                 <template v-else>
+                    <div class="flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                        <label class="flex items-center gap-1">
+                            Excluded:
+                            <select v-model="excludedFilter"
+                                    class="h-8 pl-1 pr-6 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                                <option value="all">All</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                            </select>
+                        </label>
+                        <label class="flex items-center gap-1">
+                            With action status:
+                            <select v-model="statusFilter"
+                                    class="h-8 pl-1 pr-6 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                                <option value="">Any</option>
+                                <option v-for="s in STATUS_ORDER" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
+                            </select>
+                        </label>
+                    </div>
                     <label class="flex items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
                         <input type="checkbox" :checked="allProspectsSelected" @change="toggleSelectAllProspects"
                                class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
                         Select all
                     </label>
-                    <div class="divide-y divide-gray-100">
-                    <div v-for="prospect in directory.prospects" :key="prospect.id"
+                    <div v-if="!filteredProspects.length" class="p-8 text-center text-sm text-gray-400">
+                        No prospects match this filter.
+                    </div>
+                    <div v-else class="divide-y divide-gray-100">
+                    <div v-for="prospect in filteredProspects" :key="prospect.id"
                          class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
                          @click="openProspect(prospect)">
                         <div @click.stop>

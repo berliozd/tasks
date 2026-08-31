@@ -42,7 +42,9 @@ const savedActive = ref(false);
 let savedActiveTimer = null;
 let prospectSnapshot = null;
 
-const cleanProspect = (p) => JSON.stringify({name: p.name, website: p.website, email: p.email, won: p.won});
+const cleanProspect = (p) => JSON.stringify({
+    name: p.name, website: p.website, email: p.email, won: p.won, is_excluded: p.is_excluded,
+});
 
 const refreshProspect = () => {
     loading.value = true;
@@ -52,7 +54,9 @@ const refreshProspect = () => {
     }).finally(() => loading.value = false);
 }
 
-watch(() => prospect.value && [prospect.value.name, prospect.value.website, prospect.value.email, prospect.value.won], () => {
+watch(() => prospect.value && [
+    prospect.value.name, prospect.value.website, prospect.value.email, prospect.value.won, prospect.value.is_excluded,
+], () => {
     if (!prospect.value) return;
     if (cleanProspect(prospect.value) === prospectSnapshot) return;
     debouncedUpdateProspect();
@@ -66,6 +70,7 @@ const updateProspect = () => {
         website: prospect.value.website,
         email: prospect.value.email,
         won: prospect.value.won,
+        is_excluded: prospect.value.is_excluded,
     }).then(() => {
         prospectSnapshot = cleanProspect(prospect.value);
         savingActive.value = false;
@@ -102,6 +107,11 @@ refreshProspect();
                         <input type="checkbox" v-model="prospect.won"
                                class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
                         Won
+                    </label>
+                    <label class="flex items-center gap-2 mt-1 text-sm text-gray-700">
+                        <input type="checkbox" v-model="prospect.is_excluded"
+                               class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
+                        Excluded
                     </label>
                     <div class="text-[11px] leading-3 text-gray-500 h-3">
                         <span v-if="savingActive" class="text-gray-400">Saving…</span>

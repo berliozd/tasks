@@ -86,9 +86,10 @@ readonly class ProspectService
         $this->checkPerms($prospect);
         return $this->prospectRepository->update($prospect, [
             'name' => $data['name'] ?? $prospect->name,
-            'website' => $data['website'] ?? null,
-            'email' => $data['email'] ?? null,
+            'website' => array_key_exists('website', $data) ? $data['website'] : $prospect->website,
+            'email' => array_key_exists('email', $data) ? $data['email'] : $prospect->email,
             'won' => array_key_exists('won', $data) ? (bool) $data['won'] : $prospect->won,
+            'is_excluded' => array_key_exists('is_excluded', $data) ? (bool) $data['is_excluded'] : $prospect->is_excluded,
         ]);
     }
 
