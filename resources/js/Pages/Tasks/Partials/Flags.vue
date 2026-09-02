@@ -2,7 +2,13 @@
 import {Link} from "@inertiajs/vue3";
 import {onMounted, ref, watch} from "vue";
 
-const props = defineProps({allFlags: Array});
+const props = defineProps({
+    allFlags: Array,
+    // The user's full flag list (unlike allFlags, which is narrowed to flags
+    // actually used by a currently-visible task) — used to tell "this flag
+    // was deleted" apart from "no visible task happens to have it right now".
+    knownFlagIds: {type: Array, default: () => []},
+});
 const emit = defineEmits(["filter"]);
 
 const STORAGE_KEY = 'tasks-flag-filter-ids';
@@ -33,11 +39,19 @@ onMounted(() => {
 });
 
 watch(
-    () => props.allFlags,
-    (flags) => {
-        // Not immediate: allFlags starts empty until tasks finish loading, and running
-        // this against that empty initial value would wipe a filter restored from storage.
-        const allowed = new Set((flags ?? []).map(f => f.id));
+    () => props.knownFlagIds,
+    (ids) => {
+        // Prune against the *full* flag list (a flag that was actually deleted),
+        // not allFlags — that's narrowed to flags used by a currently-visible
+        // task, and would otherwise wipe a remembered filter for a flag that
+        // simply has no matching task in view right now (e.g. right after reload,
+        // before today's tasks happen to include it).
+        //
+        // Not immediate: knownFlagIds starts empty until the flags API responds,
+        // and running this against that empty initial value would wipe a filter
+        // restored from storage before we even know the real flag list.
+        if (!ids || !ids.length) return;
+        const allowed = new Set(ids);
         const next = selectedFlagIds.value.filter(id => allowed.has(id));
         if (next.length !== selectedFlagIds.value.length) {
             selectedFlagIds.value = next;
@@ -70,7 +84,7 @@ const toggleFlagFilter = (flagId) => {
 </script>
 
 <template>
-    <div class="surface-card overflow-hidden mb-6" v-if="allFlags.length">
+    <div class="surface-card overflow-hidden mb-6" v-if="allFlags.length || selectedFlagIds.length">
         <div class="p-4">
             <div class="flex items-center justify-between gap-2">
                 <div class="inline-flex items-center gap-2 min-w-0">

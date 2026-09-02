@@ -298,7 +298,7 @@ const exportTasks = async () => {
                 <progress class="my-4 progress progress-primary w-full" :value="progress" max="100"/>
             </div>
 
-            <Flags :all-flags="pageFlags" @filter="updateSelectedFlags"/>
+            <Flags :all-flags="pageFlags" :known-flag-ids="(allFlags ?? []).map(f => f.id)" @filter="updateSelectedFlags"/>
 
             <div class="flex items-center justify-between gap-2 px-1 mb-2">
                 <div class="text-xs font-medium text-gray-500">{{ filteredTasks.length }} task(s)</div>
