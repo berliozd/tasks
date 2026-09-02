@@ -73,6 +73,8 @@ readonly class TaskService
         $flagIds = $data['flag_ids'] ?? null;
         unset($data['flag_ids']);
         $this->prepareData($data);
+        // New tasks land at the end of the user's list by default.
+        $data['sort_order'] = (Task::where('user_id', $data['user_id'])->max('sort_order') ?? -1) + 1;
         $task = $this->taskRepository->create($data);
 
         if (is_array($flagIds) && !empty($flagIds)) {
@@ -187,7 +189,9 @@ readonly class TaskService
                     $query->where('scheduled_at', '<', $thisMorning)
                         ->where('completed_at', null);
                 });
-            });
+            })
+            ->orderBy('sort_order')
+            ->orderBy('id');
 
         $collection = $query->get();
         foreach ($collection->all() as $task) {
@@ -332,6 +336,31 @@ readonly class TaskService
         $task->links()->where('id', $linkId)->delete();
         $task->load('links');
         return $this->normalizeTaskDates($task);
+    }
+
+    /**
+     * Persist a new manual order for the given task ids (as dragged in the
+     * list). Ids that don't belong to the current user are silently
+     * ignored rather than erroring, so a stale/tampered list can't reorder
+     * someone else's tasks.
+     *
+     * @param array<int, int|string> $orderedIds
+     */
+    public function reorder(array $orderedIds): void
+    {
+        $userId = auth()->user()->id;
+        $tasks = Task::where('user_id', $userId)
+            ->whereIn('id', $orderedIds)
+            ->get(['id', 'sort_order'])
+            ->keyBy('id');
+
+        foreach (array_values($orderedIds) as $index => $id) {
+            $task = $tasks->get((int) $id);
+            if (!$task || (int) $task->sort_order === $index) {
+                continue;
+            }
+            $task->update(['sort_order' => $index]);
+        }
     }
 
     /**

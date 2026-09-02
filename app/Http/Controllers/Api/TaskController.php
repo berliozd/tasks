@@ -81,4 +81,9 @@ class TaskController extends Controller
     {
         return $this->taskService->deleteLink((int) $taskId, (int) $linkId);
     }
+
+    public function reorder(Request $request)
+    {
+        $this->taskService->reorder($request->input('ids', []));
+    }
 }

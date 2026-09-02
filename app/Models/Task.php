@@ -25,6 +25,7 @@ class Task extends Model
         'start_progress_at',
         'recurrence_id',
         'parent_task_id',
+        'sort_order',
     ];
 
     public function owner(): BelongsTo

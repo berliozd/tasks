@@ -111,6 +111,28 @@ const addTask = () => {
     )
 }
 
+const draggingTaskId = ref(null);
+
+const onDragStartTask = (task) => {
+    draggingTaskId.value = task.id;
+}
+
+const onDropTask = (targetTask) => {
+    const fromId = draggingTaskId.value;
+    draggingTaskId.value = null;
+    if (fromId === null || fromId === targetTask.id) return;
+
+    const list = reactiveTasks.value;
+    const fromIndex = list.findIndex(t => t.id === fromId);
+    const toIndex = list.findIndex(t => t.id === targetTask.id);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+
+    axios.post(route('tasks.reorder'), {ids: list.map(t => t.id).filter(Boolean)});
+}
+
 const setActiveTask = (task) => {
     (reactiveTasks.value ?? []).forEach(t => {
         t.editing = t.id === task.id ? !t.editing : false;
@@ -294,11 +316,23 @@ const exportTasks = async () => {
 
             <div class="surface-card mb-2 overflow-hidden">
                 <div class="flex flex-col gap-2 p-2">
-                    <template v-for="task in filteredTasks" :key="task.id">
-                    <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"
-                          @toggle-editing="setActiveTask" :all-flags="allFlags"
-                          :all-recurrences="allRecurrences"/>
-                    </template>
+                    <div v-for="task in filteredTasks" :key="task.id" class="flex items-start gap-1"
+                         @dragover.prevent @drop="onDropTask(task)">
+                        <div draggable="true" @dragstart="onDragStartTask(task)" title="Drag to reorder"
+                             class="shrink-0 pt-3 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition select-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" class="lucide lucide-grip-vertical">
+                                <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                                <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                            </svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"
+                                  @toggle-editing="setActiveTask" :all-flags="allFlags"
+                                  :all-recurrences="allRecurrences"/>
+                        </div>
+                    </div>
                     <div v-if="!filteredTasks.length" class="px-4 py-10 text-center text-sm text-gray-400">
                         No tasks here. Add one above to get started.
                     </div>
