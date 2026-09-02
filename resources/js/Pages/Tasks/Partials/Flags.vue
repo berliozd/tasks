@@ -1,24 +1,50 @@
 <script setup>
 import {Link} from "@inertiajs/vue3";
-import {ref, watch} from "vue";
+import {onMounted, ref, watch} from "vue";
 
 const props = defineProps({allFlags: Array});
 const emit = defineEmits(["filter"]);
 
-const selectedFlagIds = ref([]);
+const STORAGE_KEY = 'tasks-flag-filter-ids';
+
+const loadStoredFlagIds = () => {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+const persistFlagIds = () => {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedFlagIds.value));
+    } catch (e) {
+        // localStorage unavailable (private mode, quota, ...) — filter still works for this session.
+    }
+}
+
+const selectedFlagIds = ref(loadStoredFlagIds());
 const isOpen = ref(true);
+
+onMounted(() => {
+    // Restore the remembered filter for the parent list too, not just this panel's own selection state.
+    if (selectedFlagIds.value.length) emit("filter", selectedFlagIds);
+});
 
 watch(
     () => props.allFlags,
     (flags) => {
+        // Not immediate: allFlags starts empty until tasks finish loading, and running
+        // this against that empty initial value would wipe a filter restored from storage.
         const allowed = new Set((flags ?? []).map(f => f.id));
         const next = selectedFlagIds.value.filter(id => allowed.has(id));
         if (next.length !== selectedFlagIds.value.length) {
             selectedFlagIds.value = next;
+            persistFlagIds();
             emit("filter", selectedFlagIds);
         }
     },
-    {immediate: true}
 );
 
 const toggleOpen = () => {
@@ -27,6 +53,7 @@ const toggleOpen = () => {
 
 const clearFlagFilters = () => {
     selectedFlagIds.value = [];
+    persistFlagIds();
     emit("filter", selectedFlagIds);
 }
 
@@ -37,6 +64,7 @@ const toggleFlagFilter = (flagId) => {
     } else {
         selectedFlagIds.value.push(flagId);
     }
+    persistFlagIds();
     emit("filter", selectedFlagIds);
 }
 </script>
