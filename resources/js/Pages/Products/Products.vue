@@ -17,6 +17,9 @@ import {statusFlags} from "@/Composables/prospectActionStatus.js";
 
 const products = ref([]);
 const plannedActions = ref([]);
+const plannedLimit = ref(20);
+const plannedHasMore = ref(false);
+const lastSentActions = ref([]);
 const showAddModal = ref(false);
 const newProduct = ref({name: '', website_url: '', brief: ''});
 const adding = ref(false);
@@ -32,9 +35,22 @@ const refreshProducts = () => {
 }
 
 const refreshPlannedActions = () => {
-    axios.get(route('prospect-actions.planned'))
+    axios.get(route('prospect-actions.planned'), {params: {limit: plannedLimit.value}})
         .then(response => {
-            plannedActions.value = response.data;
+            plannedActions.value = response.data.items;
+            plannedHasMore.value = response.data.has_more;
+        });
+}
+
+const loadMorePlannedActions = () => {
+    plannedLimit.value += 10;
+    refreshPlannedActions();
+}
+
+const refreshLastSentActions = () => {
+    axios.get(route('prospect-actions.last-sent'), {params: {limit: 20}})
+        .then(response => {
+            lastSentActions.value = response.data.items;
         });
 }
 
@@ -89,6 +105,7 @@ const openProduct = (product) => {
 
 refreshProducts();
 refreshPlannedActions();
+refreshLastSentActions();
 </script>
 
 <template>
@@ -159,6 +176,45 @@ refreshPlannedActions();
                     </span>
                     <span class="ml-auto shrink-0 text-xs text-gray-400 tabular-nums">
                         {{ formatScheduled(action.scheduled_at) }}
+                    </span>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">
+                    <span class="shrink-0 font-medium text-gray-500 capitalize">{{ action.type }}</span>
+                    <span class="truncate max-w-[60%] sm:max-w-none">To: {{ action.prospect?.email || '—' }}</span>
+                    <span v-if="action.subject" class="truncate max-w-[60%] sm:max-w-none">Subject: {{ truncate(action.subject, 30) }}</span>
+                    <span v-if="action.from_label" class="truncate max-w-[60%] sm:max-w-none">From: {{ action.from_label }}</span>
+                </div>
+            </Link>
+        </div>
+        <div v-if="plannedHasMore" class="p-3 border-t border-gray-100 flex justify-center">
+            <button type="button" @click="loadMorePlannedActions"
+                    class="text-xs font-medium text-brand-navy hover:underline">
+                See more
+            </button>
+        </div>
+    </div>
+
+    <div class="surface-card overflow-hidden mt-4">
+        <div class="p-4 text-sm font-medium text-gray-900 border-b border-gray-100">Last actions</div>
+        <div v-if="!lastSentActions.length" class="p-8 text-center text-sm text-gray-400">
+            No actions sent yet.
+        </div>
+        <div v-else class="divide-y divide-gray-100">
+            <Link v-for="action in lastSentActions" :key="action.id"
+                  :href="route('prospects.view', [action.prospect.directory.id, action.prospect.id])"
+                  class="flex flex-col gap-1 px-4 py-3 text-sm hover:bg-brand-surface transition">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span class="shrink-0 font-medium text-gray-900 truncate max-w-[45%] sm:max-w-[180px]">
+                        {{ action.prospect?.directory?.product?.name || 'Untitled product' }}
+                    </span>
+                    <span class="shrink-0 text-gray-500 truncate max-w-[45%] sm:max-w-[180px]">
+                        {{ action.prospect?.directory?.name || 'Untitled directory' }}
+                    </span>
+                    <span class="shrink-0 text-gray-700 truncate max-w-[45%] sm:max-w-[180px]">
+                        {{ action.prospect?.name || 'Untitled prospect' }}
+                    </span>
+                    <span class="ml-auto shrink-0 text-xs text-gray-400 tabular-nums">
+                        {{ formatScheduled(action.updated_at) }}
                     </span>
                 </div>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400">

@@ -36,9 +36,34 @@ readonly class ProspectActionService
         return $this->prospectActionRepository->getList($prospectId);
     }
 
-    public function getPlanned(): Collection
+    /**
+     * @return array{items: Collection, has_more: bool}
+     */
+    public function getPlanned(int $limit): array
     {
-        return $this->prospectActionRepository->getPlannedForTeam(auth()->user()->currentTeam->id);
+        $rows = $this->prospectActionRepository->getPlannedForTeam(auth()->user()->currentTeam->id, $limit);
+        return $this->paginateRows($rows, $limit);
+    }
+
+    /**
+     * @return array{items: Collection, has_more: bool}
+     */
+    public function getLastSent(int $limit): array
+    {
+        $rows = $this->prospectActionRepository->getLastSentForTeam(auth()->user()->currentTeam->id, $limit);
+        return $this->paginateRows($rows, $limit);
+    }
+
+    /**
+     * @return array{items: Collection, has_more: bool}
+     */
+    private function paginateRows(Collection $rows, int $limit): array
+    {
+        $hasMore = $rows->count() > $limit;
+        return [
+            'items' => $hasMore ? $rows->slice(0, $limit)->values() : $rows,
+            'has_more' => $hasMore,
+        ];
     }
 
     /**

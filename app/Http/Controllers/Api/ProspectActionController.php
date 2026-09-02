@@ -21,9 +21,14 @@ class ProspectActionController extends Controller
         return $this->prospectActionService->getList((int) $prospectId);
     }
 
-    public function planned()
+    public function planned(Request $request)
     {
-        return $this->prospectActionService->getPlanned();
+        return $this->prospectActionService->getPlanned((int) $request->query('limit', 20));
+    }
+
+    public function lastSent(Request $request)
+    {
+        return $this->prospectActionService->getLastSent((int) $request->query('limit', 20));
     }
 
     /**
