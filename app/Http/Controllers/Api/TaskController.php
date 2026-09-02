@@ -65,4 +65,20 @@ class TaskController extends Controller
     {
         return $this->taskService->deleteFlag((int)$taskId, (int)$flagId);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function addLink(Request $request, string $taskId)
+    {
+        return $this->taskService->addLink((int) $taskId, (string) $request->input('url', ''), $request->input('label'));
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteLink(string $taskId, string $linkId)
+    {
+        return $this->taskService->deleteLink((int) $taskId, (int) $linkId);
+    }
 }

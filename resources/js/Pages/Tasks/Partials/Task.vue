@@ -19,6 +19,12 @@ const upcomingItem = ref(null);
 const editFlagIds = ref([]);
 let suppressFlagDiff = false;
 
+const newLinkUrl = ref('');
+const newLinkLabel = ref('');
+const addingLink = ref(false);
+const linkError = ref('');
+const deletingLinkIds = ref(new Set());
+
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
     if (task.completed_at !== null) return false;
@@ -104,6 +110,35 @@ const deleteFlag = (task, flag) => {
     });
 }
 
+const addLink = (task) => {
+    if (!newLinkUrl.value.trim()) return;
+    addingLink.value = true;
+    linkError.value = '';
+    axios.post(route('tasks.links.add', task.id), {url: newLinkUrl.value, label: newLinkLabel.value})
+        .then((response) => {
+            task.links = response.data.links ?? task.links ?? [];
+            newLinkUrl.value = '';
+            newLinkLabel.value = '';
+        })
+        .catch((error) => {
+            linkError.value = error.response?.data?.message ?? 'Could not add link';
+        })
+        .finally(() => addingLink.value = false);
+}
+
+const deleteLink = (task, link) => {
+    deletingLinkIds.value = new Set(deletingLinkIds.value).add(link.id);
+    axios.delete(route('tasks.links.delete', {taskId: task.id, linkId: link.id}))
+        .then((response) => {
+            task.links = response.data.links ?? (task.links ?? []).filter(l => l.id !== link.id);
+        })
+        .finally(() => {
+            const next = new Set(deletingLinkIds.value);
+            next.delete(link.id);
+            deletingLinkIds.value = next;
+        });
+}
+
 const recurrenceLabel = (task) => {
     if (!props.allRecurrences || !task.recurrence_id) return '';
     return props.allRecurrences.find(r => r.id === task.recurrence_id)?.label ?? '';
@@ -129,6 +164,9 @@ watch(() => props.task.editing, async (isEditing) => {
     if (!isEditing) return;
     suppressFlagDiff = true;
     editFlagIds.value = (props.task.flags ?? []).map(f => f.id);
+    newLinkUrl.value = '';
+    newLinkLabel.value = '';
+    linkError.value = '';
     await loadHistory();
 })
 
@@ -244,6 +282,34 @@ watch(editFlagIds, (next, prev) => {
                             </option>
                         </select>
                     </div>
+                </div>
+                <div class="my-3 rounded-xl bg-brand-surface ring-1 ring-slate-900/[0.05] p-3">
+                    <div class="text-xs font-medium text-gray-500 mb-2">Links</div>
+                    <div v-if="(task.links ?? []).length" class="flex flex-col gap-1 mb-2">
+                        <div v-for="link in task.links" :key="link.id" class="flex items-center gap-2">
+                            <a :href="link.url" target="_blank" rel="noopener"
+                               class="min-w-0 flex-1 truncate text-sm text-brand-accent-dark hover:text-brand-accent hover:underline">
+                                {{ link.label || link.url }}
+                            </a>
+                            <button v-if="task.completed_at === null" type="button" @click="deleteLink(task, link)"
+                                    :disabled="deletingLinkIds.has(link.id)"
+                                    class="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                                    title="Remove link">
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                    <div v-if="task.completed_at === null" class="flex flex-col sm:flex-row gap-2">
+                        <input type="text" v-model="newLinkUrl" placeholder="URL" @keydown.enter="addLink(task)"
+                               class="h-9 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                        <input type="text" v-model="newLinkLabel" placeholder="Label (optional)" @keydown.enter="addLink(task)"
+                               class="h-9 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                        <button type="button" @click="addLink(task)" :disabled="addingLink || !newLinkUrl.trim()"
+                                class="shrink-0 inline-flex items-center px-3 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                            {{ addingLink ? 'Adding…' : 'Add' }}
+                        </button>
+                    </div>
+                    <div v-if="linkError" class="mt-1 text-xs text-red-600">{{ linkError }}</div>
                 </div>
                 <div v-if="upcomingItem || task.parent_task_id" class="my-3 border-t border-gray-100 pt-3">
                     <div v-if="upcomingItem" class="mb-3">

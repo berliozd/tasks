@@ -173,6 +173,7 @@ readonly class TaskService
         $query = Task::where('user_id', auth()->user()->id)
             ->with('progressions')
             ->with('flags')
+            ->with('links')
             ->with('recurrence')
             ->where(function (Builder $query) use ($thisMorning, $tonight) {
                 $query->where(function ($query) use ($thisMorning, $tonight) {
@@ -293,6 +294,47 @@ readonly class TaskService
     }
 
     /**
+     * @throws Exception
+     */
+    public function addLink(int $taskId, string $url, ?string $label = null): Task
+    {
+        $task = $this->taskRepository->find($taskId);
+        $this->checkPerms($task);
+        if ($task->completed_at !== null) {
+            throw new Exception('Completed tasks cannot be updated');
+        }
+
+        $url = trim($url);
+        if ($url === '') {
+            throw new Exception('A URL is required');
+        }
+        // A bare "example.com" is a common thing to paste — treat it as https
+        // rather than reject it, so the anchor tag on the frontend actually navigates.
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = 'https://' . $url;
+        }
+
+        $task->links()->create(['url' => $url, 'label' => trim((string) $label) ?: null]);
+        $task->load('links');
+        return $this->normalizeTaskDates($task);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteLink(int $taskId, int $linkId): Task
+    {
+        $task = $this->taskRepository->find($taskId);
+        $this->checkPerms($task);
+        if ($task->completed_at !== null) {
+            throw new Exception('Completed tasks cannot be updated');
+        }
+        $task->links()->where('id', $linkId)->delete();
+        $task->load('links');
+        return $this->normalizeTaskDates($task);
+    }
+
+    /**
      * Completed tasks over a past window ending on a given day (default: yesterday).
      *
      * period: day|week|month
@@ -323,6 +365,7 @@ readonly class TaskService
 
         $collection = Task::where('user_id', auth()->user()->id)
             ->with('flags')
+            ->with('links')
             ->with('recurrence')
             ->whereNotNull('completed_at')
             ->where('completed_at', '>=', $start)

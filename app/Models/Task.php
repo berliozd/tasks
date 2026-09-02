@@ -43,6 +43,11 @@ class Task extends Model
             ->withTimestamps();
     }
 
+    public function links(): HasMany
+    {
+        return $this->hasMany(TaskLink::class);
+    }
+
     public function recurrence(): BelongsTo
     {
         return $this->belongsTo(Recurrence::class);
