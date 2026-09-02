@@ -343,7 +343,8 @@ readonly class TaskService
             $url = 'https://' . $url;
         }
 
-        $task->links()->create(['url' => $url, 'label' => trim((string) $label) ?: null]);
+        $nextOrder = ($task->links()->max('sort_order') ?? -1) + 1;
+        $task->links()->create(['url' => $url, 'label' => trim((string) $label) ?: null, 'sort_order' => $nextOrder]);
         $task->load('links');
         return $this->normalizeTaskDates($task);
     }
@@ -359,6 +360,34 @@ readonly class TaskService
             throw new Exception('Completed tasks cannot be updated');
         }
         $task->links()->where('id', $linkId)->delete();
+        $task->load('links');
+        return $this->normalizeTaskDates($task);
+    }
+
+    /**
+     * Persist a new manual order for a task's links (as dragged in the
+     * list). Ids that don't belong to this task are silently ignored.
+     *
+     * @param array<int, int|string> $orderedLinkIds
+     * @throws Exception
+     */
+    public function reorderLinks(int $taskId, array $orderedLinkIds): Task
+    {
+        $task = $this->taskRepository->find($taskId);
+        $this->checkPerms($task);
+        if ($task->completed_at !== null) {
+            throw new Exception('Completed tasks cannot be updated');
+        }
+
+        $links = $task->links()->whereIn('id', $orderedLinkIds)->get(['id', 'sort_order'])->keyBy('id');
+        foreach (array_values($orderedLinkIds) as $index => $id) {
+            $link = $links->get((int) $id);
+            if (!$link || (int) $link->sort_order === $index) {
+                continue;
+            }
+            $link->update(['sort_order' => $index]);
+        }
+
         $task->load('links');
         return $this->normalizeTaskDates($task);
     }

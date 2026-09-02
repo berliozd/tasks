@@ -20,6 +20,8 @@ const plannedActions = ref([]);
 const plannedLimit = ref(20);
 const plannedHasMore = ref(false);
 const lastSentActions = ref([]);
+const lastSentLimit = ref(20);
+const lastSentHasMore = ref(false);
 const showAddModal = ref(false);
 const newProduct = ref({name: '', website_url: '', brief: ''});
 const adding = ref(false);
@@ -43,15 +45,21 @@ const refreshPlannedActions = () => {
 }
 
 const loadMorePlannedActions = () => {
-    plannedLimit.value += 10;
+    plannedLimit.value += 20;
     refreshPlannedActions();
 }
 
 const refreshLastSentActions = () => {
-    axios.get(route('prospect-actions.last-sent'), {params: {limit: 20}})
+    axios.get(route('prospect-actions.last-sent'), {params: {limit: lastSentLimit.value}})
         .then(response => {
             lastSentActions.value = response.data.items;
+            lastSentHasMore.value = response.data.has_more;
         });
+}
+
+const loadMoreLastSentActions = () => {
+    lastSentLimit.value += 20;
+    refreshLastSentActions();
 }
 
 const formatScheduled = (date) => date ? format(new Date(date), 'MMM d, HH:mm') : '';
@@ -224,6 +232,12 @@ refreshLastSentActions();
                     <span v-if="action.from_label" class="truncate max-w-[60%] sm:max-w-none">From: {{ action.from_label }}</span>
                 </div>
             </Link>
+        </div>
+        <div v-if="lastSentHasMore" class="p-3 border-t border-gray-100 flex justify-center">
+            <button type="button" @click="loadMoreLastSentActions"
+                    class="text-xs font-medium text-brand-navy hover:underline">
+                See more
+            </button>
         </div>
     </div>
 

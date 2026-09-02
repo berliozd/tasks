@@ -24,6 +24,7 @@ const newLinkLabel = ref('');
 const addingLink = ref(false);
 const linkError = ref('');
 const deletingLinkIds = ref(new Set());
+const draggingLinkId = ref(null);
 
 const taskIsLate = (task) => {
     if (task.scheduled_at === undefined) return false;
@@ -139,6 +140,26 @@ const deleteLink = (task, link) => {
         });
 }
 
+const onDragStartLink = (link) => {
+    draggingLinkId.value = link.id;
+}
+
+const onDropLink = (task, targetLink) => {
+    const fromId = draggingLinkId.value;
+    draggingLinkId.value = null;
+    if (fromId === null || fromId === targetLink.id) return;
+
+    const links = task.links ?? [];
+    const fromIndex = links.findIndex(l => l.id === fromId);
+    const toIndex = links.findIndex(l => l.id === targetLink.id);
+    if (fromIndex === -1 || toIndex === -1) return;
+
+    const [moved] = links.splice(fromIndex, 1);
+    links.splice(toIndex, 0, moved);
+
+    axios.post(route('tasks.links.reorder', task.id), {ids: links.map(l => l.id)});
+}
+
 const recurrenceLabel = (task) => {
     if (!props.allRecurrences || !task.recurrence_id) return '';
     return props.allRecurrences.find(r => r.id === task.recurrence_id)?.label ?? '';
@@ -207,10 +228,21 @@ watch(editFlagIds, (next, prev) => {
                     <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
                 <div class="min-w-0 w-full">
-                    <div @click="toggleEditing" class="cursor-pointer w-full">
+                    <div @click="toggleEditing" class="cursor-pointer w-full flex items-center gap-1.5">
                         <span :class="task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900'">
                             {{ task.label }}
                         </span>
+                        <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
+                           @click.stop :title="task.links[0].label || task.links[0].url"
+                           class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" class="lucide lucide-link">
+                                <path d="M9 17H7A5 5 0 0 1 7 7h2"/>
+                                <path d="M15 7h2a5 5 0 1 1 0 10h-2"/>
+                                <line x1="8" x2="16" y1="12" y2="12"/>
+                            </svg>
+                        </a>
                     </div>
                     <div v-if="task.completed_at !== null" class="text-xs text-gray-400">
                         Completed on {{ formatDateTime(task.completed_at) }}
@@ -286,7 +318,18 @@ watch(editFlagIds, (next, prev) => {
                 <div class="my-3 rounded-xl bg-brand-surface ring-1 ring-slate-900/[0.05] p-3">
                     <div class="text-xs font-medium text-gray-500 mb-2">Links</div>
                     <div v-if="(task.links ?? []).length" class="flex flex-col gap-1 mb-2">
-                        <div v-for="link in task.links" :key="link.id" class="flex items-center gap-2">
+                        <div v-for="link in task.links" :key="link.id" class="flex items-center gap-2"
+                             @dragover.prevent @drop="onDropLink(task, link)">
+                            <div v-if="task.completed_at === null" draggable="true" @dragstart="onDragStartLink(link)"
+                                 title="Drag to reorder"
+                                 class="shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition select-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round" class="lucide lucide-grip-vertical">
+                                    <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                                    <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                                </svg>
+                            </div>
                             <a :href="link.url" target="_blank" rel="noopener"
                                class="min-w-0 flex-1 truncate text-sm text-brand-accent-dark hover:text-brand-accent hover:underline">
                                 {{ link.label || link.url }}

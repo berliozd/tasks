@@ -91,4 +91,12 @@ class TaskController extends Controller
     {
         $this->taskService->reorder($request->input('ids', []));
     }
+
+    /**
+     * @throws Exception
+     */
+    public function reorderLinks(Request $request, string $taskId)
+    {
+        return $this->taskService->reorderLinks((int) $taskId, $request->input('ids', []));
+    }
 }

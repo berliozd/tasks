@@ -46,7 +46,7 @@ class Task extends Model
 
     public function links(): HasMany
     {
-        return $this->hasMany(TaskLink::class);
+        return $this->hasMany(TaskLink::class)->orderBy('sort_order');
     }
 
     public function recurrence(): BelongsTo

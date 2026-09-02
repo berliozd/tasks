@@ -25,6 +25,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/delete-flag/{taskId}/{flagId}', [App\Http\Controllers\Api\TaskController::class, 'deleteFlag'])
         ->name('tasks.delete.flag');
     Route::post('/tasks/{taskId}/links', [App\Http\Controllers\Api\TaskController::class, 'addLink'])->name('tasks.links.add');
+    Route::post('/tasks/{taskId}/links/reorder', [App\Http\Controllers\Api\TaskController::class, 'reorderLinks'])
+        ->name('tasks.links.reorder');
     Route::delete('/tasks/{taskId}/links/{linkId}', [App\Http\Controllers\Api\TaskController::class, 'deleteLink'])
         ->name('tasks.links.delete');
     Route::post('/tasks/reorder', [App\Http\Controllers\Api\TaskController::class, 'reorder'])->name('tasks.reorder');

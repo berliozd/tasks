@@ -11,6 +11,7 @@ class TaskLink extends Model
         'task_id',
         'url',
         'label',
+        'sort_order',
     ];
 
     public function task(): BelongsTo
