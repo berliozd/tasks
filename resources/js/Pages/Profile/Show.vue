@@ -6,6 +6,7 @@ import SectionBorder from '@/Components/SectionBorder.vue';
 import TwoFactorAuthenticationForm from '@/Pages/Profile/Partials/TwoFactorAuthenticationForm.vue';
 import UpdatePasswordForm from '@/Pages/Profile/Partials/UpdatePasswordForm.vue';
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue';
+import DailyTaskReportForm from '@/Pages/Profile/Partials/DailyTaskReportForm.vue';
 
 defineProps({
     confirmsTwoFactorAuthentication: Boolean,
@@ -28,6 +29,10 @@ defineProps({
 
                     <SectionBorder />
                 </div>
+
+                <DailyTaskReportForm :user="$page.props.auth.user" />
+
+                <SectionBorder />
 
                 <div v-if="$page.props.jetstream.canUpdatePassword">
                     <UpdatePasswordForm class="mt-10 sm:mt-0" />

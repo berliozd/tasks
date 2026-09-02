@@ -32,7 +32,9 @@ class User extends Authenticatable
         'email',
         'password',
         'github_id',
-        'google_id'
+        'google_id',
+        'daily_report_enabled',
+        'daily_report_hour',
     ];
 
     /**
@@ -66,6 +68,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'daily_report_enabled' => 'boolean',
         ];
     }
 }

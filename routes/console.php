@@ -9,5 +9,6 @@ Log::info('console run');
 //Schedule::job(new CheckUserNotLogged)->everyTenSeconds();
 
 Schedule::command('prospect-actions:dispatch-scheduled-sends')->everyMinute();
+Schedule::command('reports:send-daily-tasks')->hourly();
 
 Log::info('console end');
