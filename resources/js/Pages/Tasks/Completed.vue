@@ -9,6 +9,14 @@ import FlagSwatches from '@/Components/FlagSwatches.vue';
 const period = ref('day'); // day|week|month
 const loading = ref(false);
 const tasks = ref([]);
+const expandedIds = ref(new Set());
+
+const toggleExpanded = (task) => {
+    const next = new Set(expandedIds.value);
+    if (next.has(task.id)) next.delete(task.id);
+    else next.add(task.id);
+    expandedIds.value = next;
+};
 
 const yesterdayYmd = () => {
     const d = new Date();
@@ -130,17 +138,37 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                     No completed tasks.
                 </div>
                 <div v-else class="divide-y divide-gray-100">
-                    <div v-for="task in tasks" :key="task.id"
-                         class="p-3 flex items-center justify-between gap-4 hover:bg-brand-surface transition">
-                        <div class="min-w-0">
-                            <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
-                        </div>
-                        <div class="shrink-0 flex items-center gap-3">
-                            <div class="w-24 flex justify-end">
-                                <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
+                    <div v-for="task in tasks" :key="task.id">
+                        <div class="p-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-brand-surface transition"
+                             @click="toggleExpanded(task)">
+                            <div class="min-w-0 flex items-center gap-2">
+                                <svg class="shrink-0 size-3.5 text-gray-400 transition-transform"
+                                     :class="expandedIds.has(task.id) ? 'rotate-90' : ''"
+                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                     stroke-width="2.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
                             </div>
-                            <div class="w-32 text-xs text-gray-500 text-right">
-                                {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
+                            <div class="shrink-0 flex items-center gap-3">
+                                <div class="w-24 flex justify-end">
+                                    <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
+                                </div>
+                                <div class="w-32 text-xs text-gray-500 text-right">
+                                    {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="expandedIds.has(task.id)" class="px-3 pb-3 pl-9 flex flex-col gap-2">
+                            <div v-if="task.description" class="text-sm text-gray-600 whitespace-pre-wrap">
+                                {{ task.description }}
+                            </div>
+                            <div v-else class="text-xs text-gray-400">No description.</div>
+                            <div v-if="(task.links ?? []).length" class="flex flex-col gap-1">
+                                <a v-for="link in task.links" :key="link.id" :href="link.url" target="_blank" rel="noopener"
+                                   class="text-sm text-brand-accent-dark hover:text-brand-accent hover:underline truncate">
+                                    {{ link.label || link.url }}
+                                </a>
                             </div>
                         </div>
                     </div>
