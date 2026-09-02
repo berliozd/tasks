@@ -44,6 +44,11 @@ class TaskController extends Controller
         $this->taskService->destroy((int)$id);
     }
 
+    public function future()
+    {
+        return $this->taskService->getFutureTasks();
+    }
+
     public function completed(Request $request)
     {
         $period = (string) $request->query('period', 'day');

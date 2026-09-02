@@ -200,6 +200,31 @@ readonly class TaskService
         return $collection;
     }
 
+    /**
+     * Not-yet-completed tasks scheduled strictly after today, soonest first
+     * — the counterpart to getCompletedPast() for what's still ahead.
+     */
+    public function getFutureTasks(): Collection
+    {
+        $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));
+        $tonight = $this->getTonight($tz);
+
+        $collection = Task::where('user_id', auth()->user()->id)
+            ->with('flags')
+            ->with('links')
+            ->with('recurrence')
+            ->where('completed_at', null)
+            ->where('scheduled_at', '>', $tonight)
+            ->orderBy('scheduled_at')
+            ->get();
+
+        foreach ($collection->all() as $task) {
+            $this->normalizeTaskDates($task);
+        }
+
+        return $collection;
+    }
+
     public function getTodayTasks(): Collection
     {
         $tz = new DateTimeZone(auth()->user()->timezone ?? config('app.timezone'));

@@ -7,6 +7,7 @@ use App\Http\Controllers\DirectoryController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\EmailTemplatesController;
 use App\Http\Controllers\FlagController;
+use App\Http\Controllers\FutureTasksController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\ProspectController;
@@ -33,6 +34,7 @@ Route::middleware([
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/tasks', TaskController::class)->name('tasks');
     Route::get('/completed-tasks', CompletedTasksController::class)->name('completed-tasks');
+    Route::get('/future-tasks', FutureTasksController::class)->name('future-tasks');
     Route::get('/flags', FlagController::class)->name('flags');
     Route::get('/products', ProductsController::class)->name('products');
     Route::get('/products/{product}', ProductController::class)->name('products.view');

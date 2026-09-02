@@ -10,11 +10,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::patch('/daily-report-settings', [App\Http\Controllers\Api\DailyReportSettingsController::class, 'update'])
+        ->name('daily-report-settings.update');
     Route::patch('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'update'])->name('tasks.update');
     Route::get('/tasks', [App\Http\Controllers\Api\TaskController::class, 'index'])->name('tasks.index');
     Route::post('/tasks', [App\Http\Controllers\Api\TaskController::class, 'store'])->name('tasks.store');
     Route::delete('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'destroy'])->name('tasks.delete');
     Route::get('/tasks/completed', [App\Http\Controllers\Api\TaskController::class, 'completed'])->name('tasks.completed');
+    Route::get('/tasks/future', [App\Http\Controllers\Api\TaskController::class, 'future'])->name('tasks.future');
     Route::get('/tasks/{id}/history', [App\Http\Controllers\Api\TaskController::class, 'history'])->name('tasks.history');
     Route::post('/tasks/add-flag/{taskId}/{flagId}', [App\Http\Controllers\Api\TaskController::class, 'addFlag'])->name(
         'tasks.add.flag'
@@ -69,6 +72,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/prospect-actions/planned', [App\Http\Controllers\Api\ProspectActionController::class, 'planned'])
         ->name('prospect-actions.planned');
+    Route::get('/prospect-actions/last-sent', [App\Http\Controllers\Api\ProspectActionController::class, 'lastSent'])
+        ->name('prospect-actions.last-sent');
     Route::get('/prospects/{prospectId}/actions', [App\Http\Controllers\Api\ProspectActionController::class, 'index'])
         ->name('prospect-actions.index');
     Route::post('/prospects/{prospectId}/actions', [App\Http\Controllers\Api\ProspectActionController::class, 'store'])
