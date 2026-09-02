@@ -216,30 +216,18 @@ const updateSelectedFlags = (e) => {
     selectedFlagIds.value = e.value;
 };
 
-const formatExportDate = (date) => {
-    if (!date) return '';
-    return format(
-        date,
-        usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm' : 'dd/MM/yyyy HH:mm'
-    )
-}
+const undoneFilteredTasks = computed(() => filteredTasks.value.filter(task => task.completed_at === null));
 
 const exportText = computed(() => {
-    return filteredTasks.value.map(task => {
-        let line = `[${task.completed_at ? 'x' : ' '}] ${task.label}`;
-        const flagNames = (task.flags ?? []).map(f => f.name).filter(Boolean);
-        if (flagNames.length) line += ` (${flagNames.join(', ')})`;
-        if (task.completed_at) {
-            line += ` - completed ${formatExportDate(task.completed_at)}`;
-        } else if (task.scheduled_at) {
-            line += ` - scheduled ${formatExportDate(task.scheduled_at)}`;
-        }
-        return line;
-    }).join('\n');
+    return undoneFilteredTasks.value.map(task => {
+        let block = `[ ] ${task.label}`;
+        if (task.description) block += `\n${task.description}`;
+        return block;
+    }).join('\n\n');
 });
 
 const exportTasks = async () => {
-    if (!filteredTasks.value.length) return;
+    if (!undoneFilteredTasks.value.length) return;
     const text = exportText.value;
     try {
         await navigator.clipboard.writeText(text);
@@ -302,7 +290,7 @@ const exportTasks = async () => {
 
             <div class="flex items-center justify-between gap-2 px-1 mb-2">
                 <div class="text-xs font-medium text-gray-500">{{ filteredTasks.length }} task(s)</div>
-                <button type="button" @click="exportTasks" :disabled="!filteredTasks.length"
+                <button type="button" @click="exportTasks" :disabled="!undoneFilteredTasks.length"
                         class="btn btn-ghost btn-xs gap-1 normal-case disabled:opacity-50">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -310,7 +298,7 @@ const exportTasks = async () => {
                         <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
                         <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                     </svg>
-                    Export as text
+                    Export undone tasks as text
                 </button>
             </div>
 
