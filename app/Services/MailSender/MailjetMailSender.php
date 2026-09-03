@@ -26,6 +26,7 @@ class MailjetMailSender implements MailSenderInterface
         string $body,
         ?string $replyToEmail = null,
         ?string $replyToName = null,
+        ?string $htmlBody = null,
     ): void {
         if (empty($this->apiKey) || empty($this->apiSecret)) {
             throw new Exception('Mailjet API credentials are not configured');
@@ -38,7 +39,7 @@ class MailjetMailSender implements MailSenderInterface
             'To' => [array_filter(['Email' => $toEmail, 'Name' => $toName])],
             'Subject' => $subject,
             'TextPart' => $body,
-            'HTMLPart' => nl2br(e($body)),
+            'HTMLPart' => $htmlBody ?? nl2br(e($body)),
         ];
 
         if (!empty($replyToEmail)) {

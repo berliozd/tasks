@@ -51,7 +51,9 @@ defineProps({
                         <span class="font-semibold text-black">Tasks</span> keeps your day-to-day organized —
                         schedule, flag and recur what needs doing.
                         <span class="font-semibold text-black">Prospection</span> helps your team find leads,
-                        log outreach, and send real emails, powered by AI. One app, one login.
+                        log outreach, and send real emails, powered by AI.
+                        <span class="font-semibold text-black">Documents</span> is your team's Markdown
+                        knowledge base, auto-tagged by AI. One app, one login.
                     </p>
                 </div>
             </section>
@@ -178,11 +180,75 @@ defineProps({
                 </div>
             </section>
 
+            <!-- Documents -->
+            <section class="w-full bg-white">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                    <div class="grid gap-10 lg:grid-cols-3 lg:items-start">
+                        <div class="lg:col-span-1">
+                            <div class="flex size-16 shrink-0 items-center justify-center rounded-full bg-brand-navy">
+                                <svg class="size-8 stroke-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+                                </svg>
+                            </div>
+                            <h2 class="mt-4 text-xl font-semibold text-black">Documents</h2>
+                            <p class="mt-4 text-sm/relaxed">
+                                A Markdown knowledge base shared with your team, auto-tagged by AI so you can
+                                find things by topic instead of hunting through files.
+                            </p>
+                            <a href="/documents"
+                               class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand-accent-dark hover:underline">
+                                Explore Documents
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/>
+                                </svg>
+                            </a>
+                        </div>
+
+                        <div class="lg:col-span-2 grid gap-6 sm:grid-cols-3">
+                            <div class="flex flex-col items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover">
+                                <BulletLogo/>
+                                <div>
+                                    <h3 class="text-base font-semibold text-black">Write or Drag &amp; Drop</h3>
+                                    <p class="mt-2 text-sm/relaxed">
+                                        Write a document by hand, or drop in a <code>.md</code> file to import it
+                                        instantly.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover">
+                                <BulletLogo/>
+                                <div>
+                                    <h3 class="text-base font-semibold text-black">Markdown + Live Preview</h3>
+                                    <p class="mt-2 text-sm/relaxed">
+                                        Edit the raw Markdown and see the rendered, human-readable version side
+                                        by side.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover">
+                                <BulletLogo/>
+                                <div>
+                                    <h3 class="text-base font-semibold text-black">AI-Tagged &amp; Filterable</h3>
+                                    <p class="mt-2 text-sm/relaxed">
+                                        On save, AI scans the content and attaches topical flags — filter the
+                                        list by them to find things fast.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <Ad/>
 
                 <footer class="py-16 text-center text-sm text-gray-600">
-                    {{ usePage().props.appName }} - @copyright 2025 - Addeos
+                    {{ usePage().props.appName }} - @copyright 2026 - Addeos
                 </footer>
             </div>
         </div>

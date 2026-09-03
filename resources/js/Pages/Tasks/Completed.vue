@@ -3,7 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
 import {computed, ref, watch} from 'vue';
 import {addDays, format, parseISO} from 'date-fns';
-import {usePage} from '@inertiajs/vue3';
+import {Link, usePage} from '@inertiajs/vue3';
 import FlagSwatches from '@/Components/FlagSwatches.vue';
 
 const period = ref('day'); // day|week|month
@@ -69,7 +69,17 @@ watch([period, endDate], fetchCompleted, {immediate: true});
 <template>
     <AppLayout title="Completed tasks">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight text-slate-900">Completed tasks</h2>
+            <div class="flex items-center gap-4">
+                <h2 class="font-semibold text-xl leading-tight text-slate-900">Completed tasks</h2>
+                <div class="flex items-center gap-3">
+                    <Link :href="route('tasks')" class="text-sm text-gray-500 hover:text-gray-700">
+                        Tasks
+                    </Link>
+                    <Link :href="route('future-tasks')" class="text-sm text-gray-500 hover:text-gray-700">
+                        Future
+                    </Link>
+                </div>
+            </div>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">

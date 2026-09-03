@@ -52,6 +52,12 @@ schedule.
   drafted by AI from a short goal prompt plus the directory's own audience
   context. Unlike Tasks/Flags, directories belong to the current team rather than just the
   creating user.
+- **Documents** — a team-shared Markdown knowledge base. Write a document by
+  hand or drag in a `.md` file to import it; the editor shows the raw
+  Markdown and a live-rendered preview side by side. On save, AI scans the
+  content and attaches a handful of topical flags automatically (editable
+  afterward like the flags on any other document), and the document list can
+  be filtered by them.
 
 ## How it's built
 
@@ -76,8 +82,8 @@ schedule.
 - **Database**: MySQL by default via Docker (see `docker-compose.yml`), or
   SQLite for a zero-dependency local setup (see below). Key models:
   `Task`, `Flag`, `Recurrence`, `TasksProgression`, `Directory`, `Prospect`,
-  `ProspectAction`, `EmailTemplate`, plus Jetstream's
-  `Team`/`Membership`/`TeamInvitation`/`User`.
+  `ProspectAction`, `EmailTemplate`, `Document`, `DocumentFlag`, plus
+  Jetstream's `Team`/`Membership`/`TeamInvitation`/`User`.
 - **Tests**: PHPUnit (`tests/Feature`, `tests/Unit`).
 
 ### Project layout

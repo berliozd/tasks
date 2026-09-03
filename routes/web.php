@@ -4,6 +4,8 @@ use App\Http\Controllers\Auth\ProvidersCallbackController;
 use App\Http\Controllers\CompletedTasksController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentsController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\EmailTemplatesController;
 use App\Http\Controllers\FlagController;
@@ -43,6 +45,8 @@ Route::middleware([
     Route::get('/directories/{directory}/email-templates/{template}', EmailTemplateController::class)
         ->name('email-templates.view');
     Route::get('/directories/{directory}/prospects/{prospect}', ProspectController::class)->name('prospects.view');
+    Route::get('/documents', DocumentsController::class)->name('documents');
+    Route::get('/documents/{document}', DocumentController::class)->name('documents.view');
 
 });
 

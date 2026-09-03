@@ -99,4 +99,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('email-templates.update');
     Route::delete('/email-templates/{id}', [App\Http\Controllers\Api\EmailTemplateController::class, 'destroy'])
         ->name('email-templates.destroy');
+
+    Route::get('/documents', [App\Http\Controllers\Api\DocumentController::class, 'index'])->name('documents.index');
+    Route::post('/documents', [App\Http\Controllers\Api\DocumentController::class, 'store'])->name('documents.store');
+    Route::get('/documents/{id}', [App\Http\Controllers\Api\DocumentController::class, 'show'])->name('documents.show');
+    Route::patch('/documents/{id}', [App\Http\Controllers\Api\DocumentController::class, 'update'])->name('documents.update');
+    Route::patch('/documents/{id}/flags', [App\Http\Controllers\Api\DocumentController::class, 'updateFlags'])
+        ->name('documents.flags.update');
+    Route::delete('/documents/{id}', [App\Http\Controllers\Api\DocumentController::class, 'destroy'])->name('documents.destroy');
+
+    Route::get('/document-flags', [App\Http\Controllers\Api\DocumentFlagController::class, 'index'])->name('document-flags.index');
 });

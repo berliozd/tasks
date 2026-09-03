@@ -2,18 +2,22 @@
 
 namespace App\Services;
 
+use App\Models\Flag;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\MailSender\MailSenderInterface;
 use Carbon\Carbon;
 use DateTimeZone;
 use Exception;
+use Illuminate\Mail\Markdown;
 use Illuminate\Support\Collection;
 
 readonly class DailyTaskReportService
 {
-    public function __construct(private MailSenderInterface $mailSender)
-    {
+    public function __construct(
+        private MailSenderInterface $mailSender,
+        private Markdown $markdown,
+    ) {
     }
 
     /**
@@ -42,8 +46,12 @@ readonly class DailyTaskReportService
      */
     public function sendReport(User $user, DateTimeZone $tz): void
     {
-        $completedToday = $this->orderByFlags($this->getCompletedToday($user, $tz));
-        $dueTomorrow = $this->orderByFlags($this->getDueTomorrow($user, $tz));
+        $data = [
+            'userName' => $user->name,
+            'appName' => (string) config('app.name'),
+            'completedGroups' => $this->groupByFlag($this->getCompletedToday($user, $tz)),
+            'dueTomorrowGroups' => $this->groupByFlag($this->getDueTomorrow($user, $tz)),
+        ];
 
         $this->mailSender->send(
             $user->email,
@@ -51,7 +59,10 @@ readonly class DailyTaskReportService
             (string) config('services.prospection.from_email'),
             (string) config('app.name'),
             'Your daily task report',
-            $this->formatReport($completedToday, $dueTomorrow),
+            (string) $this->markdown->renderText('emails.daily-task-report', $data),
+            null,
+            null,
+            (string) $this->markdown->render('emails.daily-task-report', $data),
         );
     }
 
@@ -78,44 +89,34 @@ readonly class DailyTaskReportService
     }
 
     /**
-     * Tasks with a flag sort before flagless ones, alphabetically by their
-     * (first, case-insensitive) flag name.
+     * Groups tasks by their first (alphabetically, case-insensitive) flag,
+     * each group carrying that flag's color for display — flagless tasks
+     * land in a trailing "No flag" group. Groups themselves are ordered the
+     * same way tasks previously were: flagged before flagless, alphabetical
+     * by flag name.
+     *
+     * @return Collection<int, array{label: string, color: ?string, tasks: Collection<int, Task>}>
      */
-    private function orderByFlags(Collection $tasks): Collection
+    private function groupByFlag(Collection $tasks): Collection
     {
-        return $tasks->sortBy(function (Task $task) {
-            $firstFlagName = $task->flags->pluck('name')->filter()->sort()->first();
-            // Flagless tasks sort after everything else.
-            return $firstFlagName === null ? "\u{FFFF}" : mb_strtolower($firstFlagName);
-        })->values();
+        return $tasks
+            ->groupBy(fn (Task $task) => $this->firstFlag($task)?->id ?? 0)
+            ->map(function (Collection $tasksInGroup, int $flagId) {
+                $flag = $this->firstFlag($tasksInGroup->first());
+                return [
+                    'label' => $flag?->name ?? 'No flag',
+                    'color' => $flag?->color,
+                    'flagged' => $flagId !== 0,
+                    'tasks' => $tasksInGroup->values(),
+                ];
+            })
+            ->sortBy(fn (array $group) => $group['flagged'] ? mb_strtolower($group['label']) : "\u{FFFF}")
+            ->values();
     }
 
-    private function formatReport(Collection $completedToday, Collection $dueTomorrow): string
+    private function firstFlag(Task $task): ?Flag
     {
-        $lines = [];
-
-        $lines[] = 'Completed today (' . $completedToday->count() . ')';
-        $lines[] = $completedToday->isEmpty()
-            ? '  Nothing completed today.'
-            : $completedToday->map(fn (Task $t) => $this->formatLine($t))->implode("\n");
-
-        $lines[] = '';
-        $lines[] = 'To do tomorrow (' . $dueTomorrow->count() . ')';
-        $lines[] = $dueTomorrow->isEmpty()
-            ? '  Nothing scheduled for tomorrow.'
-            : $dueTomorrow->map(fn (Task $t) => $this->formatLine($t))->implode("\n");
-
-        return implode("\n", $lines);
-    }
-
-    private function formatLine(Task $task): string
-    {
-        $flagNames = $task->flags->pluck('name')->filter()->all();
-        $line = '  - ' . $task->label;
-        if (!empty($flagNames)) {
-            $line .= ' (' . implode(', ', $flagNames) . ')';
-        }
-        return $line;
+        return $task->flags->sortBy(fn (Flag $flag) => mb_strtolower($flag->name))->first();
     }
 
     /**

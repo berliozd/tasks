@@ -5,7 +5,7 @@ import axios from 'axios';
 import {computed, reactive, ref, watch} from "vue";
 import debounce from "lodash/debounce";
 import {format} from "date-fns";
-import {usePage} from "@inertiajs/vue3";
+import {Link, usePage} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
@@ -249,7 +249,17 @@ const exportTasks = async () => {
 <template>
     <AppLayout title="Tasks">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight text-slate-900">Tasks</h2>
+            <div class="flex items-center gap-4">
+                <h2 class="font-semibold text-xl leading-tight text-slate-900">Tasks</h2>
+                <div class="flex items-center gap-3">
+                    <Link :href="route('future-tasks')" class="text-sm text-gray-500 hover:text-gray-700">
+                        Future
+                    </Link>
+                    <Link :href="route('completed-tasks')" class="text-sm text-gray-500 hover:text-gray-700">
+                        Completed
+                    </Link>
+                </div>
+            </div>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">

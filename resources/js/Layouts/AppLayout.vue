@@ -84,37 +84,15 @@ Echo.private('my-private-channel')
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-                                <div class="flex items-center">
-                                    <NavLink :href="route('tasks')" :active="route().current('tasks')">
-                                        Tasks
-                                    </NavLink>
-                                    <Dropdown align="left" width="48">
-                                        <template #trigger>
-                                            <button type="button" title="Completed / future tasks"
-                                                    :class="(route().current('completed-tasks') || route().current('future-tasks'))
-                                                        ? 'inline-flex items-center px-1 pt-1 border-b-2 border-brand-accent-light text-white focus:outline-none focus:border-brand-accent-light transition duration-150 ease-in-out'
-                                                        : 'inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-slate-300 hover:text-white hover:border-white/30 focus:outline-none focus:text-white focus:border-white/30 transition duration-150 ease-in-out'">
-                                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
-                                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                          d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"/>
-                                                </svg>
-                                            </button>
-                                        </template>
-
-                                        <template #content>
-                                            <DropdownLink :href="route('future-tasks')">
-                                                Future
-                                            </DropdownLink>
-                                            <DropdownLink :href="route('completed-tasks')">
-                                                Completed
-                                            </DropdownLink>
-                                        </template>
-                                    </Dropdown>
-                                </div>
+                                <NavLink :href="route('tasks')" :active="route().current('tasks')">
+                                    Tasks
+                                </NavLink>
                                 <NavLink :href="route('products')"
                                          :active="route().current('products*') || route().current('directories*')">
                                     Prospection
+                                </NavLink>
+                                <NavLink :href="route('documents')" :active="route().current('documents*')">
+                                    Documents
                                 </NavLink>
                             </div>
                         </div>
@@ -289,15 +267,12 @@ Echo.private('my-private-channel')
                         <ResponsiveNavLink :href="route('tasks')" :active="route().current('tasks')">
                             Tasks
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('future-tasks')" :active="route().current('future-tasks')" class="ps-8">
-                            Future
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('completed-tasks')" :active="route().current('completed-tasks')" class="ps-8">
-                            Completed
-                        </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('products')"
                                             :active="route().current('products*') || route().current('directories*')">
                             Prospection
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('documents')" :active="route().current('documents*')">
+                            Documents
                         </ResponsiveNavLink>
                     </div>
 

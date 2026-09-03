@@ -1,6 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
+import {Link} from "@inertiajs/vue3";
 import {reactive, ref, watch} from "vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import Task from "@/Pages/Tasks/Partials/Task.vue";
@@ -82,7 +83,17 @@ const setActiveTask = (task) => {
 <template>
     <AppLayout title="Future tasks">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight text-slate-900">Future tasks</h2>
+            <div class="flex items-center gap-4">
+                <h2 class="font-semibold text-xl leading-tight text-slate-900">Future tasks</h2>
+                <div class="flex items-center gap-3">
+                    <Link :href="route('tasks')" class="text-sm text-gray-500 hover:text-gray-700">
+                        Tasks
+                    </Link>
+                    <Link :href="route('completed-tasks')" class="text-sm text-gray-500 hover:text-gray-700">
+                        Completed
+                    </Link>
+                </div>
+            </div>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">

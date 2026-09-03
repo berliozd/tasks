@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\DocumentFlagExtractor\DocumentFlagExtractorInterface;
+use App\Services\DocumentFlagExtractor\OpenAiDocumentFlagExtractor;
+use App\Services\DocumentFlagExtractor\StubDocumentFlagExtractor;
 use App\Services\EmailTemplateGenerator\EmailTemplateGeneratorInterface;
 use App\Services\EmailTemplateGenerator\OpenAiEmailTemplateGenerator;
 use App\Services\EmailTemplateGenerator\StubEmailTemplateGenerator;
@@ -41,6 +44,17 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new OpenAiEmailTemplateGenerator(
+                (string) config('services.openai.key'),
+                (string) config('services.openai.model'),
+            );
+        });
+
+        $this->app->bind(DocumentFlagExtractorInterface::class, function () {
+            if ($this->app->environment('testing') || empty(config('services.openai.key'))) {
+                return new StubDocumentFlagExtractor();
+            }
+
+            return new OpenAiDocumentFlagExtractor(
                 (string) config('services.openai.key'),
                 (string) config('services.openai.model'),
             );

@@ -20,6 +20,7 @@ class LogMailSender implements MailSenderInterface
         string $body,
         ?string $replyToEmail = null,
         ?string $replyToName = null,
+        ?string $htmlBody = null,
     ): void {
         Log::info('MailSender (stub): would send email', [
             'to' => $toEmail,
@@ -27,6 +28,7 @@ class LogMailSender implements MailSenderInterface
             'reply_to' => $replyToEmail,
             'subject' => $subject,
             'body' => $body,
+            'has_html_body' => $htmlBody !== null,
         ]);
     }
 }

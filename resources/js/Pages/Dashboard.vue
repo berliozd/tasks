@@ -16,9 +16,14 @@ const props = defineProps({
             status_counts: {}, top_products: [],
         }),
     },
+    documents: {
+        type: Object,
+        default: () => ({count: 0, recent: []}),
+    },
 });
 
 const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
+const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm') : '';
 </script>
 
 <template>
@@ -56,9 +61,13 @@ const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
                     <div class="text-2xl font-semibold text-blue-700">{{ prospection.won_count }}</div>
                     <div class="text-xs text-gray-500">Won</div>
                 </div>
+                <div class="surface-card p-4">
+                    <div class="text-2xl font-semibold text-slate-900">{{ documents.count }}</div>
+                    <div class="text-xs text-gray-500">Documents</div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 <div class="surface-card overflow-hidden">
                     <div class="p-4 flex items-center justify-between border-b border-gray-100">
@@ -150,6 +159,27 @@ const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
                                 </Link>
                             </div>
                         </template>
+                    </div>
+                </div>
+
+                <div class="surface-card overflow-hidden">
+                    <div class="p-4 flex items-center justify-between border-b border-gray-100">
+                        <div class="text-sm font-medium text-gray-900">Documents</div>
+                        <Link :href="route('documents')" class="text-xs font-medium text-brand-navy hover:underline">
+                            View all →
+                        </Link>
+                    </div>
+
+                    <div v-if="!documents.recent.length" class="p-8 text-center text-sm text-gray-400">
+                        No documents yet.
+                    </div>
+                    <div v-else class="divide-y divide-gray-100">
+                        <Link v-for="doc in documents.recent" :key="doc.id"
+                              :href="route('documents.view', doc.id)"
+                              class="flex items-center gap-3 px-4 py-3 hover:bg-brand-surface transition">
+                            <span class="text-sm text-gray-900 flex-1 min-w-0 truncate">{{ doc.title }}</span>
+                            <span class="shrink-0 text-xs text-gray-400">{{ formatRecentDate(doc.updated_at) }}</span>
+                        </Link>
                     </div>
                 </div>
 

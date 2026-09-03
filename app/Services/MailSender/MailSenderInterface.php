@@ -18,5 +18,6 @@ interface MailSenderInterface
         string $body,
         ?string $replyToEmail = null,
         ?string $replyToName = null,
+        ?string $htmlBody = null,
     ): void;
 }
