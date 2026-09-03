@@ -122,6 +122,37 @@ class DocumentTest extends TestCase
         $this->assertTrue($kept->flags()->where('document_flags.id', $sharedFlag->id)->exists());
     }
 
+    public function test_user_can_delete_a_flag_removing_it_from_every_document(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $teamId = $user->currentTeam->id;
+
+        $flag = DocumentFlag::factory()->create(['team_id' => $teamId, 'name' => 'to-delete']);
+        $doc1 = Document::factory()->create(['team_id' => $teamId]);
+        $doc2 = Document::factory()->create(['team_id' => $teamId]);
+        $doc1->flags()->attach($flag->id);
+        $doc2->flags()->attach($flag->id);
+
+        $this->deleteJson("/api/document-flags/{$flag->id}")->assertSuccessful();
+
+        $this->assertNull(DocumentFlag::find($flag->id));
+        $this->assertEquals(0, $doc1->flags()->count());
+        $this->assertEquals(0, $doc2->flags()->count());
+    }
+
+    public function test_user_cannot_delete_another_teams_flag(): void
+    {
+        $owner = User::factory()->withPersonalTeam()->create();
+        $flag = DocumentFlag::factory()->create(['team_id' => $owner->currentTeam->id]);
+
+        $intruder = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($intruder);
+
+        $this->deleteJson("/api/document-flags/{$flag->id}")->assertServerError();
+        $this->assertNotNull(DocumentFlag::find($flag->id));
+    }
+
     public function test_user_cannot_view_or_modify_another_teams_document(): void
     {
         $owner = User::factory()->withPersonalTeam()->create();

@@ -35,6 +35,14 @@ const toggleFlagFilter = (flagId) => {
     refreshDocuments();
 }
 
+const deleteFlag = (flag) => {
+    axios.delete(route('document-flags.destroy', flag.id)).then(() => {
+        selectedFlagIds.value = selectedFlagIds.value.filter(id => id !== flag.id);
+        refreshFlags();
+        refreshDocuments();
+    });
+}
+
 const openDocument = (document) => {
     router.visit(route('documents.view', document.id));
 }
@@ -114,13 +122,19 @@ refreshFlags();
             <div v-if="allFlags.length" class="surface-card p-4">
                 <div class="flex flex-wrap items-center gap-1">
                     <span class="text-xs text-gray-500 mr-1">Flags:</span>
-                    <button v-for="flag in allFlags" :key="flag.id" type="button" @click="toggleFlagFilter(flag.id)"
-                            class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                            :class="selectedFlagIds.includes(flag.id)
-                                ? 'bg-brand-accent/10 text-brand-accent-dark ring-1 ring-current'
-                                : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
-                        {{ flag.name }}
-                    </button>
+                    <span v-for="flag in allFlags" :key="flag.id"
+                          class="inline-flex items-center rounded-full text-xs font-semibold transition"
+                          :class="selectedFlagIds.includes(flag.id)
+                              ? 'bg-brand-accent/10 text-brand-accent-dark ring-1 ring-current'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                        <button type="button" @click="toggleFlagFilter(flag.id)" class="pl-2 pr-1 py-1">
+                            {{ flag.name }}
+                        </button>
+                        <span @click.stop>
+                            <DeleteConfirmPopover @deleted="deleteFlag(flag)"
+                                                   :label="'Delete the &quot;' + flag.name + '&quot; flag? It will be removed from every document that has it.'"/>
+                        </span>
+                    </span>
                 </div>
             </div>
 

@@ -178,6 +178,25 @@ readonly class DocumentService
     }
 
     /**
+     * Deletes a flag outright — detaching it from every document that
+     * currently has it, not just ones left unused (that's the automatic
+     * cleanup destroy() already does; this is an explicit, direct delete).
+     *
+     * @throws Exception
+     */
+    public function deleteFlag(int $id): void
+    {
+        $flag = $this->documentFlagRepository->find($id);
+        if (!$flag) {
+            throw new Exception('Flag not found');
+        }
+        if ((int) $flag->team_id !== (int) auth()->user()->currentTeam->id) {
+            throw new Exception('Not allowed');
+        }
+        $this->documentFlagRepository->destroy($flag);
+    }
+
+    /**
      * @throws Exception
      */
     private function findDocument(int $id): Document

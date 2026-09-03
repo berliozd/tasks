@@ -111,4 +111,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/documents/{id}', [App\Http\Controllers\Api\DocumentController::class, 'destroy'])->name('documents.destroy');
 
     Route::get('/document-flags', [App\Http\Controllers\Api\DocumentFlagController::class, 'index'])->name('document-flags.index');
+    Route::delete('/document-flags/{id}', [App\Http\Controllers\Api\DocumentFlagController::class, 'destroy'])
+        ->name('document-flags.destroy');
 });
