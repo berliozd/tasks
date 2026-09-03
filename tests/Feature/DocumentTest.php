@@ -63,6 +63,29 @@ class DocumentTest extends TestCase
             ->assertJsonMissing(['id' => $document->id]);
     }
 
+    public function test_filtering_by_multiple_flags_requires_all_of_them(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $teamId = $user->currentTeam->id;
+
+        $flagA = DocumentFlag::factory()->create(['team_id' => $teamId, 'name' => 'flag-a']);
+        $flagB = DocumentFlag::factory()->create(['team_id' => $teamId, 'name' => 'flag-b']);
+
+        $both = Document::factory()->create(['team_id' => $teamId]);
+        $both->flags()->attach([$flagA->id, $flagB->id]);
+
+        $onlyA = Document::factory()->create(['team_id' => $teamId]);
+        $onlyA->flags()->attach($flagA->id);
+
+        $response = $this->getJson('/api/documents?' . http_build_query(['flag_ids' => [$flagA->id, $flagB->id]]))
+            ->assertSuccessful();
+
+        $ids = collect($response->json())->pluck('id')->all();
+        $this->assertContains($both->id, $ids);
+        $this->assertNotContains($onlyA->id, $ids);
+    }
+
     public function test_updating_a_document_does_not_touch_its_flags(): void
     {
         $user = User::factory()->withPersonalTeam()->create();

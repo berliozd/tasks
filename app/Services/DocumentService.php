@@ -40,14 +40,15 @@ readonly class DocumentService
      */
     public function getAll(?array $flagIds = null): Collection
     {
-        return Document::where('team_id', auth()->user()->currentTeam->id)
-            ->with('flags')
-            ->when(!empty($flagIds), fn ($query) => $query->whereHas(
-                'flags',
-                fn ($q) => $q->whereIn('document_flags.id', $flagIds),
-            ))
-            ->orderByDesc('updated_at')
-            ->get();
+        $query = Document::where('team_id', auth()->user()->currentTeam->id)->with('flags');
+
+        // Each selected flag narrows the result further (AND), not widens it (OR) —
+        // a document must have every selected flag, not just one of them.
+        foreach ($flagIds ?? [] as $flagId) {
+            $query->whereHas('flags', fn ($q) => $q->where('document_flags.id', $flagId));
+        }
+
+        return $query->orderByDesc('updated_at')->get();
     }
 
     /**
