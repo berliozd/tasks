@@ -23,6 +23,8 @@ let docSnapshot = null;
 const mobileView = ref('edit'); // 'edit' | 'preview'
 const newFlagName = ref('');
 const addingFlag = ref(false);
+const rescanning = ref(false);
+const rescanError = ref('');
 
 const cleanDoc = (d) => JSON.stringify({title: d.title, content: d.content});
 
@@ -88,6 +90,17 @@ const removeFlag = (flag) => {
     saveFlags(names);
 }
 
+const rescanFlags = () => {
+    rescanning.value = true;
+    rescanError.value = '';
+    axios.post(route('documents.flags.rescan', props.documentId)).then(response => {
+        doc.value.flags = response.data.flags;
+        useStore().setSaved('Flags rescanned');
+    }).catch((error) => {
+        rescanError.value = error.response?.data?.message ?? 'Could not rescan flags';
+    }).finally(() => rescanning.value = false);
+}
+
 const deleteDocument = () => {
     axios.delete(route('documents.destroy', props.documentId)).then(() => {
         useStore().setSaved('Document deleted');
@@ -137,7 +150,13 @@ refreshDocument();
                         <input type="text" v-model="newFlagName" placeholder="Add flag"
                                @keydown.enter="addFlag" :disabled="addingFlag"
                                class="h-7 w-28 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
+                        <button type="button" @click="rescanFlags" :disabled="rescanning"
+                                title="Re-scan the content with AI and add any newly-relevant flags"
+                                class="inline-flex items-center px-2 py-1 rounded-lg border border-gray-300 text-[11px] font-medium text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
+                            {{ rescanning ? 'Rescanning…' : 'Rescan flags' }}
+                        </button>
                     </div>
+                    <div v-if="rescanError" class="text-xs text-red-600">{{ rescanError }}</div>
                     <div class="text-[11px] leading-3 text-gray-500 h-3">
                         <span v-if="savingActive" class="text-gray-400">Saving…</span>
                         <span v-else-if="savedActive" class="text-brand-accent-dark font-medium">Saved</span>

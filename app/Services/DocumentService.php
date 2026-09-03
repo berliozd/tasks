@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Document;
+use App\Models\DocumentFlag;
 use App\Repositories\DocumentFlagRepository;
 use App\Repositories\DocumentRepository;
 use App\Services\DocumentFlagExtractor\DocumentFlagExtractorInterface;
@@ -102,6 +103,30 @@ readonly class DocumentService
     }
 
     /**
+     * Explicit, user-triggered re-scan (not run automatically on every
+     * autosave, which would mean an AI call on every debounced edit) — adds
+     * any newly-relevant flags without touching ones already on the
+     * document. Lets a failed AI call propagate, unlike create()'s
+     * best-effort scan, since the user is waiting on this one specifically.
+     *
+     * @throws Exception
+     */
+    public function rescanFlags(int $id): Document
+    {
+        $document = $this->findDocument($id);
+        $this->checkPerms($document);
+
+        $flagNames = $this->documentFlagExtractor->extract($document->title, (string) $document->content);
+        $newFlagIds = collect($flagNames)
+            ->map(fn (string $name) => $this->documentFlagRepository->findOrCreateByName($document->team_id, $name)->id)
+            ->all();
+        $document->flags()->syncWithoutDetaching($newFlagIds);
+
+        $document->load('flags');
+        return $document;
+    }
+
+    /**
      * Replace a document's flags by name (creating any that don't already
      * exist for this team). Doesn't touch title/content — a separate,
      * explicit action from editing the document itself.
@@ -128,13 +153,23 @@ readonly class DocumentService
     }
 
     /**
+     * Deletes the document, then garbage-collects any of its flags that are
+     * no longer attached to any other document.
+     *
      * @throws Exception
      */
     public function destroy(int $id): void
     {
         $document = $this->findDocument($id);
         $this->checkPerms($document);
+
+        $flagIds = $document->flags()->pluck('document_flags.id')->all();
+
         $this->documentRepository->destroy($document);
+
+        if (!empty($flagIds)) {
+            DocumentFlag::whereIn('id', $flagIds)->doesntHave('documents')->delete();
+        }
     }
 
     public function getAllFlags(): Collection

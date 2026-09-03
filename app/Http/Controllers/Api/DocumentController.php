@@ -52,6 +52,14 @@ class DocumentController extends Controller
     /**
      * @throws Exception
      */
+    public function rescanFlags(string $id)
+    {
+        return $this->documentService->rescanFlags((int) $id);
+    }
+
+    /**
+     * @throws Exception
+     */
     public function destroy(string $id)
     {
         $this->documentService->destroy((int) $id);

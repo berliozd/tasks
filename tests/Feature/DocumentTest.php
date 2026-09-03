@@ -63,6 +63,65 @@ class DocumentTest extends TestCase
             ->assertJsonMissing(['id' => $document->id]);
     }
 
+    public function test_updating_a_document_does_not_touch_its_flags(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $document = Document::factory()->create(['team_id' => $user->currentTeam->id]);
+
+        $manualFlag = DocumentFlag::factory()->create(['team_id' => $user->currentTeam->id, 'name' => 'manual-flag']);
+        $document->flags()->attach($manualFlag->id);
+
+        $this->patchJson("/api/documents/{$document->id}", [
+            'title' => $document->title,
+            'content' => 'Updated content — flags are only touched by an explicit rescan.',
+        ])->assertSuccessful();
+
+        $flagIds = $document->fresh()->flags()->pluck('document_flags.id')->all();
+        $this->assertEquals([$manualFlag->id], $flagIds);
+    }
+
+    public function test_rescanning_flags_adds_new_ones_without_dropping_existing_ones(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $document = Document::factory()->create([
+            'team_id' => $user->currentTeam->id,
+            'content' => 'A guide about onboarding new sales reps.',
+        ]);
+
+        $manualFlag = DocumentFlag::factory()->create(['team_id' => $user->currentTeam->id, 'name' => 'manual-flag']);
+        $document->flags()->attach($manualFlag->id);
+
+        $this->postJson("/api/documents/{$document->id}/rescan-flags")->assertSuccessful();
+
+        $flagIds = $document->fresh()->flags()->pluck('document_flags.id')->all();
+        $this->assertContains($manualFlag->id, $flagIds, 'manually-attached flag should not be dropped by a rescan');
+        $this->assertGreaterThan(1, count($flagIds), 'the rescan should have added at least one new flag');
+    }
+
+    public function test_deleting_a_document_removes_flags_no_longer_used_but_keeps_shared_ones(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $teamId = $user->currentTeam->id;
+
+        $onlyFlag = DocumentFlag::factory()->create(['team_id' => $teamId, 'name' => 'only-here']);
+        $sharedFlag = DocumentFlag::factory()->create(['team_id' => $teamId, 'name' => 'shared']);
+
+        $toDelete = Document::factory()->create(['team_id' => $teamId]);
+        $toDelete->flags()->attach([$onlyFlag->id, $sharedFlag->id]);
+
+        $kept = Document::factory()->create(['team_id' => $teamId]);
+        $kept->flags()->attach($sharedFlag->id);
+
+        $this->deleteJson("/api/documents/{$toDelete->id}")->assertSuccessful();
+
+        $this->assertNull(DocumentFlag::find($onlyFlag->id));
+        $this->assertNotNull(DocumentFlag::find($sharedFlag->id));
+        $this->assertTrue($kept->flags()->where('document_flags.id', $sharedFlag->id)->exists());
+    }
+
     public function test_user_cannot_view_or_modify_another_teams_document(): void
     {
         $owner = User::factory()->withPersonalTeam()->create();

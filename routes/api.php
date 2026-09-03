@@ -106,6 +106,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/documents/{id}', [App\Http\Controllers\Api\DocumentController::class, 'update'])->name('documents.update');
     Route::patch('/documents/{id}/flags', [App\Http\Controllers\Api\DocumentController::class, 'updateFlags'])
         ->name('documents.flags.update');
+    Route::post('/documents/{id}/rescan-flags', [App\Http\Controllers\Api\DocumentController::class, 'rescanFlags'])
+        ->name('documents.flags.rescan');
     Route::delete('/documents/{id}', [App\Http\Controllers\Api\DocumentController::class, 'destroy'])->name('documents.destroy');
 
     Route::get('/document-flags', [App\Http\Controllers\Api\DocumentFlagController::class, 'index'])->name('document-flags.index');
