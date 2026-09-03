@@ -111,6 +111,18 @@ const describeGenerateResult = (result) => {
     return message;
 }
 
+const newProspectIds = ref(new Set());
+let newProspectIdsTimer = null;
+
+const markProspectsNew = (ids) => {
+    if (!ids.length) return;
+    newProspectIds.value = new Set(ids);
+    if (newProspectIdsTimer) clearTimeout(newProspectIdsTimer);
+    newProspectIdsTimer = setTimeout(() => {
+        newProspectIds.value = new Set();
+    }, 5000);
+}
+
 const generateProspects = () => {
     generating.value = true;
     errorMsg.value = '';
@@ -118,6 +130,7 @@ const generateProspects = () => {
     axios.post(route('directories.generate', props.directoryId), {count: generateCount.value})
         .then((response) => {
             generateResultMsg.value = describeGenerateResult(response.data);
+            markProspectsNew((response.data.prospects ?? []).map(p => p.id));
             refreshDirectory();
             useStore().refreshProspectionTree();
         })
@@ -151,8 +164,9 @@ const searchLinkedIn = () => {
 const addLinkedInProspect = (result) => {
     addingLinkedInUrls.value = new Set(addingLinkedInUrls.value).add(result.profile_url);
     axios.post(route('prospects.store', props.directoryId), {name: result.name, website: result.profile_url})
-        .then(() => {
+        .then((response) => {
             linkedinResults.value = linkedinResults.value.filter(r => r.profile_url !== result.profile_url);
+            markProspectsNew([response.data.id]);
             refreshDirectory();
             useStore().refreshProspectionTree();
         })
@@ -165,8 +179,9 @@ const addLinkedInProspect = (result) => {
 
 const addProspect = () => {
     if (!newProspect.value.name) return;
-    axios.post(route('prospects.store', props.directoryId), newProspect.value).then(() => {
+    axios.post(route('prospects.store', props.directoryId), newProspect.value).then((response) => {
         newProspect.value = {name: '', website: '', email: ''};
+        markProspectsNew([response.data.id]);
         refreshDirectory();
         useStore().refreshProspectionTree();
     });
@@ -187,14 +202,25 @@ const selectedProspectIds = ref(new Set());
 
 // 'all' | 'yes' | 'no'
 const excludedFilter = ref('all');
-// '' (any) | one of ProspectAction status values
-const statusFilter = ref('');
+// Array of selected ProspectAction status values — a prospect matches if it
+// has at least one action in any of the selected statuses (empty = any).
+const statusFilters = ref([]);
+const withoutActionsFilter = ref(false);
+
+const toggleStatusFilter = (status) => {
+    statusFilters.value = statusFilters.value.includes(status)
+        ? statusFilters.value.filter(s => s !== status)
+        : [...statusFilters.value, status];
+}
+
+const hasNoActions = (prospect) => STATUS_ORDER.every(s => !(prospect[`${s}_count`] > 0));
 
 const filteredProspects = computed(() => {
     return (directory.value.prospects ?? []).filter(p => {
         if (excludedFilter.value === 'yes' && !p.is_excluded) return false;
         if (excludedFilter.value === 'no' && p.is_excluded) return false;
-        if (statusFilter.value && !(p[`${statusFilter.value}_count`] > 0)) return false;
+        if (withoutActionsFilter.value && !hasNoActions(p)) return false;
+        if (statusFilters.value.length && !statusFilters.value.some(s => p[`${s}_count`] > 0)) return false;
         return true;
     });
 });
@@ -298,7 +324,7 @@ const submitSchedule = async () => {
 }
 
 const STATUS_LABELS = {
-    pending: 'pending', planned: 'planned', sent: 'sent', replied: 'replied', bounced: 'bounced',
+    pending: 'pending', planned: 'planned', sent: 'sent', done: 'done', replied: 'replied', bounced: 'bounced',
     no_response: 'no response', lost: 'lost',
 };
 const STATUS_COLORS = {
@@ -307,10 +333,11 @@ const STATUS_COLORS = {
     no_response: 'bg-red-50 text-red-700',
     lost: 'bg-red-50 text-red-700',
     sent: 'bg-brand-accent/10 text-brand-accent-dark',
+    done: 'bg-brand-accent/10 text-brand-accent-dark',
     planned: 'bg-brand-accent/10 text-brand-accent-dark',
     pending: 'bg-gray-100 text-gray-600',
 };
-const STATUS_ORDER = ['sent', 'replied', 'lost', 'bounced', 'no_response', 'planned', 'pending'];
+const STATUS_ORDER = ['sent', 'done', 'replied', 'lost', 'bounced', 'no_response', 'planned', 'pending'];
 
 const actionFlags = (prospect) => {
     const flags = STATUS_ORDER
@@ -386,6 +413,72 @@ refreshTemplates();
                 <EmailTemplates :directory-id="directoryId"/>
             </CollapsibleSection>
 
+            <CollapsibleSection title="Add prospects" default-open>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="text" v-model="newProspect.name" placeholder="Name"
+                           class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                           @keydown.enter="addProspect">
+                    <input type="text" v-model="newProspect.website" placeholder="Website"
+                           class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                           @keydown.enter="addProspect">
+                    <input type="email" v-model="newProspect.email" placeholder="Email"
+                           class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                           @keydown.enter="addProspect">
+                    <SaveButton @click="addProspect"/>
+                </div>
+
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                    <input type="number" v-model.number="generateCount" min="1" max="50"
+                           class="h-10 w-20 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <button type="button" @click="generateProspects" :disabled="generating || !directory.prompt"
+                            class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                        {{ generating ? 'Generating…' : 'Generate with AI' }}
+                    </button>
+                    <span class="text-xs text-gray-400">
+                        Set a prompt in Directory details describing the kind of prospects you want.
+                    </span>
+                </div>
+                <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
+                <div v-else-if="generateResultMsg"
+                     class="flex items-start gap-2 rounded-lg bg-brand-accent/10 text-brand-accent-dark text-sm px-3 py-2">
+                    <svg class="shrink-0 size-4 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none"
+                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                    </svg>
+                    <span>{{ generateResultMsg }}</span>
+                </div>
+
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                    <button type="button" @click="searchLinkedIn" :disabled="searchingLinkedIn || !directory.prompt"
+                            class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
+                        {{ searchingLinkedIn ? 'Searching…' : 'Search LinkedIn' }}
+                    </button>
+                    <span class="text-xs text-gray-400">
+                        Finds public LinkedIn profiles to check and add manually — nothing is added automatically.
+                    </span>
+                </div>
+                <div v-if="linkedinError" class="text-sm text-red-600">{{ linkedinError }}</div>
+
+                <div v-if="linkedinResults.length" class="mt-2 -mx-4 border-t border-gray-100 divide-y divide-gray-100">
+                    <div v-for="result in linkedinResults" :key="result.profile_url"
+                         class="flex items-center gap-3 px-4 py-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
+                            <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.profile_url }}</div>
+                        </div>
+                        <a :href="result.profile_url" target="_blank" rel="noopener"
+                           class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                            View profile ↗
+                        </a>
+                        <button type="button" @click="addLinkedInProspect(result)" :disabled="addingLinkedInUrls.has(result.profile_url)"
+                                class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                            {{ addingLinkedInUrls.has(result.profile_url) ? 'Adding…' : 'Add as prospect' }}
+                        </button>
+                    </div>
+                </div>
+            </CollapsibleSection>
+
             <div class="surface-card">
                 <div class="p-4 flex flex-col gap-2 border-b border-gray-100">
                     <div class="flex items-center justify-between gap-2">
@@ -408,60 +501,6 @@ refreshTemplates();
                             </button>
                         </div>
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-2">
-                        <input type="text" v-model="newProspect.name" placeholder="Name"
-                               class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                               @keydown.enter="addProspect">
-                        <input type="text" v-model="newProspect.website" placeholder="Website"
-                               class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                               @keydown.enter="addProspect">
-                        <input type="email" v-model="newProspect.email" placeholder="Email"
-                               class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                               @keydown.enter="addProspect">
-                        <SaveButton @click="addProspect"/>
-                    </div>
-                    <div class="flex items-center gap-2 mt-2">
-                        <input type="number" v-model.number="generateCount" min="1" max="50"
-                               class="h-10 w-20 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                        <button type="button" @click="generateProspects" :disabled="generating || !directory.prompt"
-                                class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                            {{ generating ? 'Generating…' : 'Generate with AI' }}
-                        </button>
-                        <span class="text-xs text-gray-400">
-                            Set a prompt in Directory details describing the kind of prospects you want.
-                        </span>
-                    </div>
-                    <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
-                    <div v-else-if="generateResultMsg" class="text-sm text-gray-500">{{ generateResultMsg }}</div>
-
-                    <div class="flex items-center gap-2 mt-2">
-                        <button type="button" @click="searchLinkedIn" :disabled="searchingLinkedIn || !directory.prompt"
-                                class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
-                            {{ searchingLinkedIn ? 'Searching…' : 'Search LinkedIn' }}
-                        </button>
-                        <span class="text-xs text-gray-400">
-                            Finds public LinkedIn profiles to check and add manually — nothing is added automatically.
-                        </span>
-                    </div>
-                    <div v-if="linkedinError" class="text-sm text-red-600">{{ linkedinError }}</div>
-                </div>
-
-                <div v-if="linkedinResults.length" class="border-b border-gray-100 divide-y divide-gray-100">
-                    <div v-for="result in linkedinResults" :key="result.profile_url"
-                         class="flex items-center gap-3 px-4 py-3">
-                        <div class="min-w-0 flex-1">
-                            <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
-                            <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.profile_url }}</div>
-                        </div>
-                        <a :href="result.profile_url" target="_blank" rel="noopener"
-                           class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
-                            View profile ↗
-                        </a>
-                        <button type="button" @click="addLinkedInProspect(result)" :disabled="addingLinkedInUrls.has(result.profile_url)"
-                                class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                            {{ addingLinkedInUrls.has(result.profile_url) ? 'Adding…' : 'Add as prospect' }}
-                        </button>
-                    </div>
                 </div>
 
                 <div v-if="!(directory.prospects ?? []).length" class="p-8 text-center text-sm text-gray-400">
@@ -479,13 +518,18 @@ refreshTemplates();
                             </select>
                         </label>
                         <label class="flex items-center gap-1">
-                            With action status:
-                            <select v-model="statusFilter"
-                                    class="h-8 pl-1 pr-6 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
-                                <option value="">Any</option>
-                                <option v-for="s in STATUS_ORDER" :key="s" :value="s">{{ STATUS_LABELS[s] }}</option>
-                            </select>
+                            <input type="checkbox" v-model="withoutActionsFilter"
+                                   class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
+                            Without actions
                         </label>
+                        <span class="flex items-center gap-1 flex-wrap">
+                            Action status:
+                            <button v-for="s in STATUS_ORDER" :key="s" type="button" @click="toggleStatusFilter(s)"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="statusFilters.includes(s) ? [STATUS_COLORS[s], 'ring-1 ring-current'] : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                {{ STATUS_LABELS[s] }}
+                            </button>
+                        </span>
                     </div>
                     <label class="flex items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
                         <input type="checkbox" :checked="allProspectsSelected" @change="toggleSelectAllProspects"
@@ -498,6 +542,7 @@ refreshTemplates();
                     <div v-else class="divide-y divide-gray-100">
                     <div v-for="prospect in filteredProspects" :key="prospect.id"
                          class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
+                         :class="newProspectIds.has(prospect.id) ? 'bg-brand-accent/5' : ''"
                          @click="openProspect(prospect)">
                         <div @click.stop>
                             <input type="checkbox" :checked="selectedProspectIds.has(prospect.id)"
@@ -505,8 +550,12 @@ refreshTemplates();
                                    class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="text-sm font-medium text-gray-900 truncate">
-                                {{ prospect.name || 'Untitled prospect' }}
+                            <div class="text-sm font-medium text-gray-900 truncate flex items-center gap-2">
+                                <span class="truncate">{{ prospect.name || 'Untitled prospect' }}</span>
+                                <span v-if="newProspectIds.has(prospect.id)"
+                                      class="shrink-0 rounded-full bg-brand-accent text-white text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5">
+                                    New
+                                </span>
                             </div>
                             <div class="text-xs text-gray-500 truncate">
                                 <a v-if="prospect.website" :href="prospect.website" target="_blank" rel="noopener"

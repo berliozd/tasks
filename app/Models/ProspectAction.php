@@ -10,7 +10,7 @@ class ProspectAction extends Model
 {
     use HasFactory;
 
-    public const STATUSES = ['pending', 'planned', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
+    public const STATUSES = ['pending', 'planned', 'sent', 'done', 'replied', 'bounced', 'no_response', 'lost'];
 
     protected $fillable = [
         'prospect_id',

@@ -52,7 +52,10 @@ readonly class DirectoryService
             ->mapWithKeys(fn (string $status) => [
                 "actions as {$status}_count" => fn ($query) => $query->where('status', $status),
             ])->all();
-        $directory->load(['product', 'prospects' => fn ($query) => $query->withCount($statusCounts)]);
+        $directory->load([
+            'product',
+            'prospects' => fn ($query) => $query->withCount($statusCounts)->orderByDesc('created_at'),
+        ]);
         return $directory;
     }
 

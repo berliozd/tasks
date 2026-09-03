@@ -19,7 +19,7 @@ readonly class ProspectRepository
 
     public function getList(int $directoryId): Collection
     {
-        return Prospect::where('directory_id', $directoryId)->with('actions')->get();
+        return Prospect::where('directory_id', $directoryId)->with('actions')->orderByDesc('created_at')->get();
     }
 
     public function getTreeList(int $directoryId): Collection

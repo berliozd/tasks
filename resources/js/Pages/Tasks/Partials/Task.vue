@@ -233,7 +233,7 @@ watch(editFlagIds, (next, prev) => {
                             {{ task.label }}
                         </span>
                         <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
-                           @click.stop :title="task.links[0].label || task.links[0].url"
+                           @click.stop :title="task.links[0].url"
                            class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
                             <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
                                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"

@@ -7,7 +7,7 @@ const props = defineProps({prospectId: Number, directoryId: Number});
 const emit = defineEmits(['counts-changed']);
 
 const TYPES = ['email', 'call', 'linkedin', 'meeting', 'other'];
-const STATUSES = ['pending', 'planned', 'sent', 'replied', 'bounced', 'no_response', 'lost'];
+const STATUSES = ['pending', 'planned', 'sent', 'done', 'replied', 'bounced', 'no_response', 'lost'];
 
 const actions = ref([]);
 const loading = ref(true);
@@ -206,6 +206,9 @@ refreshTemplates();
                       class="text-sm px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
             <div v-if="newAction.type === 'email'" class="text-[11px] text-gray-500">
                 Email actions are logged as pending — send them (or schedule a send) from the list below once created.
+            </div>
+            <div v-else class="text-[11px] text-gray-500">
+                Logged as done immediately — this records something you already did.
             </div>
             <div v-if="errorMsg" class="text-xs text-red-600">{{ errorMsg }}</div>
             <div class="flex justify-end gap-2 mt-2">

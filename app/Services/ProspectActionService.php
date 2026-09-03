@@ -75,7 +75,10 @@ readonly class ProspectActionService
         $this->checkProspectPerms($prospect);
 
         $type = $data['type'] ?? 'email';
-        $status = $data['status'] ?? 'pending';
+        // Non-email actions (call, linkedin, meeting, other) are logged
+        // after the fact (you already did it), so they're immediately
+        // "done" rather than going through email's pending/planned/send flow.
+        $status = $data['status'] ?? ($type === 'email' ? 'pending' : 'done');
         $this->validateType($type);
         $this->validateStatus($status);
 
