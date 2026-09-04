@@ -8,7 +8,9 @@ use App\Repositories\DocumentFlagRepository;
 use App\Repositories\DocumentRepository;
 use App\Services\DocumentFlagExtractor\DocumentFlagExtractorInterface;
 use Exception;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
 readonly class DocumentService
 {
@@ -171,6 +173,33 @@ readonly class DocumentService
         if (!empty($flagIds)) {
             DocumentFlag::whereIn('id', $flagIds)->doesntHave('documents')->delete();
         }
+
+        Storage::disk('public')->deleteDirectory($this->imageDirectory($document));
+    }
+
+    /**
+     * Stores an image pasted or dropped into the document editor and returns
+     * its public URL to be inserted into the Markdown content as
+     * `![](url)` — the image itself isn't referenced from `content` here,
+     * so an unused upload (e.g. the user undoes the paste) is simply
+     * orphaned until the whole document is deleted and its directory is
+     * swept in destroy().
+     *
+     * @throws Exception
+     */
+    public function uploadImage(UploadedFile $image, int $id): string
+    {
+        $document = $this->findDocument($id);
+        $this->checkPerms($document);
+
+        $path = $image->store($this->imageDirectory($document), 'public');
+
+        return Storage::disk('public')->url($path);
+    }
+
+    private function imageDirectory(Document $document): string
+    {
+        return "documents/{$document->team_id}/{$document->id}";
     }
 
     public function getAllFlags(): Collection

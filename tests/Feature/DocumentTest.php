@@ -6,6 +6,8 @@ use App\Models\Document;
 use App\Models\DocumentFlag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DocumentTest extends TestCase
@@ -174,6 +176,66 @@ class DocumentTest extends TestCase
 
         $this->deleteJson("/api/document-flags/{$flag->id}")->assertServerError();
         $this->assertNotNull(DocumentFlag::find($flag->id));
+    }
+
+    public function test_user_can_upload_an_image_to_their_document(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $document = Document::factory()->create(['team_id' => $user->currentTeam->id]);
+
+        $response = $this->postJson("/api/documents/{$document->id}/images", [
+            'image' => UploadedFile::fake()->image('screenshot.png'),
+        ])->assertSuccessful();
+
+        $url = $response->json('url');
+        $this->assertStringContainsString("documents/{$user->currentTeam->id}/{$document->id}/", $url);
+
+        $path = "documents/{$user->currentTeam->id}/{$document->id}/" . basename($url);
+        Storage::disk('public')->assertExists($path);
+    }
+
+    public function test_uploading_a_non_image_file_is_rejected(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $document = Document::factory()->create(['team_id' => $user->currentTeam->id]);
+
+        $this->postJson("/api/documents/{$document->id}/images", [
+            'image' => UploadedFile::fake()->create('malware.php', 10),
+        ])->assertStatus(422);
+    }
+
+    public function test_user_cannot_upload_an_image_to_another_teams_document(): void
+    {
+        Storage::fake('public');
+        $owner = User::factory()->withPersonalTeam()->create();
+        $document = Document::factory()->create(['team_id' => $owner->currentTeam->id]);
+
+        $intruder = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($intruder);
+
+        $this->postJson("/api/documents/{$document->id}/images", [
+            'image' => UploadedFile::fake()->image('screenshot.png'),
+        ])->assertServerError();
+    }
+
+    public function test_deleting_a_document_removes_its_uploaded_images(): void
+    {
+        Storage::fake('public');
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $document = Document::factory()->create(['team_id' => $user->currentTeam->id]);
+
+        $this->postJson("/api/documents/{$document->id}/images", [
+            'image' => UploadedFile::fake()->image('screenshot.png'),
+        ])->assertSuccessful();
+
+        $this->deleteJson("/api/documents/{$document->id}")->assertSuccessful();
+
+        Storage::disk('public')->assertDirectoryEmpty("documents/{$user->currentTeam->id}/{$document->id}");
     }
 
     public function test_user_cannot_view_or_modify_another_teams_document(): void

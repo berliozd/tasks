@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import {Head, Link, router} from '@inertiajs/vue3';
-import {ref, watch} from "vue";
+import {nextTick, ref, watch} from "vue";
 import {marked} from "marked";
 import DOMPurify from "dompurify";
 import SavedLabel from "@/Components/SavedLabel.vue";
@@ -25,6 +25,8 @@ const newFlagName = ref('');
 const addingFlag = ref(false);
 const rescanning = ref(false);
 const rescanError = ref('');
+const contentTextarea = ref(null);
+const imageUploadError = ref('');
 
 const cleanDoc = (d) => JSON.stringify({title: d.title, content: d.content});
 
@@ -66,6 +68,56 @@ const renderedHtml = (content) => {
     // the client immediately fills this in correctly after hydration.
     if (typeof window === 'undefined') return '';
     return DOMPurify.sanitize(marked.parse(content || '', {breaks: true}));
+}
+
+// Inserts text at the textarea's cursor (replacing any selection) rather
+// than appending, so pasting/dropping an image mid-document lands where
+// the cursor was.
+const insertAtCursor = (text) => {
+    const textarea = contentTextarea.value;
+    const content = doc.value.content || '';
+    const start = textarea?.selectionStart ?? content.length;
+    const end = textarea?.selectionEnd ?? content.length;
+    doc.value.content = content.slice(0, start) + text + content.slice(end);
+    nextTick(() => {
+        if (!textarea) return;
+        const pos = start + text.length;
+        textarea.focus();
+        textarea.setSelectionRange(pos, pos);
+    });
+}
+
+// Inserts a placeholder immediately so the user sees something happen,
+// then swaps it for the real Markdown image (or removes it) once the
+// upload settles.
+const uploadImage = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    imageUploadError.value = '';
+    const placeholder = `![Uploading ${file.name}…]()`;
+    insertAtCursor(placeholder);
+
+    const formData = new FormData();
+    formData.append('image', file);
+    axios.post(route('documents.images.store', props.documentId), formData).then(response => {
+        doc.value.content = doc.value.content.replace(placeholder, `![](${response.data.url})`);
+    }).catch((error) => {
+        doc.value.content = doc.value.content.replace(placeholder, '');
+        imageUploadError.value = error.response?.data?.message ?? 'Could not upload image';
+    });
+}
+
+const onContentPaste = (event) => {
+    const item = Array.from(event.clipboardData?.items ?? []).find(i => i.type.startsWith('image/'));
+    if (!item) return;
+    event.preventDefault();
+    uploadImage(item.getAsFile());
+}
+
+const onContentDrop = (event) => {
+    const file = Array.from(event.dataTransfer?.files ?? []).find(f => f.type.startsWith('image/'));
+    if (!file) return;
+    event.preventDefault();
+    uploadImage(file);
 }
 
 const saveFlags = (names) => {
@@ -177,9 +229,12 @@ refreshDocument();
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-2">
-                    <div class="surface-card p-2" :class="mobileView === 'preview' ? 'hidden lg:block' : ''">
-                        <textarea v-model="doc.content" placeholder="Write Markdown here…" rows="24"
+                    <div class="surface-card p-2 flex flex-col gap-1" :class="mobileView === 'preview' ? 'hidden lg:block' : ''">
+                        <textarea ref="contentTextarea" v-model="doc.content"
+                                  placeholder="Write Markdown here… (paste or drop an image to upload it)" rows="24"
+                                  @paste="onContentPaste" @dragover.prevent @drop.prevent="onContentDrop"
                                   class="w-full h-full min-h-[60vh] font-mono text-sm rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
+                        <div v-if="imageUploadError" class="text-xs text-red-600">{{ imageUploadError }}</div>
                     </div>
                     <div class="surface-card p-4 overflow-auto" :class="mobileView === 'edit' ? 'hidden lg:block' : ''">
                         <div class="prose prose-sm max-w-none" v-html="renderedHtml(doc.content)"/>

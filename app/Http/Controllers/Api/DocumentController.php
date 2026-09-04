@@ -64,4 +64,16 @@ class DocumentController extends Controller
     {
         $this->documentService->destroy((int) $id);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function uploadImage(Request $request, string $id)
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'max:10240', 'mimes:jpg,jpeg,png,gif,webp'],
+        ]);
+
+        return ['url' => $this->documentService->uploadImage($request->file('image'), (int) $id)];
+    }
 }
