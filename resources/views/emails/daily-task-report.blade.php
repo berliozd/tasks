@@ -1,5 +1,5 @@
 <x-mail::message>
-# Your daily task report
+# Your daily Tasks report
 
 Hi {{ $userName }},
 
@@ -19,22 +19,6 @@ Hi {{ $userName }},
 Nothing completed today.
 @endforelse
 
-## LATE TASKS ({{ $lateGroups->sum(fn ($group) => $group['tasks']->count()) }})
-
-@forelse ($lateGroups as $group)
-@if ($group['color'])
-<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:{{ $group['color'] }};margin-right:4px;"></span>
-@endif
-**{{ $group['label'] }}**
-
-@foreach ($group['tasks'] as $task)
-- {{ $task->label }}
-@endforeach
-
-@empty
-Nothing late.
-@endforelse
-
 ## TASKS DUE TOMORROW ({{ $dueTomorrowGroups->sum(fn ($group) => $group['tasks']->count()) }})
 
 @forelse ($dueTomorrowGroups as $group)
@@ -52,6 +36,6 @@ Nothing scheduled for tomorrow.
 @endforelse
 
 <x-mail::subcopy>
-This is your daily task report from {{ $appName }}.
+This is your daily Tasks report from {{ $appName }}.
 </x-mail::subcopy>
 </x-mail::message>
