@@ -235,7 +235,7 @@ watch(editFlagIds, (next, prev) => {
                         <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
                            @click.stop :title="task.links[0].url"
                            class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
                                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                  stroke-linejoin="round" class="lucide lucide-link">
                                 <path d="M9 17H7A5 5 0 0 1 7 7h2"/>

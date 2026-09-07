@@ -3,7 +3,7 @@
 
 Hi {{ $userName }},
 
-## Completed today ({{ $completedGroups->sum(fn ($group) => $group['tasks']->count()) }})
+## COMPLETED TASKS ({{ $completedGroups->sum(fn ($group) => $group['tasks']->count()) }})
 
 @forelse ($completedGroups as $group)
 @if ($group['color'])
@@ -19,7 +19,23 @@ Hi {{ $userName }},
 Nothing completed today.
 @endforelse
 
-## To do tomorrow ({{ $dueTomorrowGroups->sum(fn ($group) => $group['tasks']->count()) }})
+## LATE TASKS ({{ $lateGroups->sum(fn ($group) => $group['tasks']->count()) }})
+
+@forelse ($lateGroups as $group)
+@if ($group['color'])
+<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:{{ $group['color'] }};margin-right:4px;"></span>
+@endif
+**{{ $group['label'] }}**
+
+@foreach ($group['tasks'] as $task)
+- {{ $task->label }}
+@endforeach
+
+@empty
+Nothing late.
+@endforelse
+
+## TASKS DUE TOMORROW ({{ $dueTomorrowGroups->sum(fn ($group) => $group['tasks']->count()) }})
 
 @forelse ($dueTomorrowGroups as $group)
 @if ($group['color'])

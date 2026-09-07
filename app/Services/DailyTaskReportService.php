@@ -50,6 +50,7 @@ readonly class DailyTaskReportService
             'userName' => $user->name,
             'appName' => (string) config('app.name'),
             'completedGroups' => $this->groupByFlag($this->getCompletedToday($user, $tz)),
+            'lateGroups' => $this->groupByFlag($this->getLate($user, $tz)),
             'dueTomorrowGroups' => $this->groupByFlag($this->getDueTomorrow($user, $tz)),
         ];
 
@@ -85,6 +86,21 @@ readonly class DailyTaskReportService
             ->whereNull('completed_at')
             ->where('scheduled_at', '>=', $morning)
             ->where('scheduled_at', '<=', $night)
+            ->get();
+    }
+
+    /**
+     * Not-yet-completed tasks scheduled before today — overdue, as opposed
+     * to the "due tomorrow" section which only looks ahead.
+     */
+    private function getLate(User $user, DateTimeZone $tz): Collection
+    {
+        [$morning] = $this->localDayBounds($tz, 0);
+        return Task::where('user_id', $user->id)
+            ->with('flags')
+            ->whereNull('completed_at')
+            ->whereNotNull('scheduled_at')
+            ->where('scheduled_at', '<', $morning)
             ->get();
     }
 
