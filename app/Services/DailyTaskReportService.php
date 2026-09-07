@@ -34,7 +34,13 @@ readonly class DailyTaskReportService
         }
 
         $tz = new DateTimeZone($user->timezone ?? config('app.timezone'));
-        if ((int) $now->copy()->setTimezone($tz)->format('G') !== (int) $user->daily_report_hour) {
+        $localNow = $now->copy()->setTimezone($tz);
+        if ((int) $localNow->format('G') !== (int) $user->daily_report_hour) {
+            return;
+        }
+        // The scheduler ticks every 15 minutes, so round down to the nearest
+        // quarter-hour to match against the user's configured minute.
+        if ((int) $localNow->format('i') - (int) $localNow->format('i') % 15 !== (int) $user->daily_report_minute) {
             return;
         }
 

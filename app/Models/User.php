@@ -35,6 +35,7 @@ class User extends Authenticatable
         'google_id',
         'daily_report_enabled',
         'daily_report_hour',
+        'daily_report_minute',
     ];
 
     /**

@@ -10,12 +10,14 @@ const props = defineProps({
 
 const enabled = ref(props.user.daily_report_enabled ?? false);
 const hour = ref(props.user.daily_report_hour ?? 8);
+const minute = ref(props.user.daily_report_minute ?? 0);
 const saving = ref(false);
 const saved = ref(false);
 const errorMsg = ref('');
 let savedTimer = null;
 
-const hourLabel = (h) => String(h).padStart(2, '0') + ':00';
+const hourLabel = (h) => String(h).padStart(2, '0');
+const minuteLabel = (m) => String(m).padStart(2, '0');
 
 const updateSettings = () => {
     saving.value = true;
@@ -24,6 +26,7 @@ const updateSettings = () => {
     axios.patch(route('daily-report-settings.update'), {
         daily_report_enabled: enabled.value,
         daily_report_hour: hour.value,
+        daily_report_minute: minute.value,
     }).then(() => {
         saved.value = true;
         if (savedTimer) clearTimeout(savedTimer);
@@ -55,10 +58,17 @@ const updateSettings = () => {
 
             <div class="col-span-6 sm:col-span-4">
                 <InputLabel for="daily_report_hour" value="Send at"/>
-                <select id="daily_report_hour" v-model.number="hour" :disabled="!enabled"
-                        class="mt-1 h-10 rounded-lg shadow-sm w-full sm:w-40 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition disabled:opacity-50">
-                    <option v-for="h in 24" :key="h - 1" :value="h - 1">{{ hourLabel(h - 1) }}</option>
-                </select>
+                <div class="mt-1 flex items-center gap-1">
+                    <select id="daily_report_hour" v-model.number="hour" :disabled="!enabled"
+                            class="h-10 rounded-lg shadow-sm w-20 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition disabled:opacity-50">
+                        <option v-for="h in 24" :key="h - 1" :value="h - 1">{{ hourLabel(h - 1) }}</option>
+                    </select>
+                    <span class="text-gray-500">:</span>
+                    <select id="daily_report_minute" v-model.number="minute" :disabled="!enabled"
+                            class="h-10 rounded-lg shadow-sm w-20 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition disabled:opacity-50">
+                        <option v-for="m in [0, 15, 30, 45]" :key="m" :value="m">{{ minuteLabel(m) }}</option>
+                    </select>
+                </div>
             </div>
 
             <div v-if="errorMsg" class="col-span-6 sm:col-span-4 text-sm text-red-600">{{ errorMsg }}</div>
