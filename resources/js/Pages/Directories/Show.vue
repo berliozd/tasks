@@ -177,6 +177,43 @@ const addLinkedInProspect = (result) => {
         });
 }
 
+const companyResults = ref([]);
+const searchingCompanies = ref(false);
+const companySearchError = ref('');
+const addingCompanyUrls = ref(new Set());
+
+const searchCompanies = () => {
+    searchingCompanies.value = true;
+    companySearchError.value = '';
+    axios.post(route('directories.company-search', props.directoryId), {count: 10})
+        .then((response) => {
+            companyResults.value = response.data;
+            if (!response.data.length) {
+                companySearchError.value = 'No new results found for this prompt.';
+            }
+        })
+        .catch((error) => {
+            companySearchError.value = error.response?.data?.message ?? 'Could not search the web';
+        })
+        .finally(() => searchingCompanies.value = false);
+}
+
+const addCompanyProspect = (result) => {
+    addingCompanyUrls.value = new Set(addingCompanyUrls.value).add(result.website);
+    axios.post(route('prospects.store', props.directoryId), {name: result.name, website: result.website})
+        .then((response) => {
+            companyResults.value = companyResults.value.filter(r => r.website !== result.website);
+            markProspectsNew([response.data.id]);
+            refreshDirectory();
+            useStore().refreshProspectionTree();
+        })
+        .finally(() => {
+            const next = new Set(addingCompanyUrls.value);
+            next.delete(result.website);
+            addingCompanyUrls.value = next;
+        });
+}
+
 const addProspect = () => {
     if (!newProspect.value.name) return;
     axios.post(route('prospects.store', props.directoryId), newProspect.value).then((response) => {
@@ -474,6 +511,35 @@ refreshTemplates();
                         <button type="button" @click="addLinkedInProspect(result)" :disabled="addingLinkedInUrls.has(result.profile_url)"
                                 class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
                             {{ addingLinkedInUrls.has(result.profile_url) ? 'Adding…' : 'Add as prospect' }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                    <button type="button" @click="searchCompanies" :disabled="searchingCompanies || !directory.prompt"
+                            class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
+                        {{ searchingCompanies ? 'Searching…' : 'Basic web search' }}
+                    </button>
+                    <span class="text-xs text-gray-400">
+                        Plain keyword search (Brave) for companies to check and add manually — a fallback when AI generation doesn't turn up good results.
+                    </span>
+                </div>
+                <div v-if="companySearchError" class="text-sm text-red-600">{{ companySearchError }}</div>
+
+                <div v-if="companyResults.length" class="mt-2 -mx-4 border-t border-gray-100 divide-y divide-gray-100">
+                    <div v-for="result in companyResults" :key="result.website"
+                         class="flex items-center gap-3 px-4 py-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
+                            <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.website }}</div>
+                        </div>
+                        <a :href="result.website" target="_blank" rel="noopener"
+                           class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                            Visit site ↗
+                        </a>
+                        <button type="button" @click="addCompanyProspect(result)" :disabled="addingCompanyUrls.has(result.website)"
+                                class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                            {{ addingCompanyUrls.has(result.website) ? 'Adding…' : 'Add as prospect' }}
                         </button>
                     </div>
                 </div>

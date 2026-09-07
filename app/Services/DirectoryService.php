@@ -8,6 +8,7 @@ use App\Models\Prospect;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
+use App\Services\CompanySearch\CompanySearchInterface;
 use App\Services\ProfileSearch\ProfileSearchInterface;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use Exception;
@@ -22,6 +23,7 @@ readonly class DirectoryService
         private ProspectRepository $prospectRepository,
         private ProspectGeneratorInterface $prospectGenerator,
         private ProfileSearchInterface $profileSearch,
+        private CompanySearchInterface $companySearch,
     ) {
     }
 
@@ -223,6 +225,55 @@ readonly class DirectoryService
         return collect($results)
             ->reject(fn (array $row) => in_array(
                 rtrim(mb_strtolower(trim($row['profile_url'])), '/'),
+                $existingUrls,
+                true,
+            ))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Plain-keyword web search for companies matching this directory's
+     * prompt — a fallback to AI generation for when it doesn't surface good
+     * results. Results are suggestions only — nothing is persisted here,
+     * the caller adds whichever ones it wants as prospects via the normal
+     * create flow.
+     *
+     * @return array<int, array{name: string, website: string, snippet: ?string}>
+     *
+     * @throws Exception
+     */
+    public function searchCompanies(int $id, int $count): array
+    {
+        $directory = $this->directoryRepository->find($id);
+        if (!$directory) {
+            throw new Exception('Directory not found');
+        }
+        $this->checkPerms($directory);
+
+        if (empty($directory->prompt)) {
+            throw new Exception('Directory has no prompt to search from');
+        }
+
+        $count = max(1, min(20, $count));
+
+        $product = $directory->product;
+        $query = trim($directory->prompt . ($product?->name ? " {$product->name}" : ''));
+
+        $results = $this->companySearch->search($query, $count);
+
+        // Don't resurface a website already known anywhere in this product's
+        // directories, same scope as the AI-generation email dedup above.
+        $productDirectoryIds = Directory::where('product_id', $directory->product_id)->pluck('id');
+        $existingUrls = Prospect::whereIn('directory_id', $productDirectoryIds)
+            ->whereNotNull('website')
+            ->pluck('website')
+            ->map(fn (string $url) => rtrim(mb_strtolower(trim($url)), '/'))
+            ->all();
+
+        return collect($results)
+            ->reject(fn (array $row) => in_array(
+                rtrim(mb_strtolower(trim($row['website'])), '/'),
                 $existingUrls,
                 true,
             ))

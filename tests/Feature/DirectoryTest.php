@@ -93,6 +93,41 @@ class DirectoryTest extends TestCase
         $this->assertEquals(0, $directory->prospects()->count());
     }
 
+    public function test_company_search_returns_results_and_excludes_already_known_websites(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $product = Product::factory()->create(['team_id' => $user->currentTeam->id]);
+        $directory = Directory::factory()->create([
+            'team_id' => $user->currentTeam->id,
+            'product_id' => $product->id,
+            'prompt' => 'SaaS companies',
+        ]);
+
+        // The stub search service deterministically returns
+        // https://www.saas-companies-1.example.com as its first result.
+        Prospect::factory()->create([
+            'directory_id' => $directory->id,
+            'website' => 'https://www.saas-companies-1.example.com',
+        ]);
+
+        $response = $this->postJson("/api/directories/{$directory->id}/company-search", ['count' => 3])
+            ->assertSuccessful();
+
+        $websites = collect($response->json())->pluck('website')->all();
+        $this->assertNotContains('https://www.saas-companies-1.example.com', $websites);
+        $this->assertNotEmpty($websites);
+    }
+
+    public function test_company_search_requires_a_directory_prompt(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $directory = Directory::factory()->create(['team_id' => $user->currentTeam->id, 'prompt' => null]);
+
+        $this->postJson("/api/directories/{$directory->id}/company-search")->assertServerError();
+    }
+
     public function test_generating_prospects_skips_emails_already_used_elsewhere_in_the_same_product(): void
     {
         $user = User::factory()->withPersonalTeam()->create();

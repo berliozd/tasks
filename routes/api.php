@@ -61,6 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('directories.generate');
     Route::post('/directories/{id}/linkedin-search', [App\Http\Controllers\Api\DirectoryController::class, 'searchLinkedInProfiles'])
         ->name('directories.linkedin-search');
+    Route::post('/directories/{id}/company-search', [App\Http\Controllers\Api\DirectoryController::class, 'searchCompanies'])
+        ->name('directories.company-search');
 
     Route::get('/directories/{directoryId}/prospects', [App\Http\Controllers\Api\ProspectController::class, 'index'])
         ->name('prospects.index');

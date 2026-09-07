@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Services\CompanySearch\BraveCompanySearchService;
+use App\Services\CompanySearch\CompanySearchInterface;
+use App\Services\CompanySearch\StubCompanySearchService;
 use App\Services\DocumentFlagExtractor\DocumentFlagExtractorInterface;
 use App\Services\DocumentFlagExtractor\OpenAiDocumentFlagExtractor;
 use App\Services\DocumentFlagExtractor\StubDocumentFlagExtractor;
@@ -67,6 +70,15 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new BraveProfileSearchService((string) config('services.brave_search.key'));
+        });
+
+        $this->app->bind(CompanySearchInterface::class, function () {
+            // Keep tests hermetic (no network calls) regardless of whether a key is configured.
+            if ($this->app->environment('testing') || empty(config('services.brave_search.key'))) {
+                return new StubCompanySearchService();
+            }
+
+            return new BraveCompanySearchService((string) config('services.brave_search.key'));
         });
 
         $this->app->bind(MailSenderInterface::class, function () {
