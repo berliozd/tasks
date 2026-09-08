@@ -21,6 +21,7 @@ let savedActiveTimer = null;
 let docSnapshot = null;
 
 const mobileView = ref('edit'); // 'edit' | 'preview'
+const hideEditor = ref(false);
 const newFlagName = ref('');
 const addingFlag = ref(false);
 const rescanning = ref(false);
@@ -239,20 +240,29 @@ refreshDocument();
                     </div>
                 </div>
 
-                <div class="lg:hidden flex rounded-lg border border-gray-200 overflow-hidden w-fit">
-                    <button type="button" @click="mobileView = 'edit'"
-                            class="px-3 py-1 text-sm font-medium transition"
-                            :class="mobileView === 'edit' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700'">
-                        Edit
-                    </button>
-                    <button type="button" @click="mobileView = 'preview'"
-                            class="px-3 py-1 text-sm font-medium border-l border-gray-200 transition"
-                            :class="mobileView === 'preview' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700'">
-                        Preview
+                <div class="flex items-center justify-between gap-2">
+                    <div v-if="!hideEditor" class="lg:hidden flex rounded-lg border border-gray-200 overflow-hidden w-fit">
+                        <button type="button" @click="mobileView = 'edit'"
+                                class="px-3 py-1 text-sm font-medium transition"
+                                :class="mobileView === 'edit' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700'">
+                            Edit
+                        </button>
+                        <button type="button" @click="mobileView = 'preview'"
+                                class="px-3 py-1 text-sm font-medium border-l border-gray-200 transition"
+                                :class="mobileView === 'preview' ? 'bg-brand-navy text-white' : 'bg-white text-gray-700'">
+                            Preview
+                        </button>
+                    </div>
+                    <button type="button" @click="hideEditor = !hideEditor"
+                            class="ml-auto inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-600 hover:bg-gray-100 transition">
+                        {{ hideEditor ? 'Show Markdown' : 'Hide Markdown' }}
                     </button>
                 </div>
 
-                <div class="grid gap-4 lg:grid-cols-2">
+                <div v-if="hideEditor" class="surface-card p-4 overflow-auto">
+                    <div class="prose prose-sm max-w-none" v-html="renderedHtml(doc.content)"/>
+                </div>
+                <div v-else class="grid gap-4 lg:grid-cols-2">
                     <div class="surface-card p-2 flex flex-col gap-1" :class="mobileView === 'preview' ? 'hidden lg:block' : ''">
                         <textarea ref="contentTextarea" v-model="doc.content"
                                   placeholder="Write Markdown here… (paste or drop an image to upload it)" rows="24"
