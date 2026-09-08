@@ -62,12 +62,36 @@ const updateDocument = () => {
 }
 const debouncedUpdateDocument = debounce(updateDocument, 600);
 
+// marked doesn't add heading ids by default (removed upstream years ago),
+// so a hand-written table of contents linking to "#some-heading" has
+// nothing to jump to unless we generate matching slugs ourselves — same
+// slug rules GitHub uses, since that's what most people writing a TOC by
+// hand already expect.
+const slugify = (text) => text
+    .toLowerCase()
+    .trim()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-');
+
 const renderedHtml = (content) => {
     // DOMPurify needs a real DOM (window), which doesn't exist during SSR.
     // Render nothing server-side rather than risk crashing that render —
     // the client immediately fills this in correctly after hydration.
     if (typeof window === 'undefined') return '';
-    return DOMPurify.sanitize(marked.parse(content || '', {breaks: true}));
+
+    const slugCounts = new Map();
+    const renderer = new marked.Renderer();
+    renderer.heading = ({tokens, depth}) => {
+        const html = renderer.parser.parseInline(tokens);
+        let slug = slugify(html.replace(/<[^>]*>/g, '')) || 'section';
+        const count = slugCounts.get(slug) ?? 0;
+        slugCounts.set(slug, count + 1);
+        if (count > 0) slug = `${slug}-${count}`;
+        return `<h${depth} id="${slug}">${html}</h${depth}>\n`;
+    };
+
+    return DOMPurify.sanitize(marked.parse(content || '', {breaks: true, renderer}));
 }
 
 // Inserts text at the textarea's cursor (replacing any selection) rather
