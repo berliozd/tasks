@@ -14,6 +14,7 @@ import CollapsibleSection from "@/Components/CollapsibleSection.vue";
 import Modal from "@/Components/Modal.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
+import DangerButton from "@/Components/DangerButton.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import EmailTemplates from "@/Pages/Directories/Partials/EmailTemplates.vue";
 import debounce from "lodash/debounce";
@@ -406,6 +407,34 @@ const setExcludedForSelected = async (excluded) => {
     }
 }
 
+const showDeleteSelectedModal = ref(false);
+const deletingSelected = ref(false);
+
+const openDeleteSelectedModal = () => {
+    if (!selectedProspectIds.value.size) return;
+    showDeleteSelectedModal.value = true;
+}
+
+const closeDeleteSelectedModal = () => {
+    showDeleteSelectedModal.value = false;
+}
+
+const deleteSelectedProspects = async () => {
+    const ids = Array.from(selectedProspectIds.value);
+    if (!ids.length) return;
+    deletingSelected.value = true;
+    try {
+        await Promise.all(ids.map(id => axios.delete(route('prospects.delete', id))));
+        selectedProspectIds.value = new Set();
+        showDeleteSelectedModal.value = false;
+        refreshDirectory();
+        useStore().refreshProspectionTree();
+        useStore().setSaved(`Deleted ${ids.length} prospect${ids.length === 1 ? '' : 's'}`);
+    } finally {
+        deletingSelected.value = false;
+    }
+}
+
 refreshDirectory();
 refreshTemplates();
 </script>
@@ -565,6 +594,10 @@ refreshTemplates();
                                     class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-[11px] text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
                                 Include
                             </button>
+                            <button type="button" @click="openDeleteSelectedModal"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg border border-red-300 font-semibold text-[11px] text-red-600 uppercase tracking-widest hover:bg-red-50 transition">
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -681,6 +714,22 @@ refreshTemplates();
                         <PrimaryButton @click="submitSchedule" :disabled="scheduling">
                             {{ scheduling ? 'Scheduling…' : 'Schedule' }}
                         </PrimaryButton>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal :show="showDeleteSelectedModal" @close="closeDeleteSelectedModal">
+                <div class="p-6 flex flex-col gap-4">
+                    <h3 class="text-lg font-medium text-gray-900">Delete selected prospects?</h3>
+                    <p class="text-sm text-gray-500">
+                        {{ selectedProspectIds.size }} prospect{{ selectedProspectIds.size === 1 ? '' : 's' }} will be
+                        permanently deleted, along with their logged actions. This can't be undone.
+                    </p>
+                    <div class="flex justify-end gap-2">
+                        <SecondaryButton @click="closeDeleteSelectedModal">Cancel</SecondaryButton>
+                        <DangerButton @click="deleteSelectedProspects" :disabled="deletingSelected">
+                            {{ deletingSelected ? 'Deleting…' : 'Delete' }}
+                        </DangerButton>
                     </div>
                 </div>
             </Modal>
