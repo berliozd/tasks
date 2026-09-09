@@ -21,7 +21,7 @@ let savedActiveTimer = null;
 let docSnapshot = null;
 
 const mobileView = ref('edit'); // 'edit' | 'preview'
-const hideEditor = ref(false);
+const hideEditor = ref(true);
 const newFlagName = ref('');
 const addingFlag = ref(false);
 const rescanning = ref(false);
@@ -185,6 +185,18 @@ const deleteDocument = () => {
     });
 }
 
+const downloadAsMd = () => {
+    if (!doc.value) return;
+    const filename = (doc.value.title || 'document').replace(/[\\/:*?"<>|]/g, '').trim() + '.md';
+    const blob = new Blob([doc.value.content || ''], {type: 'text/markdown'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 refreshDocument();
 </script>
 
@@ -253,10 +265,16 @@ refreshDocument();
                             Preview
                         </button>
                     </div>
-                    <button type="button" @click="hideEditor = !hideEditor"
-                            class="ml-auto inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-600 hover:bg-gray-100 transition">
-                        {{ hideEditor ? 'Show Markdown' : 'Hide Markdown' }}
-                    </button>
+                    <div class="ml-auto flex items-center gap-2">
+                        <button type="button" @click="downloadAsMd"
+                                class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-600 hover:bg-gray-100 transition">
+                            Download as .md
+                        </button>
+                        <button type="button" @click="hideEditor = !hideEditor"
+                                class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-xs font-medium text-gray-600 hover:bg-gray-100 transition">
+                            {{ hideEditor ? 'Edit' : 'Done editing' }}
+                        </button>
+                    </div>
                 </div>
 
                 <div v-if="hideEditor" class="surface-card p-4 overflow-auto">
