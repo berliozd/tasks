@@ -11,11 +11,32 @@ import SavedLabel from "@/Components/SavedLabel.vue";
 import DebuggingTasks from "@/Pages/Tasks/Partials/DebuggingTasks.vue";
 import Task from "@/Pages/Tasks/Partials/Task.vue";
 import Flags from "@/Pages/Tasks/Partials/Flags.vue";
-import FlagMultiSelect from "@/Components/FlagMultiSelect.vue";
+import Modal from "@/Components/Modal.vue";
+import SecondaryButton from "@/Components/SecondaryButton.vue";
 
 const newTaskLabel = ref('');
+const newTaskDescription = ref('');
 const newTaskRecurrenceId = ref(null);
 const newTaskFlagIds = ref([]);
+const showAddTaskModal = ref(false);
+
+const openAddTaskModal = () => {
+    newTaskLabel.value = '';
+    newTaskDescription.value = '';
+    newTaskRecurrenceId.value = null;
+    newTaskFlagIds.value = [];
+    showAddTaskModal.value = true;
+}
+
+const closeAddTaskModal = () => {
+    showAddTaskModal.value = false;
+}
+
+const toggleNewTaskFlag = (flagId) => {
+    newTaskFlagIds.value = newTaskFlagIds.value.includes(flagId)
+        ? newTaskFlagIds.value.filter(id => id !== flagId)
+        : [...newTaskFlagIds.value, flagId];
+}
 const props = defineProps({todayTasks: Array, lateTasks: Array, completedTodayTasks: Array});
 const lastSaved = ref(new Date());
 const reactiveTasks = reactive({});
@@ -87,12 +108,14 @@ const addTask = () => {
     watchActive = false;
     reactiveTasks.value.push({
         label: newTaskLabel.value,
+        description: newTaskDescription.value,
         'completed_at': null,
         recurrence_id: newTaskRecurrenceId.value,
         flags: (allFlags.value ?? []).filter(f => (newTaskFlagIds.value ?? []).includes(f.id)),
     });
     axios.post(route('tasks.store'), {
         label: newTaskLabel.value,
+        description: newTaskDescription.value,
         recurrence_id: newTaskRecurrenceId.value,
         flag_ids: newTaskFlagIds.value,
     })
@@ -101,11 +124,13 @@ const addTask = () => {
             }
         ).then(() => {
             newTaskLabel.value = '';
+            newTaskDescription.value = '';
             newTaskRecurrenceId.value = null;
             newTaskFlagIds.value = [];
             watchActive = true;
             storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
             calculateProgress()
+            showAddTaskModal.value = false;
             scrollTo(belowList)
         }
     )
@@ -275,22 +300,6 @@ const exportTasks = async () => {
                     )
                 }}
             </div>
-            <div class="surface-card mb-6 overflow-visible">
-                <div class="p-4 flex flex-wrap justify-between items-center gap-2">
-                    <input type="text" v-model="newTaskLabel" placeholder="New task label"
-                           class="w-full md:flex-1 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                           @keydown.enter="addTask">
-                    <select v-model="newTaskRecurrenceId"
-                            class="h-10 rounded-lg border-gray-300 text-sm focus:border-brand-accent focus:ring-brand-accent transition">
-                        <option :value="null">No recurrence</option>
-                        <option v-for="recurrence in allRecurrences" :key="recurrence.id" :value="recurrence.id">
-                            {{ recurrence.label }}
-                        </option>
-                    </select>
-                    <FlagMultiSelect v-model="newTaskFlagIds" :all-flags="allFlags"/>
-                    <SaveButton @click="addTask"/>
-                </div>
-            </div>
             <div class="surface-card my-6 px-4"
                  v-if="!isNaN(progress) && progress > 0">
                 <progress class="my-4 progress progress-primary w-full" :value="progress" max="100"/>
@@ -332,7 +341,7 @@ const exportTasks = async () => {
                         </div>
                     </div>
                     <div v-if="!filteredTasks.length" class="px-4 py-10 text-center text-sm text-gray-400">
-                        No tasks here. Add one above to get started.
+                        No tasks here. Use the + button to add one.
                     </div>
                 </div>
             </div>
@@ -343,5 +352,75 @@ const exportTasks = async () => {
                             :completedTodayTasks="completedTodayTasks"
                             :class="usePage().props.environment === 'production'?'hidden':''"/>
         </div>
+
+        <button type="button" @click="openAddTaskModal" title="Add a task"
+                class="fixed bottom-6 right-6 z-40 flex items-center justify-center size-14 rounded-full bg-brand-accent text-white shadow-soft hover:bg-brand-accent-dark active:scale-95 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+            </svg>
+        </button>
+
+        <Modal :show="showAddTaskModal" @close="closeAddTaskModal">
+            <div class="p-6 flex flex-col gap-4">
+                <h3 class="text-lg font-medium text-gray-900">Add a task</h3>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Label</label>
+                    <input type="text" v-model="newTaskLabel" placeholder="What needs doing?" autofocus
+                           @keydown.enter="addTask"
+                           class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Description (optional)</label>
+                    <textarea v-model="newTaskDescription" rows="3"
+                              class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm"/>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Recurrence</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" @click="newTaskRecurrenceId = null"
+                                class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition"
+                                :class="newTaskRecurrenceId === null
+                                    ? 'bg-brand-navy text-white ring-brand-navy'
+                                    : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                            No recurrence
+                        </button>
+                        <button v-for="recurrence in allRecurrences" :key="recurrence.id"
+                                type="button" @click="newTaskRecurrenceId = recurrence.id"
+                                class="rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition"
+                                :class="newTaskRecurrenceId === recurrence.id
+                                    ? 'bg-brand-navy text-white ring-brand-navy'
+                                    : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                            {{ recurrence.label }}
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Flags</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button v-for="flag in allFlags" :key="flag.id"
+                                type="button" @click="toggleNewTaskFlag(flag.id)"
+                                class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition"
+                                :class="newTaskFlagIds.includes(flag.id)
+                                    ? 'bg-brand-navy text-white ring-brand-navy'
+                                    : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
+                                  :style="{ backgroundColor: flag.color }"/>
+                            <span class="truncate max-w-48">{{ flag.name }}</span>
+                        </button>
+                        <span v-if="!allFlags.length" class="text-xs text-gray-400">No flags yet.</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <SecondaryButton @click="closeAddTaskModal">Cancel</SecondaryButton>
+                    <SaveButton @click="addTask"/>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>
