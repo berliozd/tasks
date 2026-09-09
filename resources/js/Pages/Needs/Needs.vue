@@ -26,23 +26,20 @@ const STAGES = [
 ];
 
 // One distinct color per stage, reused for the filter pills, column headers,
-// and the stage badge shown elsewhere (e.g. Dashboard.vue). `border` is
-// scoped to border-TOP-color specifically (border-t-*) — it must never
-// collide with the column's own all-sides border-gray-100, since two classes
-// setting the same CSS property at equal specificity get resolved by
-// Tailwind's internal stylesheet order, not by class-attribute order, and
-// silently lose for some colors depending on that order.
+// and the stage badge shown elsewhere (e.g. Dashboard.vue). `border` colors
+// all four sides — the column's own static classes only ever set border
+// WIDTH (never a color), so there's no competing color class to tie with.
 const STAGE_COLORS = {
-    discovery: {bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-t-gray-400'},
-    documented: {bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-t-indigo-400'},
-    jira_created: {bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-t-blue-400'},
-    validated: {bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-t-cyan-400'},
-    grooming: {bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-t-purple-400'},
-    todo: {bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-t-amber-400'},
-    dev: {bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-t-orange-400'},
-    qa: {bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-t-pink-400'},
-    soon: {bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-t-teal-400'},
-    prod: {bg: 'bg-green-50', text: 'text-green-700', border: 'border-t-green-400'},
+    discovery: {bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-400'},
+    documented: {bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-400'},
+    jira_created: {bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-400'},
+    validated: {bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-400'},
+    grooming: {bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-400'},
+    todo: {bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-400'},
+    dev: {bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-400'},
+    qa: {bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-400'},
+    soon: {bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-400'},
+    prod: {bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-400'},
 };
 
 const loading = ref(true);
@@ -356,7 +353,7 @@ refreshBoard();
                         </div>
                         <div class="flex gap-4 overflow-x-auto pb-2">
                             <div v-for="stage in group.stages" :key="stage.key"
-                                 class="shrink-0 w-72 flex flex-col rounded-xl bg-brand-surface border-r border-b border-l border-r-gray-100 border-b-gray-100 border-l-gray-100 border-t-4"
+                                 class="shrink-0 w-72 flex flex-col rounded-xl bg-brand-surface border border-t-4"
                                  :class="STAGE_COLORS[stage.key].border">
                                 <div class="p-3 flex items-center justify-between border-b border-gray-200">
                                     <div class="text-xs font-semibold uppercase tracking-wide" :class="STAGE_COLORS[stage.key].text">
