@@ -94,6 +94,9 @@ Echo.private('my-private-channel')
                                 <NavLink :href="route('documents')" :active="route().current('documents*')">
                                     Documents
                                 </NavLink>
+                                <NavLink :href="route('needs')" :active="route().current('needs*')">
+                                    Needs
+                                </NavLink>
                             </div>
                         </div>
 
@@ -273,6 +276,9 @@ Echo.private('my-private-channel')
                         </ResponsiveNavLink>
                         <ResponsiveNavLink :href="route('documents')" :active="route().current('documents*')">
                             Documents
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink :href="route('needs')" :active="route().current('needs*')">
+                            Needs
                         </ResponsiveNavLink>
                     </div>
 

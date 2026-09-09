@@ -10,6 +10,7 @@ use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\EmailTemplatesController;
 use App\Http\Controllers\FlagController;
 use App\Http\Controllers\FutureTasksController;
+use App\Http\Controllers\NeedsController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductsController;
 use App\Http\Controllers\ProspectController;
@@ -47,6 +48,7 @@ Route::middleware([
     Route::get('/directories/{directory}/prospects/{prospect}', ProspectController::class)->name('prospects.view');
     Route::get('/documents', DocumentsController::class)->name('documents');
     Route::get('/documents/{document}', DocumentController::class)->name('documents.view');
+    Route::get('/needs', NeedsController::class)->name('needs');
 
 });
 

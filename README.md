@@ -58,6 +58,13 @@ schedule.
   content and attaches a handful of topical flags automatically (editable
   afterward like the flags on any other document), and the document list can
   be filtered by them.
+- **Needs** — a team-shared Kanban board for tracking business needs from
+  discovery through production: Discovery → Documented → Jira ticket created
+  → Validated with business → Grooming → To do → In dev → In QA → Coming
+  soon → In production. Drag a card between columns (or use the stage
+  dropdown) to move it; each need can carry a Confluence link, a Jira
+  key/URL, and a business owner, and every stage change plus any note added
+  along the way is recorded in a per-need activity log.
 
 ## How it's built
 
@@ -82,8 +89,8 @@ schedule.
 - **Database**: MySQL by default via Docker (see `docker-compose.yml`), or
   SQLite for a zero-dependency local setup (see below). Key models:
   `Task`, `Flag`, `Recurrence`, `TasksProgression`, `Directory`, `Prospect`,
-  `ProspectAction`, `EmailTemplate`, `Document`, `DocumentFlag`, plus
-  Jetstream's `Team`/`Membership`/`TeamInvitation`/`User`.
+  `ProspectAction`, `EmailTemplate`, `Document`, `DocumentFlag`, `Need`,
+  `NeedActivity`, plus Jetstream's `Team`/`Membership`/`TeamInvitation`/`User`.
 - **Tests**: PHPUnit (`tests/Feature`, `tests/Unit`).
 
 ### Project layout

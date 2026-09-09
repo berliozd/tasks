@@ -117,4 +117,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/document-flags', [App\Http\Controllers\Api\DocumentFlagController::class, 'index'])->name('document-flags.index');
     Route::delete('/document-flags/{id}', [App\Http\Controllers\Api\DocumentFlagController::class, 'destroy'])
         ->name('document-flags.destroy');
+
+    Route::get('/needs', [App\Http\Controllers\Api\NeedController::class, 'index'])->name('needs.index');
+    Route::post('/needs', [App\Http\Controllers\Api\NeedController::class, 'store'])->name('needs.store');
+    Route::post('/needs/reorder', [App\Http\Controllers\Api\NeedController::class, 'reorder'])->name('needs.reorder');
+    Route::get('/needs/{id}', [App\Http\Controllers\Api\NeedController::class, 'show'])->name('needs.show');
+    Route::patch('/needs/{id}', [App\Http\Controllers\Api\NeedController::class, 'update'])->name('needs.update');
+    Route::patch('/needs/{id}/stage', [App\Http\Controllers\Api\NeedController::class, 'moveStage'])->name('needs.stage');
+    Route::post('/needs/{id}/notes', [App\Http\Controllers\Api\NeedController::class, 'addNote'])->name('needs.notes.store');
+    Route::delete('/needs/{id}', [App\Http\Controllers\Api\NeedController::class, 'destroy'])->name('needs.destroy');
 });

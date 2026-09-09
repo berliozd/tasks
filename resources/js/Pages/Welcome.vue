@@ -53,7 +53,9 @@ defineProps({
                         <span class="font-semibold text-black">Prospection</span> helps your team find leads,
                         log outreach, and send real emails, powered by AI.
                         <span class="font-semibold text-black">Documents</span> is your team's Markdown
-                        knowledge base, auto-tagged by AI. One app, one login.
+                        knowledge base, auto-tagged by AI.
+                        <span class="font-semibold text-black">Needs</span> is a drag-and-drop board tracking
+                        business needs from discovery to production. One app, one login.
                     </p>
                 </div>
             </section>
@@ -236,6 +238,70 @@ defineProps({
                                     <p class="mt-2 text-sm/relaxed">
                                         On save, AI scans the content and attaches topical flags — filter the
                                         list by them to find things fast.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Needs -->
+            <section class="w-full bg-gray-50">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+                    <div class="grid gap-10 lg:grid-cols-3 lg:items-start">
+                        <div class="lg:col-span-1">
+                            <div class="flex size-16 shrink-0 items-center justify-center rounded-full bg-brand-navy">
+                                <svg class="size-8 stroke-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25"/>
+                                </svg>
+                            </div>
+                            <h2 class="mt-4 text-xl font-semibold text-black">Needs</h2>
+                            <p class="mt-4 text-sm/relaxed">
+                                A drag-and-drop Kanban board for product owners to track business needs from
+                                first discovery through production, with a full activity log on every one.
+                            </p>
+                            <a href="/needs"
+                               class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand-accent-dark hover:underline">
+                                Explore Needs
+                                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" fill="none"
+                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"/>
+                                </svg>
+                            </a>
+                        </div>
+
+                        <div class="lg:col-span-2 grid gap-6 sm:grid-cols-3">
+                            <div class="flex flex-col items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover">
+                                <BulletLogo/>
+                                <div>
+                                    <h3 class="text-base font-semibold text-black">Discovery to Production</h3>
+                                    <p class="mt-2 text-sm/relaxed">
+                                        Ten fixed stages from first discovery through deployment, so every need's
+                                        status is unambiguous.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover">
+                                <BulletLogo/>
+                                <div>
+                                    <h3 class="text-base font-semibold text-black">Drag to Move</h3>
+                                    <p class="mt-2 text-sm/relaxed">
+                                        Drag a card between columns to change its stage, with Confluence and
+                                        Jira links kept right on the card.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-start gap-4 rounded-xl p-6 shadow-card ring-1 ring-slate-900/[0.06] transition hover:shadow-card-hover">
+                                <BulletLogo/>
+                                <div>
+                                    <h3 class="text-base font-semibold text-black">Full Activity Log</h3>
+                                    <p class="mt-2 text-sm/relaxed">
+                                        Every stage change and note is logged, so you can see exactly what
+                                        happened before, during, and after deployment.
                                     </p>
                                 </div>
                             </div>

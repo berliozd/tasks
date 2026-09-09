@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\DocumentService;
+use App\Services\NeedService;
 use App\Services\ProspectionSummaryService;
 use App\Services\TaskService;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class DashboardController extends Controller
         private readonly TaskService $taskService,
         private readonly ProspectionSummaryService $prospectionSummaryService,
         private readonly DocumentService $documentService,
+        private readonly NeedService $needService,
     ) {
     }
 
@@ -25,6 +27,7 @@ class DashboardController extends Controller
             'completedTodayTasks' => $this->taskService->getCompletedTodayTasks()->toArray(),
             'prospection' => $this->prospectionSummaryService->getSummary(auth()->user()->currentTeam->id),
             'documents' => $this->documentService->getDashboardSummary(),
+            'needs' => $this->needService->getDashboardSummary(),
         ]);
     }
 }
