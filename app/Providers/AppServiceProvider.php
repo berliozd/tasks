@@ -8,6 +8,9 @@ use App\Services\CompanySearch\StubCompanySearchService;
 use App\Services\DocumentFlagExtractor\DocumentFlagExtractorInterface;
 use App\Services\DocumentFlagExtractor\OpenAiDocumentFlagExtractor;
 use App\Services\DocumentFlagExtractor\StubDocumentFlagExtractor;
+use App\Services\EmailFinder\EmailFinderInterface;
+use App\Services\EmailFinder\OpenAiEmailFinder;
+use App\Services\EmailFinder\StubEmailFinder;
 use App\Services\EmailTemplateGenerator\EmailTemplateGeneratorInterface;
 use App\Services\EmailTemplateGenerator\OpenAiEmailTemplateGenerator;
 use App\Services\EmailTemplateGenerator\StubEmailTemplateGenerator;
@@ -79,6 +82,17 @@ class AppServiceProvider extends ServiceProvider
             }
 
             return new BraveCompanySearchService((string) config('services.brave_search.key'));
+        });
+
+        $this->app->bind(EmailFinderInterface::class, function () {
+            if ($this->app->environment('testing') || empty(config('services.openai.key'))) {
+                return new StubEmailFinder();
+            }
+
+            return new OpenAiEmailFinder(
+                (string) config('services.openai.key'),
+                (string) config('services.openai.model'),
+            );
         });
 
         $this->app->bind(MailSenderInterface::class, function () {

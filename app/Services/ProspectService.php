@@ -7,6 +7,7 @@ use App\Models\Prospect;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
 use App\Repositories\ProspectRepository;
+use App\Services\EmailFinder\EmailFinderInterface;
 use Exception;
 use Illuminate\Support\Collection;
 
@@ -15,6 +16,7 @@ readonly class ProspectService
     public function __construct(
         private ProspectRepository $prospectRepository,
         private DirectoryRepository $directoryRepository,
+        private EmailFinderInterface $emailFinder,
     ) {
     }
 
@@ -101,6 +103,29 @@ readonly class ProspectService
         $prospect = $this->findProspect($id);
         $this->checkPerms($prospect);
         $this->prospectRepository->destroy($prospect);
+    }
+
+    /**
+     * Best-effort scrape of the prospect's own website for a contact email —
+     * a fallback for when AI generation/search didn't turn one up.
+     *
+     * @throws Exception
+     */
+    public function findEmail(int $id): Prospect
+    {
+        $prospect = $this->findProspect($id);
+        $this->checkPerms($prospect);
+
+        if (empty($prospect->website)) {
+            throw new Exception('This prospect has no website to search');
+        }
+
+        $email = $this->emailFinder->find($prospect->website);
+        if (!$email) {
+            throw new Exception('Could not find an email on this website');
+        }
+
+        return $this->prospectRepository->update($prospect, ['email' => $email]);
     }
 
     /**

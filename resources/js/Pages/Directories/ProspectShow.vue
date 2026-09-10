@@ -41,6 +41,8 @@ const savingActive = ref(false);
 const savedActive = ref(false);
 let savedActiveTimer = null;
 let prospectSnapshot = null;
+const findingEmail = ref(false);
+const findEmailError = ref('');
 
 const cleanProspect = (p) => JSON.stringify({
     name: p.name, website: p.website, email: p.email, won: p.won, is_excluded: p.is_excluded,
@@ -83,6 +85,17 @@ const updateProspect = () => {
 }
 const debouncedUpdateProspect = debounce(updateProspect, 600);
 
+const findEmail = () => {
+    findingEmail.value = true;
+    findEmailError.value = '';
+    axios.post(route('prospects.find-email', prospect.value.id)).then((response) => {
+        prospect.value.email = response.data.email;
+        prospectSnapshot = cleanProspect(prospect.value);
+    }).catch((error) => {
+        findEmailError.value = error.response?.data?.message ?? 'Could not find an email';
+    }).finally(() => findingEmail.value = false);
+}
+
 refreshProspect();
 </script>
 
@@ -103,6 +116,13 @@ refreshProspect();
                     <label class="text-xs font-medium text-gray-500 mt-1">Email</label>
                     <input type="email" v-model="prospect.email"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                    <div v-if="!prospect.email && prospect.website" class="flex items-center gap-2 mt-1">
+                        <button type="button" @click="findEmail" :disabled="findingEmail"
+                                class="inline-flex items-center px-3 py-1.5 rounded-lg border border-brand-accent font-semibold text-[11px] text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
+                            {{ findingEmail ? 'Searching…' : 'Find email from website' }}
+                        </button>
+                        <span v-if="findEmailError" class="text-xs text-red-600">{{ findEmailError }}</span>
+                    </div>
                     <label class="flex items-center gap-2 mt-1 text-sm text-gray-700">
                         <input type="checkbox" v-model="prospect.won"
                                class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">

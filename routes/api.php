@@ -73,6 +73,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/prospects/{id}', [App\Http\Controllers\Api\ProspectController::class, 'show'])->name('prospects.show');
     Route::patch('/prospects/{id}', [App\Http\Controllers\Api\ProspectController::class, 'update'])->name('prospects.update');
     Route::delete('/prospects/{id}', [App\Http\Controllers\Api\ProspectController::class, 'destroy'])->name('prospects.delete');
+    Route::post('/prospects/{id}/find-email', [App\Http\Controllers\Api\ProspectController::class, 'findEmail'])
+        ->name('prospects.find-email');
 
     Route::get('/prospect-actions/planned', [App\Http\Controllers\Api\ProspectActionController::class, 'planned'])
         ->name('prospect-actions.planned');

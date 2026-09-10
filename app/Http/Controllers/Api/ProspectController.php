@@ -63,4 +63,12 @@ class ProspectController extends Controller
     {
         $this->prospectService->destroy((int) $id);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function findEmail(string $id)
+    {
+        return $this->prospectService->findEmail((int) $id);
+    }
 }
