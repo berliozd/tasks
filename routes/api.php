@@ -80,6 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('prospect-actions.planned');
     Route::get('/prospect-actions/last-sent', [App\Http\Controllers\Api\ProspectActionController::class, 'lastSent'])
         ->name('prospect-actions.last-sent');
+    Route::get('/prospect-actions/activity', [App\Http\Controllers\Api\ProspectActionController::class, 'activityOverTime'])
+        ->name('prospect-actions.activity');
     Route::get('/prospects/{prospectId}/actions', [App\Http\Controllers\Api\ProspectActionController::class, 'index'])
         ->name('prospect-actions.index');
     Route::post('/prospects/{prospectId}/actions', [App\Http\Controllers\Api\ProspectActionController::class, 'store'])

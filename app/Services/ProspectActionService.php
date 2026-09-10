@@ -55,6 +55,31 @@ readonly class ProspectActionService
     }
 
     /**
+     * Daily counts of completed actions over the last $days days, with
+     * every day present (zero-filled) so a chart renders a continuous
+     * series instead of gaps for quiet days.
+     *
+     * @return array<int, array{date: string, count: int}>
+     */
+    public function getActivityOverTime(int $days): array
+    {
+        $days = max(1, min(365, $days));
+        $counts = $this->prospectActionRepository->getDailyActivityCountsForTeam(
+            auth()->user()->currentTeam->id,
+            $days,
+        );
+
+        $start = now()->subDays($days - 1)->startOfDay();
+
+        return collect(range(0, $days - 1))
+            ->map(function (int $offset) use ($start, $counts) {
+                $date = $start->copy()->addDays($offset)->format('Y-m-d');
+                return ['date' => $date, 'count' => (int) ($counts[$date] ?? 0)];
+            })
+            ->all();
+    }
+
+    /**
      * @return array{items: Collection, has_more: bool}
      */
     private function paginateRows(Collection $rows, int $limit): array

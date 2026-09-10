@@ -12,6 +12,7 @@ import {ref} from "vue";
 import {format} from 'date-fns';
 import Modal from "@/Components/Modal.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
+import ActivityChart from "@/Pages/Products/Partials/ActivityChart.vue";
 import {useStore} from "@/Composables/store.js";
 import {statusFlags} from "@/Composables/prospectActionStatus.js";
 
@@ -162,6 +163,8 @@ refreshLastSentActions();
             </div>
         </div>
     </div>
+
+    <ActivityChart class="mt-4"/>
 
     <div class="surface-card overflow-hidden mt-4">
         <div class="p-4 text-sm font-medium text-gray-900 border-b border-gray-100">Planned actions</div>

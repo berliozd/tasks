@@ -31,6 +31,11 @@ class ProspectActionController extends Controller
         return $this->prospectActionService->getLastSent((int) $request->query('limit', 20));
     }
 
+    public function activityOverTime(Request $request)
+    {
+        return $this->prospectActionService->getActivityOverTime((int) $request->query('days', 30));
+    }
+
     /**
      * @throws Exception
      */
