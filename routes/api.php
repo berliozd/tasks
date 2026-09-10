@@ -10,6 +10,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
+    Route::get('/teams/{team}/invitation-links', [App\Http\Controllers\Api\TeamInvitationController::class, 'links'])
+        ->name('teams.invitation-links');
     Route::patch('/daily-report-settings', [App\Http\Controllers\Api\DailyReportSettingsController::class, 'update'])
         ->name('daily-report-settings.update');
     Route::patch('/tasks/{id}', [App\Http\Controllers\Api\TaskController::class, 'update'])->name('tasks.update');

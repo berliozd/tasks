@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { router, useForm, usePage } from '@inertiajs/vue3';
+import { useStore } from '@/Composables/store.js';
 import ActionMessage from '@/Components/ActionMessage.vue';
 import ActionSection from '@/Components/ActionSection.vue';
 import ConfirmationModal from '@/Components/ConfirmationModal.vue';
@@ -52,6 +53,32 @@ const cancelTeamInvitation = (invitation) => {
         preserveScroll: true,
     });
 };
+
+const invitationLinks = ref({});
+const loadingInvitationLinks = ref(false);
+
+const loadInvitationLinks = () => {
+    if (!props.team.team_invitations.length) return;
+    loadingInvitationLinks.value = true;
+    axios.get(route('teams.invitation-links', props.team.id)).then(response => {
+        invitationLinks.value = Object.fromEntries(response.data.map(row => [row.id, row.url]));
+    }).finally(() => loadingInvitationLinks.value = false);
+};
+
+const copyInvitationLink = async (invitation) => {
+    const url = invitationLinks.value[invitation.id];
+    if (!url) return;
+    try {
+        await navigator.clipboard.writeText(url);
+        useStore().setSaved('Copied to clipboard!');
+    } catch (e) {
+        // Clipboard API unavailable (e.g. insecure context) — the link is
+        // still shown inline so it can be selected and copied manually.
+    }
+};
+
+loadInvitationLinks();
+watch(() => props.team.team_invitations.length, loadInvitationLinks);
 
 const manageRole = (teamMember) => {
     managingRoleFor.value = teamMember;
@@ -184,26 +211,41 @@ const displayableRole = (role) => {
                 </template>
 
                 <template #description>
-                    These people have been invited to your team and have been sent an invitation email. They may join the team by accepting the email invitation.
+                    These people have been invited to your team and have been sent an invitation email. They may join the team by accepting the email invitation, or you can copy/paste the invite link below directly.
                 </template>
 
                 <!-- Pending Team Member Invitation List -->
                 <template #content>
                     <div class="space-y-6">
-                        <div v-for="invitation in team.team_invitations" :key="invitation.id" class="flex items-center justify-between">
-                            <div class="text-gray-600">
-                                {{ invitation.email }}
+                        <div v-for="invitation in team.team_invitations" :key="invitation.id" class="flex flex-col gap-2">
+                            <div class="flex items-center justify-between">
+                                <div class="text-gray-600">
+                                    {{ invitation.email }}
+                                </div>
+
+                                <div class="flex items-center">
+                                    <!-- Cancel Team Invitation -->
+                                    <button
+                                        v-if="userPermissions.canRemoveTeamMembers"
+                                        class="cursor-pointer ms-6 text-sm text-red-500 focus:outline-none"
+                                        @click="cancelTeamInvitation(invitation)"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
 
-                            <div class="flex items-center">
-                                <!-- Cancel Team Invitation -->
-                                <button
-                                    v-if="userPermissions.canRemoveTeamMembers"
-                                    class="cursor-pointer ms-6 text-sm text-red-500 focus:outline-none"
-                                    @click="cancelTeamInvitation(invitation)"
-                                >
-                                    Cancel
+                            <div v-if="invitationLinks[invitation.id]" class="flex items-center gap-2">
+                                <input type="text" readonly :value="invitationLinks[invitation.id]"
+                                       @focus="$event.target.select()"
+                                       class="h-9 px-2 text-xs text-gray-500 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                                <button type="button" @click="copyInvitationLink(invitation)"
+                                        class="shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 text-[11px] font-semibold text-gray-600 uppercase tracking-widest hover:bg-gray-100 transition">
+                                    Copy
                                 </button>
+                            </div>
+                            <div v-else-if="loadingInvitationLinks" class="text-xs text-gray-400">
+                                Loading invite link…
                             </div>
                         </div>
                     </div>
