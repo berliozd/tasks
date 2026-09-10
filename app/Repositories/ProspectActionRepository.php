@@ -66,23 +66,23 @@ readonly class ProspectActionRepository
     }
 
     /**
-     * Daily counts of actions actually carried out (i.e. not still
-     * pending/planned) over the last $days days, keyed by "Y-m-d". Grouped
-     * by updated_at since there's no dedicated "completed at" timestamp —
-     * updated_at is when an action's status last changed, which for a
-     * non-pending/planned action is effectively when it was carried out.
+     * updated_at timestamps of actions actually carried out (i.e. not still
+     * pending/planned) within the given UTC window — updated_at is when an
+     * action's status last changed, which for a non-pending/planned action
+     * is effectively when it was carried out. Returns raw timestamps rather
+     * than grouping by date here, since DATE() in SQL would bucket by the
+     * UTC calendar day regardless of the user's own timezone; the caller
+     * converts each timestamp to local time before bucketing.
      *
-     * @return Collection<string, int>
+     * @return Collection<int, \Illuminate\Support\Carbon>
      */
-    public function getDailyActivityCountsForTeam(int $teamId, int $days): Collection
+    public function getCompletedActionTimestampsForTeam(int $teamId, \DateTimeInterface $from, \DateTimeInterface $until): Collection
     {
         return ProspectAction::query()
             ->whereNotIn('status', ['pending', 'planned'])
             ->whereHas('prospect.directory', fn ($query) => $query->where('team_id', $teamId))
-            ->where('updated_at', '>=', now()->subDays($days - 1)->startOfDay())
-            ->selectRaw('DATE(updated_at) as day, count(*) as aggregate')
-            ->groupBy('day')
-            ->pluck('aggregate', 'day');
+            ->whereBetween('updated_at', [$from, $until])
+            ->pluck('updated_at');
     }
 
     public function update(ProspectAction $action, array $data): ProspectAction

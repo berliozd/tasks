@@ -11,6 +11,7 @@ use App\Repositories\ProspectActionRepository;
 use App\Repositories\ProspectRepository;
 use App\Services\MailSender\MailSenderInterface;
 use Carbon\Carbon;
+use DateTimeZone;
 use Exception;
 use Illuminate\Support\Collection;
 
@@ -57,24 +58,38 @@ readonly class ProspectActionService
     /**
      * Daily counts of completed actions over the last $days days, with
      * every day present (zero-filled) so a chart renders a continuous
-     * series instead of gaps for quiet days.
+     * series instead of gaps for quiet days. Bucketed by the user's own
+     * local date — updated_at is stored in UTC, so a day boundary drawn in
+     * UTC would misfile an action completed just after local midnight into
+     * the previous day for anyone not in UTC themselves.
      *
      * @return array<int, array{date: string, count: int}>
      */
     public function getActivityOverTime(int $days): array
     {
         $days = max(1, min(365, $days));
-        $counts = $this->prospectActionRepository->getDailyActivityCountsForTeam(
-            auth()->user()->currentTeam->id,
-            $days,
+        $user = auth()->user();
+        $tz = new DateTimeZone($user->timezone ?? config('app.timezone'));
+
+        $startLocal = Carbon::now($tz)->startOfDay()->subDays($days - 1);
+        $endLocal = Carbon::now($tz)->endOfDay();
+
+        $timestamps = $this->prospectActionRepository->getCompletedActionTimestampsForTeam(
+            $user->currentTeam->id,
+            $startLocal->copy()->utc(),
+            $endLocal->copy()->utc(),
         );
 
-        $start = now()->subDays($days - 1)->startOfDay();
+        $counts = [];
+        foreach ($timestamps as $timestamp) {
+            $localDate = Carbon::parse($timestamp, 'UTC')->setTimezone($tz)->format('Y-m-d');
+            $counts[$localDate] = ($counts[$localDate] ?? 0) + 1;
+        }
 
         return collect(range(0, $days - 1))
-            ->map(function (int $offset) use ($start, $counts) {
-                $date = $start->copy()->addDays($offset)->format('Y-m-d');
-                return ['date' => $date, 'count' => (int) ($counts[$date] ?? 0)];
+            ->map(function (int $offset) use ($startLocal, $counts) {
+                $date = $startLocal->copy()->addDays($offset)->format('Y-m-d');
+                return ['date' => $date, 'count' => $counts[$date] ?? 0];
             })
             ->all();
     }
