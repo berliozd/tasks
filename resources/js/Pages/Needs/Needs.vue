@@ -315,10 +315,16 @@ refreshBoard();
     <Head title="Needs"/>
     <AppLayout title="Needs">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight text-slate-900">Needs</h2>
+            <div class="flex items-center gap-4">
+                <h2 class="font-semibold text-xl leading-tight text-slate-900">Needs</h2>
+                <button type="button" @click="openAddModal" title="Add a need"
+                        class="ml-auto shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                    +
+                </button>
+            </div>
         </template>
 
-        <div class="max-w-full mx-auto sm:px-6 lg:px-8 flex flex-col gap-4">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col gap-4">
             <div class="surface-card p-3 flex flex-col gap-1.5">
                 <div class="flex items-center justify-between">
                     <span class="text-xs text-gray-500">Filter by stage</span>
@@ -505,14 +511,6 @@ refreshBoard();
                 </div>
             </div>
         </Modal>
-
-        <button type="button" @click="openAddModal" title="Add a need"
-                class="fixed bottom-6 right-6 z-40 flex items-center justify-center size-14 rounded-full bg-brand-accent text-white shadow-soft hover:bg-brand-accent-dark active:scale-95 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 5v14M5 12h14"/>
-            </svg>
-        </button>
 
         <Modal :show="showAddModal" @close="closeAddModal">
             <div class="p-6 flex flex-col gap-4">

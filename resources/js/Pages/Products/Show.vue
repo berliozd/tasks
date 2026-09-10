@@ -8,9 +8,9 @@ export default {
 
 <script setup>
 import {ref, watch, watchEffect} from "vue";
-import SaveButton from "@/Components/SaveButton.vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import CollapsibleSection from "@/Components/CollapsibleSection.vue";
+import Modal from "@/Components/Modal.vue";
 import DeleteConfirmPopover from "@/Pages/Directories/Partials/DeleteConfirmPopover.vue";
 import debounce from "lodash/debounce";
 import {Head, router} from "@inertiajs/vue3";
@@ -22,6 +22,18 @@ const product = ref({name: '', website_url: '', brief: '', from_label: '', defau
 const newDirectoryName = ref('');
 const newDirectoryPrompt = ref('');
 const errorMsg = ref('');
+const showAddDirectoryModal = ref(false);
+
+const openAddDirectoryModal = () => {
+    newDirectoryName.value = '';
+    newDirectoryPrompt.value = '';
+    errorMsg.value = '';
+    showAddDirectoryModal.value = true;
+}
+
+const closeAddDirectoryModal = () => {
+    showAddDirectoryModal.value = false;
+}
 let storedProductSnapshot = null;
 let watchProductActive = false;
 const savingProduct = ref(false);
@@ -90,6 +102,7 @@ const addDirectory = async () => {
     }).then(() => {
         newDirectoryName.value = '';
         newDirectoryPrompt.value = '';
+        showAddDirectoryModal.value = false;
         refreshProduct();
         useStore().refreshProspectionTree();
     }).catch((error) => {
@@ -149,19 +162,12 @@ refreshProduct();
     </CollapsibleSection>
 
     <div class="surface-card">
-        <div class="p-4 flex flex-col gap-2 border-b border-gray-100">
-            <div class="text-sm font-medium text-gray-900">Directories</div>
-            <div class="flex flex-col sm:flex-row gap-2">
-                <input type="text" v-model="newDirectoryName" placeholder="Directory name"
-                       class="w-full sm:flex-1 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                       @keydown.enter="addDirectory">
-                <input type="text" v-model="newDirectoryPrompt"
-                       placeholder="AI prompt (e.g. SaaS companies in Paris)"
-                       class="w-full sm:flex-1 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                       @keydown.enter="addDirectory">
-                <SaveButton @click="addDirectory"/>
-            </div>
-            <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
+        <div class="p-4 flex items-center gap-2 border-b border-gray-100">
+            <span class="text-sm font-medium text-gray-900">Directories</span>
+            <button type="button" @click="openAddDirectoryModal" title="Add a directory"
+                    class="ml-auto shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                +
+            </button>
         </div>
 
         <div v-if="!(product.directories ?? []).length" class="p-8 text-center text-sm text-gray-400">
@@ -189,4 +195,27 @@ refreshProduct();
             </div>
         </div>
     </div>
+
+    <Modal :show="showAddDirectoryModal" @close="closeAddDirectoryModal" max-width="md">
+        <div class="p-4 flex flex-col gap-2">
+            <div class="text-sm font-medium text-gray-900">New directory</div>
+            <input type="text" v-model="newDirectoryName" placeholder="Directory name"
+                   class="w-full rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                   @keydown.enter="addDirectory">
+            <input type="text" v-model="newDirectoryPrompt" placeholder="AI prompt (e.g. SaaS companies in Paris)"
+                   class="w-full rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                   @keydown.enter="addDirectory">
+            <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
+            <div class="flex justify-end gap-2 mt-2">
+                <button type="button" @click="closeAddDirectoryModal"
+                        class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-xs text-gray-600 uppercase tracking-widest hover:bg-gray-100 transition">
+                    Cancel
+                </button>
+                <button type="button" @click="addDirectory"
+                        class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
+                    Add directory
+                </button>
+            </div>
+        </div>
+    </Modal>
 </template>

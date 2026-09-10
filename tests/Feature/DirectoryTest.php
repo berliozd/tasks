@@ -128,6 +128,25 @@ class DirectoryTest extends TestCase
         $this->postJson("/api/directories/{$directory->id}/company-search")->assertServerError();
     }
 
+    public function test_generating_prospects_returns_candidates_without_creating_them(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $directory = Directory::factory()->create([
+            'team_id' => $user->currentTeam->id,
+            'prompt' => 'SaaS companies',
+        ]);
+
+        $response = $this->postJson("/api/directories/{$directory->id}/generate", ['count' => 2])
+            ->assertSuccessful()
+            ->json();
+
+        $this->assertNotEmpty($response['candidates']);
+        // Nothing is persisted — the caller adds candidates individually via
+        // the normal prospects.store flow, same as the other search methods.
+        $this->assertEquals(0, $directory->prospects()->count());
+    }
+
     public function test_generating_prospects_skips_emails_already_used_elsewhere_in_the_same_product(): void
     {
         $user = User::factory()->withPersonalTeam()->create();
@@ -146,10 +165,11 @@ class DirectoryTest extends TestCase
         // The stub generator deterministically produces prospect1@example.com
         // as its first row when nothing is excluded by name yet — which
         // already belongs to another prospect under the same product.
-        $this->postJson("/api/directories/{$directory->id}/generate", ['count' => 1])
+        $response = $this->postJson("/api/directories/{$directory->id}/generate", ['count' => 1])
             ->assertSuccessful()
-            ->assertJson([]);
+            ->json();
 
+        $this->assertEmpty($response['candidates']);
         $this->assertEquals(0, $directory->prospects()->count());
     }
 }

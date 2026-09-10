@@ -284,6 +284,10 @@ const exportTasks = async () => {
                         Completed
                     </Link>
                 </div>
+                <button type="button" @click="openAddTaskModal" title="Add a task"
+                        class="ml-auto shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                    +
+                </button>
             </div>
         </template>
 
@@ -352,14 +356,6 @@ const exportTasks = async () => {
                             :completedTodayTasks="completedTodayTasks"
                             :class="usePage().props.environment === 'production'?'hidden':''"/>
         </div>
-
-        <button type="button" @click="openAddTaskModal" title="Add a task"
-                class="fixed bottom-6 right-6 z-40 flex items-center justify-center size-14 rounded-full bg-brand-accent text-white shadow-soft hover:bg-brand-accent-dark active:scale-95 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 5v14M5 12h14"/>
-            </svg>
-        </button>
 
         <Modal :show="showAddTaskModal" @close="closeAddTaskModal">
             <div class="p-6 flex flex-col gap-4">

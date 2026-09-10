@@ -8,7 +8,6 @@ export default {
 
 <script setup>
 import {computed, ref, watch, watchEffect} from "vue";
-import SaveButton from "@/Components/SaveButton.vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import CollapsibleSection from "@/Components/CollapsibleSection.vue";
 import Modal from "@/Components/Modal.vue";
@@ -37,11 +36,39 @@ watchEffect(() => {
         breadcrumb: crumbs,
     });
 });
-const generateCount = ref(5);
-const generating = ref(false);
-const errorMsg = ref('');
-const generateResultMsg = ref('');
+const aiCount = ref(5);
+const searchingWithAi = ref(false);
+
+const stepAiCount = (delta) => {
+    aiCount.value = Math.min(50, Math.max(1, aiCount.value + delta));
+}
+
+// Mirrors the query-building logic in DirectoryService::searchLinkedInProfiles()/
+// searchCompanies(), so the popin can show the PO exactly what will be searched.
+const baseSearchQuery = computed(() => (directory.value.prompt ?? '').trim());
+const linkedInSearchQuery = computed(() => baseSearchQuery.value
+    ? `${baseSearchQuery.value} site:linkedin.com/in`
+    : '');
+const aiResults = ref([]);
+const aiSearchError = ref('');
+const addingAiKeys = ref(new Set());
 const newProspect = ref({name: '', website: '', email: ''});
+const showAddProspectModal = ref(false);
+
+const openAddProspectModal = () => {
+    newProspect.value = {name: '', website: '', email: ''};
+    linkedinResults.value = [];
+    linkedinError.value = '';
+    companyResults.value = [];
+    companySearchError.value = '';
+    aiResults.value = [];
+    aiSearchError.value = '';
+    showAddProspectModal.value = true;
+}
+
+const closeAddProspectModal = () => {
+    showAddProspectModal.value = false;
+}
 let storedDirectorySnapshot = null;
 let watchDirectoryActive = false;
 const savingDirectory = ref(false);
@@ -89,56 +116,62 @@ const updateDirectory = () => {
 }
 const debouncedUpdateDirectory = debounce(updateDirectory, 600);
 
-// Explains what actually happened — the AI can suggest names that turn out
-// to be already-known contacts or unreachable websites, so a batch can come
-// back with fewer prospects than requested, or none at all. Silently doing
-// nothing in that case is confusing, so always summarize the outcome.
-const describeGenerateResult = (result) => {
-    const created = result.created_count ?? 0;
-    const reasons = [];
-    if (result.skipped_duplicate_count) reasons.push(`${result.skipped_duplicate_count} already known`);
-    if (result.skipped_unreachable_count) reasons.push(`${result.skipped_unreachable_count} with an unreachable website`);
-    if (result.skipped_incomplete_count) reasons.push(`${result.skipped_incomplete_count} incomplete`);
-    const skipped = reasons.length ? (result.skipped_duplicate_count ?? 0) + (result.skipped_unreachable_count ?? 0) + (result.skipped_incomplete_count ?? 0) : 0;
-
-    if (created === 0) {
-        return skipped
-            ? `No new prospects — all ${skipped} suggestion${skipped === 1 ? '' : 's'} ${skipped === 1 ? 'was' : 'were'} skipped (${reasons.join(', ')}).`
-            : 'No new prospects were generated — try a different prompt.';
-    }
-
-    let message = `Added ${created} new prospect${created === 1 ? '' : 's'}.`;
-    if (skipped) message += ` Skipped ${skipped} (${reasons.join(', ')}).`;
-    return message;
-}
-
 const newProspectIds = ref(new Set());
-let newProspectIdsTimer = null;
+const newProspectIdTimers = new Map();
 
+// Merges into the existing set (rather than replacing it) and expires each
+// id independently, so adding a second prospect doesn't clear the "New"
+// badge that's still showing on the first one.
 const markProspectsNew = (ids) => {
     if (!ids.length) return;
-    newProspectIds.value = new Set(ids);
-    if (newProspectIdsTimer) clearTimeout(newProspectIdsTimer);
-    newProspectIdsTimer = setTimeout(() => {
-        newProspectIds.value = new Set();
-    }, 5000);
+    const merged = new Set(newProspectIds.value);
+    ids.forEach(id => merged.add(id));
+    newProspectIds.value = merged;
+
+    ids.forEach(id => {
+        if (newProspectIdTimers.has(id)) clearTimeout(newProspectIdTimers.get(id));
+        newProspectIdTimers.set(id, setTimeout(() => {
+            const next = new Set(newProspectIds.value);
+            next.delete(id);
+            newProspectIds.value = next;
+            newProspectIdTimers.delete(id);
+        }, 30000));
+    });
 }
 
-const generateProspects = () => {
-    generating.value = true;
-    errorMsg.value = '';
-    generateResultMsg.value = '';
-    axios.post(route('directories.generate', props.directoryId), {count: generateCount.value})
+const searchWithAi = () => {
+    searchingWithAi.value = true;
+    aiSearchError.value = '';
+    axios.post(route('directories.generate', props.directoryId), {count: aiCount.value})
         .then((response) => {
-            generateResultMsg.value = describeGenerateResult(response.data);
-            markProspectsNew((response.data.prospects ?? []).map(p => p.id));
+            aiResults.value = response.data.candidates ?? [];
+            if (!aiResults.value.length) {
+                aiSearchError.value = 'No new candidates found for this prompt.';
+            }
+        })
+        .catch((error) => {
+            aiSearchError.value = error.response?.data?.message ?? 'Could not search with AI';
+        })
+        .finally(() => searchingWithAi.value = false);
+}
+
+const addAiProspect = (result) => {
+    const key = result.email || result.website || result.name;
+    addingAiKeys.value = new Set(addingAiKeys.value).add(key);
+    axios.post(route('prospects.store', props.directoryId), {
+        name: result.name, website: result.website, email: result.email,
+    })
+        .then((response) => {
+            aiResults.value = aiResults.value.filter(r => r !== result);
+            markProspectsNew([response.data.id]);
             refreshDirectory();
             useStore().refreshProspectionTree();
         })
-        .catch((error) => {
-            errorMsg.value = error.response?.data?.message ?? 'Could not generate prospects';
-        })
-        .finally(() => generating.value = false);
+        .finally(() => {
+            const next = new Set(addingAiKeys.value);
+            next.delete(key);
+            addingAiKeys.value = next;
+        });
 }
 
 const linkedinResults = ref([]);
@@ -448,9 +481,6 @@ refreshTemplates();
                     <label class="text-xs font-medium text-gray-500">Name</label>
                     <input type="text" v-model="directory.name"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                    <label class="text-xs font-medium text-gray-500 mt-2">AI prompt / criteria</label>
-                    <textarea v-model="directory.prompt" rows="2"
-                              class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
                     <div class="flex flex-col sm:flex-row gap-2 mt-2">
                         <div class="w-full sm:flex-1 flex flex-col gap-1">
                             <label class="text-xs font-medium text-gray-500">From label override</label>
@@ -479,104 +509,9 @@ refreshTemplates();
                 <EmailTemplates :directory-id="directoryId"/>
             </CollapsibleSection>
 
-            <CollapsibleSection title="Add prospects" default-open>
-                <div class="flex flex-col sm:flex-row gap-2">
-                    <input type="text" v-model="newProspect.name" placeholder="Name"
-                           class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                           @keydown.enter="addProspect">
-                    <input type="text" v-model="newProspect.website" placeholder="Website"
-                           class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                           @keydown.enter="addProspect">
-                    <input type="email" v-model="newProspect.email" placeholder="Email"
-                           class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
-                           @keydown.enter="addProspect">
-                    <SaveButton @click="addProspect"/>
-                </div>
-
-                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
-                    <input type="number" v-model.number="generateCount" min="1" max="50"
-                           class="h-10 w-20 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                    <button type="button" @click="generateProspects" :disabled="generating || !directory.prompt"
-                            class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                        {{ generating ? 'Generating…' : 'Generate with AI' }}
-                    </button>
-                    <span class="text-xs text-gray-400">
-                        Set a prompt in Directory details describing the kind of prospects you want.
-                    </span>
-                </div>
-                <div v-if="errorMsg" class="text-sm text-red-600">{{ errorMsg }}</div>
-                <div v-else-if="generateResultMsg"
-                     class="flex items-start gap-2 rounded-lg bg-brand-accent/10 text-brand-accent-dark text-sm px-3 py-2">
-                    <svg class="shrink-0 size-4 mt-0.5" xmlns="http://www.w3.org/2000/svg" fill="none"
-                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                              d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
-                    </svg>
-                    <span>{{ generateResultMsg }}</span>
-                </div>
-
-                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
-                    <button type="button" @click="searchLinkedIn" :disabled="searchingLinkedIn || !directory.prompt"
-                            class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
-                        {{ searchingLinkedIn ? 'Searching…' : 'Search LinkedIn' }}
-                    </button>
-                    <span class="text-xs text-gray-400">
-                        Finds public LinkedIn profiles to check and add manually — nothing is added automatically.
-                    </span>
-                </div>
-                <div v-if="linkedinError" class="text-sm text-red-600">{{ linkedinError }}</div>
-
-                <div v-if="linkedinResults.length" class="mt-2 -mx-4 border-t border-gray-100 divide-y divide-gray-100">
-                    <div v-for="result in linkedinResults" :key="result.profile_url"
-                         class="flex items-center gap-3 px-4 py-3">
-                        <div class="min-w-0 flex-1">
-                            <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
-                            <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.profile_url }}</div>
-                        </div>
-                        <a :href="result.profile_url" target="_blank" rel="noopener"
-                           class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
-                            View profile ↗
-                        </a>
-                        <button type="button" @click="addLinkedInProspect(result)" :disabled="addingLinkedInUrls.has(result.profile_url)"
-                                class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                            {{ addingLinkedInUrls.has(result.profile_url) ? 'Adding…' : 'Add as prospect' }}
-                        </button>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
-                    <button type="button" @click="searchCompanies" :disabled="searchingCompanies || !directory.prompt"
-                            class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
-                        {{ searchingCompanies ? 'Searching…' : 'Basic web search' }}
-                    </button>
-                    <span class="text-xs text-gray-400">
-                        Plain keyword search (Brave) for companies to check and add manually — a fallback when AI generation doesn't turn up good results.
-                    </span>
-                </div>
-                <div v-if="companySearchError" class="text-sm text-red-600">{{ companySearchError }}</div>
-
-                <div v-if="companyResults.length" class="mt-2 -mx-4 border-t border-gray-100 divide-y divide-gray-100">
-                    <div v-for="result in companyResults" :key="result.website"
-                         class="flex items-center gap-3 px-4 py-3">
-                        <div class="min-w-0 flex-1">
-                            <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
-                            <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.website }}</div>
-                        </div>
-                        <a :href="result.website" target="_blank" rel="noopener"
-                           class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
-                            Visit site ↗
-                        </a>
-                        <button type="button" @click="addCompanyProspect(result)" :disabled="addingCompanyUrls.has(result.website)"
-                                class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
-                            {{ addingCompanyUrls.has(result.website) ? 'Adding…' : 'Add as prospect' }}
-                        </button>
-                    </div>
-                </div>
-            </CollapsibleSection>
-
             <div class="surface-card">
                 <div class="p-4 flex flex-col gap-2 border-b border-gray-100">
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2">
                         <div class="text-sm font-medium text-gray-900">Prospects</div>
                         <div v-if="selectedProspectIds.size" class="flex items-center gap-2">
                             <span class="text-xs text-gray-500">
@@ -599,6 +534,10 @@ refreshTemplates();
                                 Delete
                             </button>
                         </div>
+                        <button type="button" @click="openAddProspectModal" title="Add a prospect"
+                                class="ml-auto shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                            +
+                        </button>
                     </div>
                 </div>
 
@@ -730,6 +669,156 @@ refreshTemplates();
                         <DangerButton @click="deleteSelectedProspects" :disabled="deletingSelected">
                             {{ deletingSelected ? 'Deleting…' : 'Delete' }}
                         </DangerButton>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal :show="showAddProspectModal" @close="closeAddProspectModal" max-width="2xl">
+                <div class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
+                    <h3 class="text-lg font-medium text-gray-900">Add prospects</h3>
+
+                    <div class="flex flex-col gap-2">
+                        <div class="text-xs font-medium text-gray-500 uppercase tracking-widest">Add manually</div>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <input type="text" v-model="newProspect.name" placeholder="Name" autofocus
+                                   class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                                   @keydown.enter="addProspect">
+                            <input type="text" v-model="newProspect.website" placeholder="Website"
+                                   class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                                   @keydown.enter="addProspect">
+                            <input type="email" v-model="newProspect.email" placeholder="Email"
+                                   class="h-10 px-2 rounded-lg w-full sm:flex-1 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                                   @keydown.enter="addProspect">
+                            <button type="button" @click="addProspect"
+                                    class="shrink-0 inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 pt-3 border-t border-gray-100">
+                        <label class="text-xs font-medium text-gray-500 uppercase tracking-widest">AI prompt / criteria</label>
+                        <textarea v-model="directory.prompt" rows="2" placeholder="e.g. SaaS companies in Paris"
+                                  class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm"/>
+                        <span class="text-[11px] text-gray-400">
+                            Used by all three search methods below.
+                        </span>
+                    </div>
+
+                    <div class="flex flex-col gap-2 pt-3 border-t border-gray-100">
+                        <div class="text-xs font-medium text-gray-500 uppercase tracking-widest">Search with AI</div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center rounded-lg border border-gray-300 overflow-hidden">
+                                <button type="button" @click="stepAiCount(-5)"
+                                        class="h-10 w-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition">
+                                    −
+                                </button>
+                                <input type="number" v-model.number="aiCount" min="1" max="50"
+                                       class="h-10 w-14 px-1 text-center border-0 border-x border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+                                <button type="button" @click="stepAiCount(5)"
+                                        class="h-10 w-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition">
+                                    +
+                                </button>
+                            </div>
+                            <button type="button" @click="searchWithAi" :disabled="searchingWithAi || !directory.prompt"
+                                    class="inline-flex items-center px-4 py-2 bg-brand-navy border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                                {{ searchingWithAi ? 'Searching…' : 'Search' }}
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-400 truncate">
+                            {{ directory.prompt ? `Prompt: "${directory.prompt}"` : 'Set a prompt above describing the kind of prospects you want.' }}
+                        </div>
+                        <div v-if="aiSearchError" class="text-sm text-red-600">{{ aiSearchError }}</div>
+
+                        <div v-if="aiResults.length" class="-mx-6 border-t border-gray-100 divide-y divide-gray-100">
+                            <div v-for="result in aiResults" :key="result.email || result.website || result.name"
+                                 class="flex items-center gap-3 px-6 py-3">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
+                                    <div class="text-xs text-gray-500 truncate">{{ result.website || result.email }}</div>
+                                </div>
+                                <a v-if="result.website" :href="result.website" target="_blank" rel="noopener"
+                                   class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                                    Visit site ↗
+                                </a>
+                                <button type="button" @click="addAiProspect(result)"
+                                        :disabled="addingAiKeys.has(result.email || result.website || result.name)"
+                                        class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                                    {{ addingAiKeys.has(result.email || result.website || result.name) ? 'Adding…' : 'Add as prospect' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 pt-3 border-t border-gray-100">
+                        <div class="text-xs font-medium text-gray-500 uppercase tracking-widest">Search LinkedIn</div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="searchLinkedIn" :disabled="searchingLinkedIn || !directory.prompt"
+                                    class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
+                                {{ searchingLinkedIn ? 'Searching…' : 'Search LinkedIn' }}
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-400 truncate">
+                            {{ linkedInSearchQuery ? `Search term: "${linkedInSearchQuery}"` : 'Set a prompt above to search.' }}
+                        </div>
+                        <div v-if="linkedinError" class="text-sm text-red-600">{{ linkedinError }}</div>
+
+                        <div v-if="linkedinResults.length" class="-mx-6 border-t border-gray-100 divide-y divide-gray-100">
+                            <div v-for="result in linkedinResults" :key="result.profile_url"
+                                 class="flex items-center gap-3 px-6 py-3">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
+                                    <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.profile_url }}</div>
+                                </div>
+                                <a :href="result.profile_url" target="_blank" rel="noopener"
+                                   class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                                    View profile ↗
+                                </a>
+                                <button type="button" @click="addLinkedInProspect(result)" :disabled="addingLinkedInUrls.has(result.profile_url)"
+                                        class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                                    {{ addingLinkedInUrls.has(result.profile_url) ? 'Adding…' : 'Add as prospect' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 pt-3 border-t border-gray-100">
+                        <div class="text-xs font-medium text-gray-500 uppercase tracking-widest">Basic web search</div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" @click="searchCompanies" :disabled="searchingCompanies || !directory.prompt"
+                                    class="inline-flex items-center px-4 py-2 rounded-lg border border-brand-accent font-semibold text-xs text-brand-accent uppercase tracking-widest hover:bg-brand-accent/10 disabled:opacity-50 transition">
+                                {{ searchingCompanies ? 'Searching…' : 'Basic web search' }}
+                            </button>
+                        </div>
+                        <div class="text-xs text-gray-400 truncate">
+                            {{ baseSearchQuery ? `Search term: "${baseSearchQuery}"` : 'Set a prompt above to search.' }}
+                        </div>
+                        <div v-if="companySearchError" class="text-sm text-red-600">{{ companySearchError }}</div>
+
+                        <div v-if="companyResults.length" class="-mx-6 border-t border-gray-100 divide-y divide-gray-100">
+                            <div v-for="result in companyResults" :key="result.website"
+                                 class="flex items-center gap-3 px-6 py-3">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-sm font-medium text-gray-900 truncate">{{ result.name }}</div>
+                                    <div class="text-xs text-gray-500 truncate">{{ result.snippet || result.website }}</div>
+                                </div>
+                                <a :href="result.website" target="_blank" rel="noopener"
+                                   class="shrink-0 text-xs font-medium text-brand-navy hover:underline">
+                                    Visit site ↗
+                                </a>
+                                <button type="button" @click="addCompanyProspect(result)" :disabled="addingCompanyUrls.has(result.website)"
+                                        class="shrink-0 inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light disabled:opacity-50 transition">
+                                    {{ addingCompanyUrls.has(result.website) ? 'Adding…' : 'Add as prospect' }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="button" @click="closeAddProspectModal"
+                                class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-xs text-gray-600 uppercase tracking-widest hover:bg-gray-100 transition">
+                            Close
+                        </button>
                     </div>
                 </div>
             </Modal>

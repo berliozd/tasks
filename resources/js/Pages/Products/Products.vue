@@ -123,7 +123,7 @@ refreshLastSentActions();
         <div class="p-4 flex items-center gap-2 border-b border-gray-100">
             <span class="text-sm font-medium text-gray-900">Products</span>
             <button type="button" @click="openAddModal" title="Add a product"
-                    class="ml-auto shrink-0 inline-flex items-center justify-center size-9 rounded-full bg-brand-accent text-white text-xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                    class="ml-auto shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
                 +
             </button>
         </div>

@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\Prospect;
 use App\Models\ProspectAction;
 use App\Repositories\DirectoryRepository;
-use App\Repositories\ProspectRepository;
 use App\Services\CompanySearch\CompanySearchInterface;
 use App\Services\ProfileSearch\ProfileSearchInterface;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
@@ -20,7 +19,6 @@ readonly class DirectoryService
 {
     public function __construct(
         private DirectoryRepository $directoryRepository,
-        private ProspectRepository $prospectRepository,
         private ProspectGeneratorInterface $prospectGenerator,
         private ProfileSearchInterface $profileSearch,
         private CompanySearchInterface $companySearch,
@@ -102,6 +100,11 @@ readonly class DirectoryService
     }
 
     /**
+     * AI-generated prospect candidates for this directory's prompt. Like
+     * searchLinkedInProfiles()/searchCompanies(), this only returns
+     * suggestions — nothing is persisted here, the caller adds whichever
+     * ones it wants via the normal create flow.
+     *
      * @throws Exception
      */
     public function generate(int $id, int $count): array
@@ -142,7 +145,7 @@ readonly class DirectoryService
         $skippedDuplicate = 0;
         $skippedUnreachable = 0;
 
-        $created = collect($rows)
+        $candidates = collect($rows)
             ->filter(function (array $row) use (&$seenEmails, $reachable, &$skippedIncomplete, &$skippedDuplicate, &$skippedUnreachable) {
                 $name = mb_strtolower(trim((string) ($row['name'] ?? '')));
                 $email = mb_strtolower(trim((string) ($row['email'] ?? '')));
@@ -166,21 +169,19 @@ readonly class DirectoryService
                 $seenEmails[] = $email;
                 return true;
             })
-            ->map(fn (array $row) => $this->prospectRepository->create([
-                'directory_id' => $directory->id,
+            ->map(fn (array $row) => [
                 'name' => $row['name'],
                 'website' => $row['website'] ?? null,
                 'email' => $row['email'],
-            ]))
+            ])
             ->values();
 
         return [
             'requested' => $count,
-            'created_count' => $created->count(),
             'skipped_duplicate_count' => $skippedDuplicate,
             'skipped_unreachable_count' => $skippedUnreachable,
             'skipped_incomplete_count' => $skippedIncomplete,
-            'prospects' => $created,
+            'candidates' => $candidates,
         ];
     }
 
@@ -207,9 +208,7 @@ readonly class DirectoryService
 
         $count = max(1, min(20, $count));
 
-        $product = $directory->product;
-        $query = trim($directory->prompt . ($product?->name ? " {$product->name}" : ''))
-            . ' site:linkedin.com/in';
+        $query = trim($directory->prompt) . ' site:linkedin.com/in';
 
         $results = $this->profileSearch->search($query, $count);
 
@@ -257,8 +256,7 @@ readonly class DirectoryService
 
         $count = max(1, min(20, $count));
 
-        $product = $directory->product;
-        $query = trim($directory->prompt . ($product?->name ? " {$product->name}" : ''));
+        $query = trim($directory->prompt);
 
         $results = $this->companySearch->search($query, $count);
 
