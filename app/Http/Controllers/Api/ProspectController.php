@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\EmailNotFoundException;
 use App\Http\Controllers\Controller;
 use App\Services\ProspectService;
 use Exception;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 class ProspectController extends Controller
 {
@@ -69,6 +71,12 @@ class ProspectController extends Controller
      */
     public function findEmail(string $id)
     {
-        return $this->prospectService->findEmail((int) $id);
+        try {
+            return $this->prospectService->findEmail((int) $id);
+        } catch (EmailNotFoundException $e) {
+            return response()->json(['message' => $e->getMessage()], 404);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 }

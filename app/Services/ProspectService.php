@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\EmailNotFoundException;
 use App\Models\Directory;
 use App\Models\Prospect;
 use App\Models\ProspectAction;
@@ -10,6 +11,7 @@ use App\Repositories\ProspectRepository;
 use App\Services\EmailFinder\EmailFinderInterface;
 use Exception;
 use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 readonly class ProspectService
 {
@@ -109,7 +111,11 @@ readonly class ProspectService
      * Best-effort scrape of the prospect's own website for a contact email —
      * a fallback for when AI generation/search didn't turn one up.
      *
-     * @throws Exception
+     * @throws InvalidArgumentException if the prospect has no website to search
+     * @throws EmailNotFoundException if the search turned up nothing — an
+     *     expected, common outcome, not a failure, so it's a distinct type
+     *     the controller maps to 404 instead of a generic 500
+     * @throws Exception on any other failure (permissions, AI/API errors, ...)
      */
     public function findEmail(int $id): Prospect
     {
@@ -117,12 +123,12 @@ readonly class ProspectService
         $this->checkPerms($prospect);
 
         if (empty($prospect->website)) {
-            throw new Exception('This prospect has no website to search');
+            throw new InvalidArgumentException('This prospect has no website to search');
         }
 
         $email = $this->emailFinder->find($prospect->website);
         if (!$email) {
-            throw new Exception('Could not find an email on this website');
+            throw new EmailNotFoundException('Could not find an email on this website');
         }
 
         return $this->prospectRepository->update($prospect, ['email' => $email]);

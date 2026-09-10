@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Directory;
 use App\Models\Prospect;
 use App\Models\User;
+use App\Services\EmailFinder\EmailFinderInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -73,7 +74,29 @@ class ProspectTest extends TestCase
             'email' => null,
         ]);
 
-        $this->postJson("/api/prospects/{$prospect->id}/find-email")->assertServerError();
+        $this->postJson("/api/prospects/{$prospect->id}/find-email")->assertStatus(422);
+        $this->assertNull($prospect->fresh()->email);
+    }
+
+    public function test_find_email_returns_404_when_nothing_is_found(): void
+    {
+        $this->app->bind(EmailFinderInterface::class, fn () => new class implements EmailFinderInterface {
+            public function find(string $url): ?string
+            {
+                return null;
+            }
+        });
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $directory = Directory::factory()->create(['team_id' => $user->currentTeam->id]);
+        $prospect = Prospect::factory()->create([
+            'directory_id' => $directory->id,
+            'website' => 'https://www.acme.example.com',
+            'email' => null,
+        ]);
+
+        $this->postJson("/api/prospects/{$prospect->id}/find-email")->assertStatus(404);
         $this->assertNull($prospect->fresh()->email);
     }
 
