@@ -5,7 +5,6 @@ import {format} from "date-fns";
 import {Link, usePage} from "@inertiajs/vue3";
 import InProgressIcon from "@/Components/InProgressIcon.vue";
 import FlagSwatches from "@/Components/FlagSwatches.vue";
-import FlagMultiSelect from "@/Components/FlagMultiSelect.vue";
 import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 import {ref, watch} from "vue";
@@ -82,6 +81,13 @@ const taskHasFlag = (task, flag) => {
         return false;
     }
     return task.flags.some(f => f.id === flag.id);
+}
+
+const toggleEditFlag = (flagId) => {
+    if (props.task.completed_at !== null) return;
+    editFlagIds.value = editFlagIds.value.includes(flagId)
+        ? editFlagIds.value.filter(id => id !== flagId)
+        : [...editFlagIds.value, flagId];
 }
 
 const addFlag = (task, flag) => {
@@ -287,8 +293,18 @@ watch(editFlagIds, (next, prev) => {
                     <div class="rounded-xl bg-brand-surface ring-1 ring-slate-900/[0.05] p-3">
                         <div class="text-xs font-medium text-gray-500 mb-2">Flags</div>
                         <template v-if="allFlags.length > 0">
-                            <div class="flex items-center justify-between gap-2">
-                                <FlagMultiSelect v-model="editFlagIds" :all-flags="allFlags" :disabled="task.completed_at !== null"/>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button v-for="flag in allFlags" :key="flag.id"
+                                        type="button" @click="toggleEditFlag(flag.id)"
+                                        :disabled="task.completed_at !== null"
+                                        class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                        :class="editFlagIds.includes(flag.id)
+                                            ? 'bg-brand-navy text-white ring-brand-navy'
+                                            : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                                    <span class="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
+                                          :style="{ backgroundColor: flag.color }"/>
+                                    <span class="truncate max-w-48">{{ flag.name }}</span>
+                                </button>
                                 <Link :href="route('flags')"
                                       class="text-sm text-brand-accent-dark hover:text-brand-accent underline">
                                     Update your flags

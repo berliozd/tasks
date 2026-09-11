@@ -54,6 +54,24 @@ const visibleGroups = computed(() => groups.value
 
 const stageBgStyle = (color) => ({backgroundColor: `${color}1a`, color});
 
+// --- Search ---
+
+const searchQuery = ref('');
+
+const matchesSearch = (need) => {
+    const query = searchQuery.value.trim().toLowerCase();
+    if (!query) return true;
+    return (need.title ?? '').toLowerCase().includes(query)
+        || (need.description ?? '').toLowerCase().includes(query);
+}
+
+const visibleNeeds = (stageId) => (needsByStage[stageId] ?? []).filter(matchesSearch);
+
+// --- Presentation mode ---
+
+const presentationMode = ref(false);
+const togglePresentationMode = () => presentationMode.value = !presentationMode.value;
+
 const refreshStages = () => axios.get(route('need-stage-groups.index')).then(response => {
     groups.value = response.data;
     allStages.value.forEach(s => ensureBucket(s.id));
@@ -110,6 +128,7 @@ const draggingFromStage = ref(null);
 const justDragged = ref(false);
 
 const onDragStart = (need) => {
+    if (presentationMode.value) return;
     draggingId.value = need.id;
     draggingFromStage.value = need.need_stage_id;
 }
@@ -130,6 +149,7 @@ const persistDrop = (id, fromStageId, targetStageId) => {
 }
 
 const onDropOnCard = (targetStageId, targetNeed) => {
+    if (presentationMode.value) return;
     const id = draggingId.value;
     const fromStageId = draggingFromStage.value;
     draggingId.value = null;
@@ -151,6 +171,7 @@ const onDropOnCard = (targetStageId, targetNeed) => {
 }
 
 const onDropOnColumn = (targetStageId) => {
+    if (presentationMode.value) return;
     const id = draggingId.value;
     const fromStageId = draggingFromStage.value;
     draggingId.value = null;
@@ -187,7 +208,7 @@ const cleanDetail = (n) => JSON.stringify({
 });
 
 const openNeed = (need) => {
-    if (justDragged.value) return;
+    if (justDragged.value || presentationMode.value) return;
     confirmingDelete.value = false;
     newNote.value = '';
     watchDetailActive = false;
@@ -300,47 +321,85 @@ refreshStages().then(refreshBoard);
 
 <template>
     <Head title="Needs"/>
-    <AppLayout title="Needs">
+    <AppLayout title="Needs" :fullscreen="presentationMode">
         <template #header>
             <div class="flex items-center gap-4">
                 <h2 class="font-semibold text-xl leading-tight text-slate-900">Needs</h2>
-                <button type="button" @click="openManageModal" title="Manage pipeline"
-                        class="ml-auto shrink-0 inline-flex items-center justify-center size-10 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 transition">
+                <button type="button" @click="togglePresentationMode"
+                        :title="presentationMode ? 'Exit presentation view' : 'Presentation view'"
+                        class="ml-auto shrink-0 inline-flex items-center justify-center size-10 rounded-full border transition"
+                        :class="presentationMode
+                            ? 'border-brand-accent bg-brand-accent/10 text-brand-accent-dark'
+                            : 'border-gray-300 text-gray-500 hover:bg-gray-100'">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
                         <circle cx="12" cy="12" r="3"/>
                     </svg>
                 </button>
-                <button type="button" @click="openAddModal" title="Add a need"
-                        class="shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
-                    +
-                </button>
+                <template v-if="!presentationMode">
+                    <button type="button" @click="openManageModal" title="Manage pipeline"
+                            class="shrink-0 inline-flex items-center justify-center size-10 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                    <button type="button" @click="openAddModal" title="Add a need"
+                            class="shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                        +
+                    </button>
+                </template>
             </div>
         </template>
 
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col gap-4">
-            <div class="surface-card p-3 flex flex-col gap-1.5">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs text-gray-500">Filter by stage</span>
-                    <button v-if="stageFilters.length" type="button" @click="stageFilters = []"
-                            class="text-xs text-gray-400 hover:text-gray-600 underline">
-                        Clear
-                    </button>
+        <button v-if="presentationMode" type="button" @click="togglePresentationMode"
+                title="Exit presentation view"
+                class="fixed top-4 right-4 z-50 inline-flex items-center justify-center size-10 rounded-full border border-brand-accent bg-white shadow-card-hover text-brand-accent-dark hover:bg-brand-accent/10 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18"/>
+                <path d="M6 6l12 12"/>
+            </svg>
+        </button>
+
+        <div class="flex flex-col gap-4"
+             :class="presentationMode ? 'w-full px-4 pt-4' : 'max-w-7xl mx-auto sm:px-6 lg:px-8'">
+            <div v-if="!presentationMode" class="surface-card p-3 flex flex-col gap-3">
+                <div class="relative">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400"
+                         xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.3-4.3"/>
+                    </svg>
+                    <input type="text" v-model="searchQuery" placeholder="Search needs…"
+                           class="h-10 pl-9 pr-3 text-sm rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
                 </div>
-                <div v-for="group in groups" :key="group.id" class="flex flex-wrap items-center gap-1">
-                    <button type="button" @click="toggleGroupFilter(group)"
-                            class="text-[10px] font-semibold uppercase tracking-wider w-36 shrink-0 text-left transition"
-                            :class="isGroupFilterActive(group) ? 'text-brand-accent-dark underline' : 'text-gray-400 hover:text-gray-600'">
-                        {{ group.label }}
-                    </button>
-                    <button v-for="stage in group.stages" :key="stage.id"
-                            type="button" @click="toggleStageFilter(stage.id)"
-                            class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                            :style="stageBgStyle(stage.color)"
-                            :class="stageFilters.includes(stage.id) ? 'ring-1 ring-current' : 'opacity-40 hover:opacity-70'">
-                        {{ stage.label }} ({{ (needsByStage[stage.id] ?? []).length }})
-                    </button>
+
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">Filter by stage</span>
+                        <button v-if="stageFilters.length" type="button" @click="stageFilters = []"
+                                class="text-xs text-gray-400 hover:text-gray-600 underline">
+                            Clear
+                        </button>
+                    </div>
+                    <div v-for="group in groups" :key="group.id" class="flex flex-wrap items-center gap-1">
+                        <button type="button" @click="toggleGroupFilter(group)"
+                                class="text-[10px] font-semibold uppercase tracking-wider w-36 shrink-0 text-left transition"
+                                :class="isGroupFilterActive(group) ? 'text-brand-accent-dark underline' : 'text-gray-400 hover:text-gray-600'">
+                            {{ group.label }}
+                        </button>
+                        <button v-for="stage in group.stages" :key="stage.id"
+                                type="button" @click="toggleStageFilter(stage.id)"
+                                class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                :style="stageBgStyle(stage.color)"
+                                :class="stageFilters.includes(stage.id) ? 'ring-1 ring-current' : 'opacity-40 hover:opacity-70'">
+                            {{ stage.label }} ({{ (needsByStage[stage.id] ?? []).length }})
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -352,27 +411,33 @@ refreshStages().then(refreshBoard);
                         <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1">
                             {{ group.label }}
                         </div>
-                        <div class="flex gap-4 overflow-x-auto pb-2">
+                        <div class="flex overflow-x-auto pb-2 gap-4">
                             <div v-for="stage in group.stages" :key="stage.id"
-                                 class="shrink-0 w-72 flex flex-col rounded-xl bg-brand-surface border border-t-4"
+                                 class="shrink-0 flex flex-col rounded-xl bg-brand-surface border border-t-4 w-72"
                                  :style="{borderColor: stage.color}">
-                                <div class="p-3 flex items-center justify-between border-b border-gray-200">
-                                    <div class="text-xs font-semibold uppercase tracking-wide" :style="{color: stage.color}">
+                                <div class="flex items-center justify-between border-b border-gray-200 p-3">
+                                    <div class="font-semibold uppercase tracking-wide text-xs"
+                                         :style="{color: stage.color}">
                                         {{ stage.label }}
                                     </div>
-                                    <span class="text-xs text-gray-400">{{ (needsByStage[stage.id] ?? []).length }}</span>
+                                    <span class="text-xs text-gray-400">{{ visibleNeeds(stage.id).length }}</span>
                                 </div>
 
-                                <div class="flex-1 flex flex-col gap-2 p-2 min-h-[4rem]"
+                                <div class="flex-1 flex flex-col min-h-[4rem] gap-2 p-2"
                                      @dragover.prevent @drop="onDropOnColumn(stage.id)">
-                                    <div v-for="need in (needsByStage[stage.id] ?? [])" :key="need.id"
-                                         draggable="true" @dragstart="onDragStart(need)"
+                                    <div v-for="need in visibleNeeds(stage.id)" :key="need.id"
+                                         :draggable="!presentationMode" @dragstart="onDragStart(need)"
                                          @dragover.prevent @drop.stop="onDropOnCard(stage.id, need)"
                                          @click="openNeed(need)"
-                                         class="surface-card p-3 cursor-pointer hover:ring-1 hover:ring-brand-accent transition">
-                                        <div class="text-sm font-medium text-gray-900">{{ need.title }}</div>
-                                        <div v-if="need.business_owner" class="text-xs text-gray-400 mt-1">{{ need.business_owner }}</div>
-                                        <div v-if="need.jira_key || need.jira_url || need.confluence_url" class="flex flex-wrap gap-1 mt-2">
+                                         class="surface-card transition p-3"
+                                         :class="presentationMode ? '' : 'cursor-pointer hover:ring-1 hover:ring-brand-accent'">
+                                        <div class="font-medium text-gray-900 text-sm">
+                                            {{ need.title }}
+                                        </div>
+                                        <div v-if="need.business_owner" class="text-gray-400 mt-1 text-xs">
+                                            {{ need.business_owner }}
+                                        </div>
+                                        <div v-if="!presentationMode && (need.jira_key || need.jira_url || need.confluence_url)" class="flex flex-wrap gap-1 mt-2">
                                             <a v-if="need.jira_url" :href="need.jira_url" target="_blank" rel="noopener" @click.stop
                                                :title="need.jira_key || 'Jira ticket'"
                                                class="inline-flex items-center justify-center size-6 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">

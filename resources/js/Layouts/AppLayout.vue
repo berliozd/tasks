@@ -11,6 +11,7 @@ import {useIdleRedirect} from '@/Composables/useIdleRedirect';
 
 defineProps({
     title: String,
+    fullscreen: {type: Boolean, default: false},
 });
 
 const showingNavigationDropdown = ref(false);
@@ -67,7 +68,7 @@ Echo.private('my-private-channel')
         <Banner/>
 
         <div class="min-h-screen">
-            <nav class="sticky top-0 z-30 bg-gradient-to-r from-brand-navy to-brand-navy-light shadow-md text-slate-100">
+            <nav v-if="!fullscreen" class="sticky top-0 z-30 bg-gradient-to-r from-brand-navy to-brand-navy-light shadow-md text-slate-100">
                 <!-- Primary Navigation Menu -->
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex justify-between h-16">
@@ -373,7 +374,7 @@ Echo.private('my-private-channel')
             </nav>
 
             <!-- Page Heading -->
-            <header v-if="$slots.header" class="bg-white/80 backdrop-blur border-b border-slate-900/5 shadow-soft">
+            <header v-if="$slots.header && !fullscreen" class="bg-white/80 backdrop-blur border-b border-slate-900/5 shadow-soft">
                 <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex items-center gap-2">
                     <button type="button" @click="goBack" title="Go back"
                             class="shrink-0 inline-flex items-center justify-center size-8 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition">
@@ -389,7 +390,7 @@ Echo.private('my-private-channel')
             </header>
 
             <!-- Page Content -->
-            <main class="py-6">
+            <main :class="fullscreen ? '' : 'py-6'">
                 <slot/>
             </main>
         </div>
