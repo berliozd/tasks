@@ -2,27 +2,26 @@
 
 namespace Database\Factories;
 
-use App\Models\NeedStage;
+use App\Models\NeedStageGroup;
 use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Need>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\NeedStage>
  */
-class NeedFactory extends Factory
+class NeedStageFactory extends Factory
 {
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
     {
         return [
-            'title' => $this->faker->sentence(4),
+            'label' => $this->faker->word(),
+            'color' => $this->faker->hexColor(),
             'position' => 0,
             'team_id' => Team::factory(),
-            'need_stage_id' => fn (array $attributes) => NeedStage::factory()
+            'need_stage_group_id' => fn (array $attributes) => NeedStageGroup::factory()
                 ->create(['team_id' => $attributes['team_id']])->id,
         ];
     }

@@ -132,4 +132,26 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/needs/{id}/stage', [App\Http\Controllers\Api\NeedController::class, 'moveStage'])->name('needs.stage');
     Route::post('/needs/{id}/notes', [App\Http\Controllers\Api\NeedController::class, 'addNote'])->name('needs.notes.store');
     Route::delete('/needs/{id}', [App\Http\Controllers\Api\NeedController::class, 'destroy'])->name('needs.destroy');
+
+    Route::get('/need-stage-groups', [App\Http\Controllers\Api\NeedStageController::class, 'index'])
+        ->name('need-stage-groups.index');
+    Route::post('/need-stage-groups', [App\Http\Controllers\Api\NeedStageController::class, 'storeGroup'])
+        ->name('need-stage-groups.store');
+    Route::post('/need-stage-groups/reorder', [App\Http\Controllers\Api\NeedStageController::class, 'reorderGroups'])
+        ->name('need-stage-groups.reorder');
+    Route::patch('/need-stage-groups/{id}', [App\Http\Controllers\Api\NeedStageController::class, 'updateGroup'])
+        ->name('need-stage-groups.update');
+    Route::delete('/need-stage-groups/{id}', [App\Http\Controllers\Api\NeedStageController::class, 'destroyGroup'])
+        ->name('need-stage-groups.destroy');
+
+    Route::post('/need-stages', [App\Http\Controllers\Api\NeedStageController::class, 'storeStage'])
+        ->name('need-stages.store');
+    Route::post('/need-stages/reorder', [App\Http\Controllers\Api\NeedStageController::class, 'reorderStages'])
+        ->name('need-stages.reorder');
+    Route::patch('/need-stages/{id}', [App\Http\Controllers\Api\NeedStageController::class, 'updateStage'])
+        ->name('need-stages.update');
+    Route::patch('/need-stages/{id}/move', [App\Http\Controllers\Api\NeedStageController::class, 'moveStage'])
+        ->name('need-stages.move');
+    Route::delete('/need-stages/{id}', [App\Http\Controllers\Api\NeedStageController::class, 'destroyStage'])
+        ->name('need-stages.destroy');
 });

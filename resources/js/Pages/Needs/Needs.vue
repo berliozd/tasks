@@ -9,86 +9,72 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import SaveButton from '@/Components/SaveButton.vue';
+import ManagePipelineModal from '@/Pages/Needs/Partials/ManagePipelineModal.vue';
 import {useStore} from '@/Composables/store.js';
 
-// Mirrors App\Models\Need::STAGES / STAGE_LABELS.
-const STAGES = [
-    {key: 'discovery', label: 'Discovery'},
-    {key: 'documented', label: 'Documented'},
-    {key: 'jira_created', label: 'Jira ticket created'},
-    {key: 'validated', label: 'Validated with business'},
-    {key: 'grooming', label: 'Grooming'},
-    {key: 'todo', label: 'To do'},
-    {key: 'dev', label: 'Dev'},
-    {key: 'qa', label: 'QA'},
-    {key: 'soon', label: 'Coming soon'},
-    {key: 'prod', label: 'In production'},
-];
-
-// One distinct color per stage, reused for the filter pills, column headers,
-// and the stage badge shown elsewhere (e.g. Dashboard.vue). `border` colors
-// all four sides — the column's own static classes only ever set border
-// WIDTH (never a color), so there's no competing color class to tie with.
-const STAGE_COLORS = {
-    discovery: {bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-400'},
-    documented: {bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-400'},
-    jira_created: {bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-400'},
-    validated: {bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-400'},
-    grooming: {bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-400'},
-    todo: {bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-400'},
-    dev: {bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-400'},
-    qa: {bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-400'},
-    soon: {bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-400'},
-    prod: {bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-400'},
-};
-
 const loading = ref(true);
-const needsByStage = reactive(Object.fromEntries(STAGES.map(s => [s.key, []])));
+const groups = ref([]); // [{id, label, position, stages: [{id, label, color, position, need_stage_group_id}]}]
+const needsByStage = reactive({}); // stage id -> Need[]
+
+const allStages = computed(() => groups.value.flatMap(g => g.stages));
+const stagesById = computed(() => Object.fromEntries(allStages.value.map(s => [s.id, s])));
+
+const ensureBucket = (stageId) => {
+    if (!needsByStage[stageId]) needsByStage[stageId] = [];
+}
 
 // Cumulative (OR) multi-select — empty means every stage is shown.
 const stageFilters = ref([]);
 
-const toggleStageFilter = (key) => {
-    stageFilters.value = stageFilters.value.includes(key)
-        ? stageFilters.value.filter(k => k !== key)
-        : [...stageFilters.value, key];
+const toggleStageFilter = (stageId) => {
+    stageFilters.value = stageFilters.value.includes(stageId)
+        ? stageFilters.value.filter(id => id !== stageId)
+        : [...stageFilters.value, stageId];
 }
 
-const isGroupFilterActive = (group) => group.keys.every(k => stageFilters.value.includes(k));
+const isGroupFilterActive = (group) => group.stages.length > 0
+    && group.stages.every(s => stageFilters.value.includes(s.id));
 
 // Toggles every stage in the group at once — cumulative with individual
 // stage toggles, so a group filter can be combined with other selections.
 const toggleGroupFilter = (group) => {
+    const ids = group.stages.map(s => s.id);
     stageFilters.value = isGroupFilterActive(group)
-        ? stageFilters.value.filter(k => !group.keys.includes(k))
-        : [...new Set([...stageFilters.value, ...group.keys])];
+        ? stageFilters.value.filter(id => !ids.includes(id))
+        : [...new Set([...stageFilters.value, ...ids])];
 }
 
-const visibleStages = computed(() => STAGES.filter(
-    s => !stageFilters.value.length || stageFilters.value.includes(s.key),
+const visibleStages = computed(() => allStages.value.filter(
+    s => !stageFilters.value.length || stageFilters.value.includes(s.id),
 ));
 
-// Groups the pipeline into the three phases relative to the dev/build/test
-// pipeline itself: everything upstream of it, inside it, and downstream of
-// it (release/deployment).
-const STAGE_GROUPS = [
-    {label: 'Before Dev Pipeline', keys: ['discovery', 'documented', 'jira_created', 'validated']},
-    {label: 'In Dev Pipeline', keys: ['grooming', 'todo', 'dev', 'qa']},
-    {label: 'After Dev Pipeline', keys: ['soon', 'prod']},
-];
-
-const visibleGroups = computed(() => STAGE_GROUPS
-    .map(group => ({...group, stages: visibleStages.value.filter(s => group.keys.includes(s.key))}))
+const visibleGroups = computed(() => groups.value
+    .map(group => ({...group, stages: group.stages.filter(s => visibleStages.value.includes(s))}))
     .filter(group => group.stages.length));
+
+const stageBgStyle = (color) => ({backgroundColor: `${color}1a`, color});
+
+const refreshStages = () => axios.get(route('need-stage-groups.index')).then(response => {
+    groups.value = response.data;
+    allStages.value.forEach(s => ensureBucket(s.id));
+});
 
 const refreshBoard = () => {
     loading.value = true;
-    axios.get(route('needs.index')).then(response => {
-        STAGES.forEach(s => needsByStage[s.key] = []);
+    return axios.get(route('needs.index')).then(response => {
+        Object.keys(needsByStage).forEach(id => needsByStage[id] = []);
         response.data.forEach(need => {
-            (needsByStage[need.stage] ?? needsByStage.discovery).push(need);
+            ensureBucket(need.need_stage_id);
+            needsByStage[need.need_stage_id].push(need);
         });
     }).finally(() => loading.value = false);
+}
+
+const showManageModal = ref(false);
+const openManageModal = () => showManageModal.value = true;
+const closeManageModal = () => {
+    showManageModal.value = false;
+    refreshStages().then(refreshBoard);
 }
 
 const showAddModal = ref(false);
@@ -111,7 +97,8 @@ const addNeed = () => {
     if (!title) return;
     creating.value = true;
     axios.post(route('needs.store'), {title, description: newNeedDescription.value.trim() || null}).then(response => {
-        needsByStage.discovery.push(response.data);
+        ensureBucket(response.data.need_stage_id);
+        needsByStage[response.data.need_stage_id].push(response.data);
         showAddModal.value = false;
     }).finally(() => creating.value = false);
 }
@@ -124,17 +111,17 @@ const justDragged = ref(false);
 
 const onDragStart = (need) => {
     draggingId.value = need.id;
-    draggingFromStage.value = need.stage;
+    draggingFromStage.value = need.need_stage_id;
 }
 
-const persistDrop = (id, fromStage, targetStage) => {
-    const changedStage = fromStage !== targetStage;
-    const ids = needsByStage[targetStage].map(n => n.id);
+const persistDrop = (id, fromStageId, targetStageId) => {
+    const changedStage = fromStageId !== targetStageId;
+    const ids = needsByStage[targetStageId].map(n => n.id);
     const request = changedStage
-        ? axios.patch(route('needs.stage', id), {stage: targetStage})
+        ? axios.patch(route('needs.stage', id), {stage_id: targetStageId})
         : Promise.resolve();
     request
-        .then(() => axios.post(route('needs.reorder'), {stage: targetStage, ids}))
+        .then(() => axios.post(route('needs.reorder'), {stage_id: targetStageId, ids}))
         .catch(() => refreshBoard())
         .finally(() => {
             justDragged.value = true;
@@ -142,42 +129,42 @@ const persistDrop = (id, fromStage, targetStage) => {
         });
 }
 
-const onDropOnCard = (targetStage, targetNeed) => {
+const onDropOnCard = (targetStageId, targetNeed) => {
     const id = draggingId.value;
-    const fromStage = draggingFromStage.value;
+    const fromStageId = draggingFromStage.value;
     draggingId.value = null;
     draggingFromStage.value = null;
-    if (id === null || fromStage === null) return;
+    if (id === null || fromStageId === null) return;
 
-    const fromArr = needsByStage[fromStage];
+    const fromArr = needsByStage[fromStageId];
     const fromIndex = fromArr.findIndex(n => n.id === id);
     if (fromIndex === -1) return;
     const [moved] = fromArr.splice(fromIndex, 1);
-    moved.stage = targetStage;
+    moved.need_stage_id = targetStageId;
 
-    const toArr = needsByStage[targetStage];
+    const toArr = needsByStage[targetStageId];
     let toIndex = toArr.findIndex(n => n.id === targetNeed.id);
     if (toIndex === -1) toIndex = toArr.length;
     toArr.splice(toIndex, 0, moved);
 
-    persistDrop(id, fromStage, targetStage);
+    persistDrop(id, fromStageId, targetStageId);
 }
 
-const onDropOnColumn = (targetStage) => {
+const onDropOnColumn = (targetStageId) => {
     const id = draggingId.value;
-    const fromStage = draggingFromStage.value;
+    const fromStageId = draggingFromStage.value;
     draggingId.value = null;
     draggingFromStage.value = null;
-    if (id === null || fromStage === null) return;
+    if (id === null || fromStageId === null) return;
 
-    const fromArr = needsByStage[fromStage];
+    const fromArr = needsByStage[fromStageId];
     const fromIndex = fromArr.findIndex(n => n.id === id);
     if (fromIndex === -1) return;
     const [moved] = fromArr.splice(fromIndex, 1);
-    moved.stage = targetStage;
-    needsByStage[targetStage].push(moved);
+    moved.need_stage_id = targetStageId;
+    needsByStage[targetStageId].push(moved);
 
-    persistDrop(id, fromStage, targetStage);
+    persistDrop(id, fromStageId, targetStageId);
 }
 
 // --- Detail modal ---
@@ -232,7 +219,7 @@ const updateDetail = () => {
     }).then(() => {
         detailSnapshot = cleanDetail(selectedNeed.value);
         // Keep the board card in sync without a full refetch.
-        const card = needsByStage[selectedNeed.value.stage]?.find(n => n.id === selectedNeed.value.id);
+        const card = needsByStage[selectedNeed.value.need_stage_id]?.find(n => n.id === selectedNeed.value.id);
         if (card) {
             card.title = selectedNeed.value.title;
             card.business_owner = selectedNeed.value.business_owner;
@@ -258,18 +245,19 @@ watch(() => selectedNeed.value && [
 });
 
 const changeStageFromModal = (event) => {
-    const stage = event.target.value;
-    if (!selectedNeed.value || stage === selectedNeed.value.stage) return;
-    const fromStage = selectedNeed.value.stage;
-    axios.patch(route('needs.stage', selectedNeed.value.id), {stage}).then(() => {
-        const arr = needsByStage[fromStage];
+    const stageId = Number(event.target.value);
+    if (!selectedNeed.value || stageId === selectedNeed.value.need_stage_id) return;
+    const fromStageId = selectedNeed.value.need_stage_id;
+    axios.patch(route('needs.stage', selectedNeed.value.id), {stage_id: stageId}).then(() => {
+        const arr = needsByStage[fromStageId];
         const idx = arr.findIndex(n => n.id === selectedNeed.value.id);
         if (idx !== -1) {
             const [moved] = arr.splice(idx, 1);
-            moved.stage = stage;
-            needsByStage[stage].push(moved);
+            moved.need_stage_id = stageId;
+            ensureBucket(stageId);
+            needsByStage[stageId].push(moved);
         }
-        selectedNeed.value.stage = stage;
+        selectedNeed.value.need_stage_id = stageId;
         return axios.get(route('needs.show', selectedNeed.value.id));
     }).then(response => {
         selectedNeed.value.activities = response.data.activities;
@@ -289,26 +277,25 @@ const addNote = () => {
 const deleteNeed = () => {
     if (!selectedNeed.value) return;
     const id = selectedNeed.value.id;
-    const stage = selectedNeed.value.stage;
+    const stageId = selectedNeed.value.need_stage_id;
     axios.delete(route('needs.destroy', id)).then(() => {
-        needsByStage[stage] = needsByStage[stage].filter(n => n.id !== id);
+        needsByStage[stageId] = needsByStage[stageId].filter(n => n.id !== id);
         useStore().setSaved('Need deleted');
         closeDetail();
     });
 }
 
-const stageLabel = (key) => STAGES.find(s => s.key === key)?.label ?? key;
 const formatDate = (date) => date ? format(new Date(date), 'MMM d, yyyy HH:mm') : '';
 
 const activityText = computed(() => (activity) => {
     if (activity.type === 'created') return 'Need created';
     if (activity.type === 'stage_changed') {
-        return `Moved from "${stageLabel(activity.from_stage)}" to "${stageLabel(activity.to_stage)}"`;
+        return `Moved from "${activity.from_stage}" to "${activity.to_stage}"`;
     }
     return activity.note;
 });
 
-refreshBoard();
+refreshStages().then(refreshBoard);
 </script>
 
 <template>
@@ -317,8 +304,16 @@ refreshBoard();
         <template #header>
             <div class="flex items-center gap-4">
                 <h2 class="font-semibold text-xl leading-tight text-slate-900">Needs</h2>
+                <button type="button" @click="openManageModal" title="Manage pipeline"
+                        class="ml-auto shrink-0 inline-flex items-center justify-center size-10 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                </button>
                 <button type="button" @click="openAddModal" title="Add a need"
-                        class="ml-auto shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
+                        class="shrink-0 inline-flex items-center justify-center size-12 rounded-full bg-brand-accent text-white text-3xl leading-none hover:bg-brand-accent-dark active:scale-95 transition">
                     +
                 </button>
             </div>
@@ -333,80 +328,80 @@ refreshBoard();
                         Clear
                     </button>
                 </div>
-                <div v-for="group in STAGE_GROUPS" :key="group.label" class="flex flex-wrap items-center gap-1">
+                <div v-for="group in groups" :key="group.id" class="flex flex-wrap items-center gap-1">
                     <button type="button" @click="toggleGroupFilter(group)"
                             class="text-[10px] font-semibold uppercase tracking-wider w-36 shrink-0 text-left transition"
                             :class="isGroupFilterActive(group) ? 'text-brand-accent-dark underline' : 'text-gray-400 hover:text-gray-600'">
                         {{ group.label }}
                     </button>
-                    <button v-for="stage in STAGES.filter(s => group.keys.includes(s.key))" :key="stage.key"
-                            type="button" @click="toggleStageFilter(stage.key)"
+                    <button v-for="stage in group.stages" :key="stage.id"
+                            type="button" @click="toggleStageFilter(stage.id)"
                             class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                            :class="[STAGE_COLORS[stage.key].bg, STAGE_COLORS[stage.key].text,
-                                     stageFilters.includes(stage.key) ? 'ring-1 ring-current' : 'opacity-40 hover:opacity-70']">
-                        {{ stage.label }} ({{ needsByStage[stage.key].length }})
+                            :style="stageBgStyle(stage.color)"
+                            :class="stageFilters.includes(stage.id) ? 'ring-1 ring-current' : 'opacity-40 hover:opacity-70'">
+                        {{ stage.label }} ({{ (needsByStage[stage.id] ?? []).length }})
                     </button>
                 </div>
             </div>
 
             <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
             <div v-else class="flex flex-col gap-6">
-                <template v-for="(group, groupIndex) in visibleGroups" :key="group.label">
+                <template v-for="(group, groupIndex) in visibleGroups" :key="group.id">
                     <div v-if="groupIndex > 0" class="h-px bg-gray-200"/>
                     <div class="flex flex-col gap-2">
                         <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1">
                             {{ group.label }}
                         </div>
                         <div class="flex gap-4 overflow-x-auto pb-2">
-                            <div v-for="stage in group.stages" :key="stage.key"
+                            <div v-for="stage in group.stages" :key="stage.id"
                                  class="shrink-0 w-72 flex flex-col rounded-xl bg-brand-surface border border-t-4"
-                                 :class="STAGE_COLORS[stage.key].border">
+                                 :style="{borderColor: stage.color}">
                                 <div class="p-3 flex items-center justify-between border-b border-gray-200">
-                                    <div class="text-xs font-semibold uppercase tracking-wide" :class="STAGE_COLORS[stage.key].text">
+                                    <div class="text-xs font-semibold uppercase tracking-wide" :style="{color: stage.color}">
                                         {{ stage.label }}
                                     </div>
-                                    <span class="text-xs text-gray-400">{{ needsByStage[stage.key].length }}</span>
+                                    <span class="text-xs text-gray-400">{{ (needsByStage[stage.id] ?? []).length }}</span>
                                 </div>
 
                                 <div class="flex-1 flex flex-col gap-2 p-2 min-h-[4rem]"
-                         @dragover.prevent @drop="onDropOnColumn(stage.key)">
-                        <div v-for="need in needsByStage[stage.key]" :key="need.id"
-                             draggable="true" @dragstart="onDragStart(need)"
-                             @dragover.prevent @drop.stop="onDropOnCard(stage.key, need)"
-                             @click="openNeed(need)"
-                             class="surface-card p-3 cursor-pointer hover:ring-1 hover:ring-brand-accent transition">
-                            <div class="text-sm font-medium text-gray-900">{{ need.title }}</div>
-                            <div v-if="need.business_owner" class="text-xs text-gray-400 mt-1">{{ need.business_owner }}</div>
-                            <div v-if="need.jira_key || need.jira_url || need.confluence_url" class="flex flex-wrap gap-1 mt-2">
-                                <a v-if="need.jira_url" :href="need.jira_url" target="_blank" rel="noopener" @click.stop
-                                   :title="need.jira_key || 'Jira ticket'"
-                                   class="inline-flex items-center justify-center size-6 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/>
-                                        <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
-                                    </svg>
-                                </a>
-                                <span v-else-if="need.jira_key" :title="need.jira_key"
-                                      class="inline-flex items-center justify-center size-6 rounded-full bg-blue-50 text-blue-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/>
-                                        <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
-                                    </svg>
-                                </span>
-                                <a v-if="need.confluence_url" :href="need.confluence_url" target="_blank" rel="noopener" @click.stop
-                                   title="Confluence page"
-                                   class="inline-flex items-center justify-center size-6 rounded-full bg-brand-accent/10 text-brand-accent-dark hover:bg-brand-accent/20 transition">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 7v14"/>
-                                        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
-                                    </svg>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                                     @dragover.prevent @drop="onDropOnColumn(stage.id)">
+                                    <div v-for="need in (needsByStage[stage.id] ?? [])" :key="need.id"
+                                         draggable="true" @dragstart="onDragStart(need)"
+                                         @dragover.prevent @drop.stop="onDropOnCard(stage.id, need)"
+                                         @click="openNeed(need)"
+                                         class="surface-card p-3 cursor-pointer hover:ring-1 hover:ring-brand-accent transition">
+                                        <div class="text-sm font-medium text-gray-900">{{ need.title }}</div>
+                                        <div v-if="need.business_owner" class="text-xs text-gray-400 mt-1">{{ need.business_owner }}</div>
+                                        <div v-if="need.jira_key || need.jira_url || need.confluence_url" class="flex flex-wrap gap-1 mt-2">
+                                            <a v-if="need.jira_url" :href="need.jira_url" target="_blank" rel="noopener" @click.stop
+                                               :title="need.jira_key || 'Jira ticket'"
+                                               class="inline-flex items-center justify-center size-6 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/>
+                                                    <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
+                                                </svg>
+                                            </a>
+                                            <span v-else-if="need.jira_key" :title="need.jira_key"
+                                                  class="inline-flex items-center justify-center size-6 rounded-full bg-blue-50 text-blue-700">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42Z"/>
+                                                    <circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>
+                                                </svg>
+                                            </span>
+                                            <a v-if="need.confluence_url" :href="need.confluence_url" target="_blank" rel="noopener" @click.stop
+                                               title="Confluence page"
+                                               class="inline-flex items-center justify-center size-6 rounded-full bg-brand-accent/10 text-brand-accent-dark hover:bg-brand-accent/20 transition">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M12 7v14"/>
+                                                    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+                                                </svg>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -420,10 +415,10 @@ refreshBoard();
                 <div class="flex items-start justify-between gap-2">
                     <input type="text" v-model="selectedNeed.title"
                            class="text-lg font-medium h-11 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
-                    <select :value="selectedNeed.stage" @change="changeStageFromModal"
+                    <select :value="selectedNeed.need_stage_id" @change="changeStageFromModal"
                             class="h-11 shrink-0 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm font-medium"
-                            :class="STAGE_COLORS[selectedNeed.stage].text">
-                        <option v-for="s in STAGES" :key="s.key" :value="s.key">{{ s.label }}</option>
+                            :style="{color: stagesById[selectedNeed.need_stage_id]?.color}">
+                        <option v-for="s in allStages" :key="s.id" :value="s.id">{{ s.label }}</option>
                     </select>
                 </div>
 
@@ -526,7 +521,7 @@ refreshBoard();
                     <textarea v-model="newNeedDescription" rows="3"
                               class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm"/>
                 </div>
-                <span class="text-xs text-gray-400">New needs always start in the Discovery stage.</span>
+                <span class="text-xs text-gray-400">New needs always start in the first stage of your pipeline.</span>
                 <div class="flex justify-end gap-2">
                     <SecondaryButton @click="closeAddModal">Cancel</SecondaryButton>
                     <PrimaryButton @click="addNeed" :disabled="creating || !newNeedTitle.trim()">
@@ -535,5 +530,7 @@ refreshBoard();
                 </div>
             </div>
         </Modal>
+
+        <ManagePipelineModal :show="showManageModal" @close="closeManageModal"/>
     </AppLayout>
 </template>

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Need;
 use App\Models\NeedActivity;
+use App\Models\NeedStage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -25,7 +26,8 @@ class NeedTest extends TestCase
         $need = Need::first();
         $this->assertNotNull($need);
         $this->assertEquals($user->currentTeam->id, $need->team_id);
-        $this->assertEquals('discovery', $need->stage);
+        // Created with no stages yet — lands on the first lazily-seeded one.
+        $this->assertEquals('Discovery', $need->stage->label);
 
         $this->getJson('/api/needs')
             ->assertSuccessful()
@@ -55,12 +57,13 @@ class NeedTest extends TestCase
     {
         $user = User::factory()->withPersonalTeam()->create();
         $this->actingAs($user);
-        $need = Need::factory()->create(['team_id' => $user->currentTeam->id, 'stage' => 'dev']);
+        $stage = NeedStage::factory()->create(['team_id' => $user->currentTeam->id, 'label' => 'Dev']);
+        $need = Need::factory()->create(['team_id' => $user->currentTeam->id, 'need_stage_id' => $stage->id]);
 
         $this->patchJson("/api/needs/{$need->id}", ['title' => 'Updated title'])
             ->assertSuccessful();
 
-        $this->assertEquals('dev', $need->fresh()->stage);
+        $this->assertEquals($stage->id, $need->fresh()->need_stage_id);
     }
 
     public function test_moving_a_need_to_a_new_stage_logs_an_activity_and_appends_to_the_end(): void
@@ -69,20 +72,23 @@ class NeedTest extends TestCase
         $this->actingAs($user);
         $teamId = $user->currentTeam->id;
 
-        Need::factory()->create(['team_id' => $teamId, 'stage' => 'dev', 'position' => 0]);
-        Need::factory()->create(['team_id' => $teamId, 'stage' => 'dev', 'position' => 1]);
-        $need = Need::factory()->create(['team_id' => $teamId, 'stage' => 'grooming', 'position' => 0]);
+        $devStage = NeedStage::factory()->create(['team_id' => $teamId, 'label' => 'Dev']);
+        $groomingStage = NeedStage::factory()->create(['team_id' => $teamId, 'label' => 'Grooming']);
 
-        $this->patchJson("/api/needs/{$need->id}/stage", ['stage' => 'dev'])->assertSuccessful();
+        Need::factory()->create(['team_id' => $teamId, 'need_stage_id' => $devStage->id, 'position' => 0]);
+        Need::factory()->create(['team_id' => $teamId, 'need_stage_id' => $devStage->id, 'position' => 1]);
+        $need = Need::factory()->create(['team_id' => $teamId, 'need_stage_id' => $groomingStage->id, 'position' => 0]);
+
+        $this->patchJson("/api/needs/{$need->id}/stage", ['stage_id' => $devStage->id])->assertSuccessful();
 
         $need->refresh();
-        $this->assertEquals('dev', $need->stage);
+        $this->assertEquals($devStage->id, $need->need_stage_id);
         $this->assertEquals(2, $need->position);
 
         $activity = $need->activities()->latest()->first();
         $this->assertEquals('stage_changed', $activity->type);
-        $this->assertEquals('grooming', $activity->from_stage);
-        $this->assertEquals('dev', $activity->to_stage);
+        $this->assertEquals('Grooming', $activity->from_stage);
+        $this->assertEquals('Dev', $activity->to_stage);
     }
 
     public function test_moving_a_need_to_an_invalid_stage_fails(): void
@@ -90,10 +96,23 @@ class NeedTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $this->actingAs($user);
         $need = Need::factory()->create(['team_id' => $user->currentTeam->id]);
+        $originalStageId = $need->need_stage_id;
 
-        $this->patchJson("/api/needs/{$need->id}/stage", ['stage' => 'not-a-real-stage'])
+        $this->patchJson("/api/needs/{$need->id}/stage", ['stage_id' => 999999])
             ->assertServerError();
-        $this->assertEquals('discovery', $need->fresh()->stage);
+        $this->assertEquals($originalStageId, $need->fresh()->need_stage_id);
+    }
+
+    public function test_moving_a_need_to_another_teams_stage_fails(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $need = Need::factory()->create(['team_id' => $user->currentTeam->id]);
+
+        $otherTeamStage = NeedStage::factory()->create();
+
+        $this->patchJson("/api/needs/{$need->id}/stage", ['stage_id' => $otherTeamStage->id])
+            ->assertServerError();
     }
 
     public function test_adding_a_note_logs_an_activity(): void
@@ -116,11 +135,12 @@ class NeedTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $this->actingAs($user);
         $teamId = $user->currentTeam->id;
+        $stage = NeedStage::factory()->create(['team_id' => $teamId]);
 
-        $first = Need::factory()->create(['team_id' => $teamId, 'stage' => 'todo', 'position' => 0]);
-        $second = Need::factory()->create(['team_id' => $teamId, 'stage' => 'todo', 'position' => 1]);
+        $first = Need::factory()->create(['team_id' => $teamId, 'need_stage_id' => $stage->id, 'position' => 0]);
+        $second = Need::factory()->create(['team_id' => $teamId, 'need_stage_id' => $stage->id, 'position' => 1]);
 
-        $this->postJson('/api/needs/reorder', ['stage' => 'todo', 'ids' => [$second->id, $first->id]])
+        $this->postJson('/api/needs/reorder', ['stage_id' => $stage->id, 'ids' => [$second->id, $first->id]])
             ->assertSuccessful();
 
         $this->assertEquals(0, $second->fresh()->position);
@@ -131,13 +151,14 @@ class NeedTest extends TestCase
     {
         $owner = User::factory()->withPersonalTeam()->create();
         $need = Need::factory()->create(['team_id' => $owner->currentTeam->id]);
+        $ownStage = NeedStage::factory()->create(['team_id' => $owner->currentTeam->id]);
 
         $intruder = User::factory()->withPersonalTeam()->create();
         $this->actingAs($intruder);
 
         $this->getJson("/api/needs/{$need->id}")->assertServerError();
         $this->patchJson("/api/needs/{$need->id}", ['title' => 'Hijacked'])->assertServerError();
-        $this->patchJson("/api/needs/{$need->id}/stage", ['stage' => 'dev'])->assertServerError();
+        $this->patchJson("/api/needs/{$need->id}/stage", ['stage_id' => $ownStage->id])->assertServerError();
         $this->postJson("/api/needs/{$need->id}/notes", ['note' => 'hi'])->assertServerError();
         $this->deleteJson("/api/needs/{$need->id}")->assertServerError();
 

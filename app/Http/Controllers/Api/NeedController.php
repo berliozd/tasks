@@ -44,7 +44,7 @@ class NeedController extends Controller
      */
     public function moveStage(Request $request, string $id)
     {
-        return $this->needService->moveStage((int) $id, (string) $request->input('stage'));
+        return $this->needService->moveStage((int) $id, (int) $request->input('stage_id'));
     }
 
     /**
@@ -53,7 +53,7 @@ class NeedController extends Controller
     public function reorder(Request $request)
     {
         $this->needService->reorderWithinStage(
-            (string) $request->input('stage'),
+            (int) $request->input('stage_id'),
             (array) $request->input('ids', []),
         );
     }

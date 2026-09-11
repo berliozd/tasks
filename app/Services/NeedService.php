@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Need;
 use App\Models\NeedActivity;
+use App\Models\NeedStage;
 use App\Repositories\NeedRepository;
 use Exception;
 use Illuminate\Support\Collection;
@@ -12,13 +13,13 @@ readonly class NeedService
 {
     public function __construct(
         private NeedRepository $needRepository,
+        private NeedStageService $needStageService,
     ) {
     }
 
     public function getAll(): Collection
     {
         return Need::where('team_id', auth()->user()->currentTeam->id)
-            ->orderBy('stage')
             ->orderBy('position')
             ->get();
     }
@@ -34,12 +35,16 @@ readonly class NeedService
         return $need;
     }
 
+    /**
+     * @throws Exception
+     */
     public function create(array $data): Need
     {
         $teamId = auth()->user()->currentTeam->id;
+        $firstStage = $this->firstStage($teamId);
 
         $position = (int) Need::where('team_id', $teamId)
-            ->where('stage', 'discovery')
+            ->where('need_stage_id', $firstStage->id)
             ->max('position');
 
         $need = $this->needRepository->create([
@@ -50,7 +55,7 @@ readonly class NeedService
             'jira_key' => $data['jira_key'] ?? null,
             'jira_url' => $data['jira_url'] ?? null,
             'business_owner' => $data['business_owner'] ?? null,
-            'stage' => 'discovery',
+            'need_stage_id' => $firstStage->id,
             'position' => $position + 1,
         ]);
 
@@ -89,33 +94,34 @@ readonly class NeedService
     /**
      * @throws Exception
      */
-    public function moveStage(int $id, string $stage): Need
+    public function moveStage(int $id, int $stageId): Need
     {
         $need = $this->findNeed($id);
         $this->checkPerms($need);
 
-        if (!in_array($stage, Need::STAGES, true)) {
+        $newStage = NeedStage::find($stageId);
+        if (!$newStage || (int) $newStage->team_id !== (int) $need->team_id) {
             throw new Exception('Invalid stage');
         }
 
         $fromStage = $need->stage;
 
         $position = (int) Need::where('team_id', $need->team_id)
-            ->where('stage', $stage)
+            ->where('need_stage_id', $stageId)
             ->max('position');
 
         $this->needRepository->update($need, [
-            'stage' => $stage,
+            'need_stage_id' => $stageId,
             'position' => $position + 1,
         ]);
 
-        if ($fromStage !== $stage) {
+        if ($fromStage->id !== $newStage->id) {
             NeedActivity::create([
                 'need_id' => $need->id,
                 'user_id' => auth()->id(),
                 'type' => 'stage_changed',
-                'from_stage' => $fromStage,
-                'to_stage' => $stage,
+                'from_stage' => $fromStage->label,
+                'to_stage' => $newStage->label,
             ]);
         }
 
@@ -127,12 +133,12 @@ readonly class NeedService
      *
      * @throws Exception
      */
-    public function reorderWithinStage(string $stage, array $ids): void
+    public function reorderWithinStage(int $stageId, array $ids): void
     {
         $teamId = auth()->user()->currentTeam->id;
 
         $needs = Need::where('team_id', $teamId)
-            ->where('stage', $stage)
+            ->where('need_stage_id', $stageId)
             ->whereIn('id', $ids)
             ->get(['id', 'position'])
             ->keyBy('id');
@@ -190,9 +196,10 @@ readonly class NeedService
         return [
             'count' => Need::where('team_id', $teamId)->count(),
             'recent' => Need::where('team_id', $teamId)
+                ->with('stage:id,label,color')
                 ->orderByDesc('updated_at')
                 ->limit(5)
-                ->get(['id', 'title', 'stage', 'updated_at']),
+                ->get(['id', 'title', 'need_stage_id', 'updated_at']),
         ];
     }
 
@@ -206,6 +213,27 @@ readonly class NeedService
             throw new Exception('Need not found');
         }
         return $need;
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function firstStage(int $teamId): NeedStage
+    {
+        $this->needStageService->ensureSeeded($teamId);
+
+        $stage = NeedStage::where('need_stages.team_id', $teamId)
+            ->join('need_stage_groups', 'need_stage_groups.id', '=', 'need_stages.need_stage_group_id')
+            ->orderBy('need_stage_groups.position')
+            ->orderBy('need_stages.position')
+            ->select('need_stages.*')
+            ->first();
+
+        if (!$stage) {
+            throw new Exception('This team has no stages yet — open the pipeline settings first');
+        }
+
+        return $stage;
     }
 
     /**

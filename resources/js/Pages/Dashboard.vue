@@ -26,26 +26,7 @@ const props = defineProps({
     },
 });
 
-const stageLabel = (stage) => ({
-    discovery: 'Discovery', documented: 'Documented', jira_created: 'Jira ticket created',
-    validated: 'Validated with business', grooming: 'Grooming', todo: 'To do', dev: 'Dev',
-    qa: 'QA', soon: 'Coming soon', prod: 'In production',
-}[stage] ?? stage);
-
-// Mirrors the same mapping in Pages/Needs/Needs.vue.
-const STAGE_COLORS = {
-    discovery: {bg: 'bg-gray-100', text: 'text-gray-600'},
-    documented: {bg: 'bg-indigo-50', text: 'text-indigo-700'},
-    jira_created: {bg: 'bg-blue-50', text: 'text-blue-700'},
-    validated: {bg: 'bg-cyan-50', text: 'text-cyan-700'},
-    grooming: {bg: 'bg-purple-50', text: 'text-purple-700'},
-    todo: {bg: 'bg-amber-50', text: 'text-amber-700'},
-    dev: {bg: 'bg-orange-50', text: 'text-orange-700'},
-    qa: {bg: 'bg-pink-50', text: 'text-pink-700'},
-    soon: {bg: 'bg-teal-50', text: 'text-teal-700'},
-    prod: {bg: 'bg-green-50', text: 'text-green-700'},
-};
-const stageColor = (stage) => STAGE_COLORS[stage] ?? {bg: 'bg-brand-accent/10', text: 'text-brand-accent-dark'};
+const stageBgStyle = (color) => ({backgroundColor: `${color}1a`, color});
 
 const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
 const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm') : '';
@@ -228,8 +209,8 @@ const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm')
                               class="flex items-center gap-3 px-4 py-3 hover:bg-brand-surface transition">
                             <span class="text-sm text-gray-900 flex-1 min-w-0 truncate">{{ need.title }}</span>
                             <span class="shrink-0 rounded-full text-[11px] font-medium px-2 py-0.5"
-                                  :class="[stageColor(need.stage).bg, stageColor(need.stage).text]">
-                                {{ stageLabel(need.stage) }}
+                                  :style="stageBgStyle(need.stage.color)">
+                                {{ need.stage.label }}
                             </span>
                         </Link>
                     </div>
