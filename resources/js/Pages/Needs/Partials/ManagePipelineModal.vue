@@ -4,6 +4,8 @@ import debounce from 'lodash/debounce';
 import Modal from '@/Components/Modal.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import SaveButton from '@/Components/SaveButton.vue';
+import SavedLabel from '@/Components/SavedLabel.vue';
+import {useStore} from '@/Composables/store.js';
 
 const props = defineProps({show: Boolean});
 const emit = defineEmits(['close']);
@@ -37,19 +39,23 @@ const addGroup = () => {
     axios.post(route('need-stage-groups.store'), {label}).then(response => {
         groups.value.push({...response.data, stages: []});
         newGroupLabel.value = '';
+        useStore().setSaved('Group added');
     }).catch((error) => {
         groupError.value = error.response?.data?.message ?? 'Could not add group';
     });
 }
 
 const saveGroupLabel = debounce((group) => {
-    axios.patch(route('need-stage-groups.update', group.id), {label: group.label});
+    axios.patch(route('need-stage-groups.update', group.id), {label: group.label}).then(() => {
+        useStore().setSaved('Saved');
+    });
 }, 600);
 
 const deleteGroup = (group) => {
     groupError.value = '';
     axios.delete(route('need-stage-groups.destroy', group.id)).then(() => {
         groups.value = groups.value.filter(g => g.id !== group.id);
+        useStore().setSaved('Group deleted');
     }).catch((error) => {
         groupError.value = error.response?.data?.message ?? 'Could not delete group';
     });
@@ -70,7 +76,9 @@ const onGroupDrop = (targetGroup) => {
     const [moved] = groups.value.splice(fromIndex, 1);
     groups.value.splice(toIndex, 0, moved);
 
-    axios.post(route('need-stage-groups.reorder'), {ids: groups.value.map(g => g.id)});
+    axios.post(route('need-stage-groups.reorder'), {ids: groups.value.map(g => g.id)}).then(() => {
+        useStore().setSaved('Saved');
+    });
 }
 
 // --- Stages ---
@@ -84,19 +92,23 @@ const addStage = (group) => {
     }).then(response => {
         group.stages.push(response.data);
         newStageLabel[group.id] = '';
+        useStore().setSaved('Stage added');
     }).catch((error) => {
         stageError.value = error.response?.data?.message ?? 'Could not add stage';
     });
 }
 
 const saveStage = debounce((stage) => {
-    axios.patch(route('need-stages.update', stage.id), {label: stage.label, color: stage.color});
+    axios.patch(route('need-stages.update', stage.id), {label: stage.label, color: stage.color}).then(() => {
+        useStore().setSaved('Saved');
+    });
 }, 600);
 
 const deleteStage = (group, stage) => {
     stageError.value = '';
     axios.delete(route('need-stages.destroy', stage.id)).then(() => {
         group.stages = group.stages.filter(s => s.id !== stage.id);
+        useStore().setSaved('Stage deleted');
     }).catch((error) => {
         stageError.value = error.response?.data?.message ?? 'Could not delete stage';
     });
@@ -110,12 +122,20 @@ const onStageDragStart = (group, stage) => {
     draggingStageFromGroupId.value = group.id;
 }
 
-const persistStageMove = (fromGroupId, targetGroup) => {
+// stageId/fromGroupId are passed explicitly rather than read from the
+// dragging refs here — the callers already reset those refs to null
+// before calling this, since the drop has already been handled by then.
+const persistStageMove = (stageId, fromGroupId, targetGroup) => {
     const ids = targetGroup.stages.map(s => s.id);
     const request = fromGroupId === targetGroup.id
         ? Promise.resolve()
-        : axios.patch(route('need-stages.move', draggingStageId.value), {group_id: targetGroup.id});
-    request.then(() => axios.post(route('need-stages.reorder'), {group_id: targetGroup.id, ids}));
+        : axios.patch(route('need-stages.move', stageId), {group_id: targetGroup.id});
+    request
+        .then(() => axios.post(route('need-stages.reorder'), {group_id: targetGroup.id, ids}))
+        .then(() => useStore().setSaved('Saved'))
+        .catch((error) => {
+            stageError.value = error.response?.data?.message ?? 'Could not move stage';
+        });
 }
 
 const onStageDropOnStage = (targetGroup, targetStage) => {
@@ -134,7 +154,7 @@ const onStageDropOnStage = (targetGroup, targetStage) => {
     if (toIndex === -1) toIndex = targetGroup.stages.length;
     targetGroup.stages.splice(toIndex, 0, moved);
 
-    persistStageMove(fromGroupId, targetGroup);
+    persistStageMove(id, fromGroupId, targetGroup);
 }
 
 const onStageDropOnGroup = (targetGroup) => {
@@ -151,14 +171,17 @@ const onStageDropOnGroup = (targetGroup) => {
     const [moved] = fromGroup.stages.splice(fromIndex, 1);
     targetGroup.stages.push(moved);
 
-    persistStageMove(fromGroupId, targetGroup);
+    persistStageMove(id, fromGroupId, targetGroup);
 }
 </script>
 
 <template>
     <Modal :show="show" @close="close" max-width="2xl">
         <div class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
-            <h3 class="text-lg font-medium text-gray-900">Manage pipeline</h3>
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium text-gray-900">Manage pipeline</h3>
+                <SavedLabel/>
+            </div>
             <p class="text-xs text-gray-400">
                 Drag a stage onto another group to move it there, or drag a group to reorder the pipeline.
             </p>
