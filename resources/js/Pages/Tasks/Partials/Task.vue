@@ -276,16 +276,15 @@ watch(editFlagIds, (next, prev) => {
             </div>
             <div :class="task.editing?'':'hidden'" class="mt-3 pt-3 border-t border-gray-100">
                 <div>
-                    <div class="text-xs font-medium text-gray-500 mb-1">Label</div>
-                    <textarea v-model="task.label"
-                              class="rounded-lg shadow-sm w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                    <textarea v-model="task.label" rows="1" placeholder="Task title"
+                              class="text-lg font-semibold text-gray-900 w-full resize-none border-0 border-b-2 border-gray-200 rounded-none bg-transparent px-0 py-1 shadow-none focus:border-brand-accent focus:ring-0 transition"
                               :disabled="task.completed_at!==null"
                               maxlength="255"/>
                 </div>
                 <div class="mt-3">
                     <div class="text-xs font-medium text-gray-500 mb-1">Description</div>
-                    <textarea v-model="task.description"
-                              class="rounded-lg shadow-sm w-full h-48 border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"
+                    <textarea v-model="task.description" placeholder="Add more details…"
+                              class="rounded-lg shadow-sm w-full h-48 text-sm border-gray-300 bg-brand-surface focus:border-brand-accent focus:ring-brand-accent transition"
                               :disabled="task.completed_at!==null"
                               maxlength="5000"/>
                 </div>
