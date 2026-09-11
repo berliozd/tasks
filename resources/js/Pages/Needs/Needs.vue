@@ -75,6 +75,11 @@ const togglePresentationMode = () => presentationMode.value = !presentationMode.
 const refreshStages = () => axios.get(route('need-stage-groups.index')).then(response => {
     groups.value = response.data;
     allStages.value.forEach(s => ensureBucket(s.id));
+    // Drop any filter selection pointing at a stage that no longer exists —
+    // otherwise a deleted stage can linger in the filter and blank the whole
+    // board until the page is reloaded (which resets this ref to []).
+    const validIds = new Set(allStages.value.map(s => s.id));
+    stageFilters.value = stageFilters.value.filter(id => validIds.has(id));
 });
 
 const refreshBoard = () => {
