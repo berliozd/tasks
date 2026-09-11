@@ -1,9 +1,15 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import {Link} from '@inertiajs/vue3';
+import {Link, usePage} from '@inertiajs/vue3';
 import {format} from 'date-fns';
+import {ref} from 'vue';
 import FlagSwatches from '@/Components/FlagSwatches.vue';
 import {statusFlags} from '@/Composables/prospectActionStatus.js';
+import Modal from '@/Components/Modal.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SavedLabel from '@/Components/SavedLabel.vue';
+import {useStore} from '@/Composables/store.js';
 
 const props = defineProps({
     todayTasks: {type: Array, default: () => []},
@@ -28,50 +34,98 @@ const props = defineProps({
 
 const stageBgStyle = (color) => ({backgroundColor: `${color}1a`, color});
 
+const page = usePage();
+const isFeatureEnabled = (feature) => {
+    const disabled = page.props.auth?.user?.current_team?.disabled_features ?? [];
+    return !disabled.includes(feature);
+};
+
 const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
 const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm') : '';
+
+const showFeatureRequestModal = ref(false);
+const featureRequestMessage = ref('');
+const sendingFeatureRequest = ref(false);
+const featureRequestError = ref('');
+
+const openFeatureRequestModal = () => {
+    featureRequestMessage.value = '';
+    featureRequestError.value = '';
+    showFeatureRequestModal.value = true;
+};
+
+const closeFeatureRequestModal = () => showFeatureRequestModal.value = false;
+
+const submitFeatureRequest = () => {
+    const message = featureRequestMessage.value.trim();
+    if (!message) return;
+    sendingFeatureRequest.value = true;
+    featureRequestError.value = '';
+    axios.post(route('feature-requests.store'), {message}).then(() => {
+        showFeatureRequestModal.value = false;
+        useStore().setSaved('Request sent!');
+    }).catch((error) => {
+        featureRequestError.value = error.response?.data?.message ?? 'Could not send your request';
+    }).finally(() => sendingFeatureRequest.value = false);
+};
 </script>
 
 <template>
     <AppLayout title="Dashboard">
         <template #header>
-            <h2 class="font-semibold text-xl leading-tight text-slate-900">Dashboard</h2>
+            <div class="flex items-center gap-4">
+                <h2 class="font-semibold text-xl leading-tight text-slate-900">Dashboard</h2>
+                <SavedLabel/>
+                <button type="button" @click="openFeatureRequestModal"
+                        class="ml-auto shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-full border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16v12H7l-3 3z"/>
+                        <path d="M8 9h8M8 13h5"/>
+                    </svg>
+                    Submit a request to developer
+                </button>
+            </div>
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 flex flex-col gap-6">
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div class="surface-card p-4">
-                    <div class="text-2xl font-semibold text-slate-900">{{ todayTasks.length }}</div>
-                    <div class="text-xs text-gray-500">Tasks due today</div>
-                </div>
-                <div class="surface-card p-4">
-                    <div class="text-2xl font-semibold" :class="lateTasks.length ? 'text-red-600' : 'text-slate-900'">
-                        {{ lateTasks.length }}
+                <template v-if="isFeatureEnabled('tasks')">
+                    <div class="surface-card p-4">
+                        <div class="text-2xl font-semibold text-slate-900">{{ todayTasks.length }}</div>
+                        <div class="text-xs text-gray-500">Tasks due today</div>
                     </div>
-                    <div class="text-xs text-gray-500">Overdue tasks</div>
-                </div>
-                <div class="surface-card p-4">
-                    <div class="text-2xl font-semibold text-slate-900">{{ completedTodayTasks.length }}</div>
-                    <div class="text-xs text-gray-500">Completed today</div>
-                </div>
-                <div class="surface-card p-4">
-                    <div class="text-2xl font-semibold text-slate-900">{{ prospection.directories_count }}</div>
-                    <div class="text-xs text-gray-500">Directories</div>
-                </div>
-                <div class="surface-card p-4">
-                    <div class="text-2xl font-semibold text-slate-900">{{ prospection.prospects_count }}</div>
-                    <div class="text-xs text-gray-500">Prospects</div>
-                </div>
-                <div class="surface-card p-4">
-                    <div class="text-2xl font-semibold text-blue-700">{{ prospection.won_count }}</div>
-                    <div class="text-xs text-gray-500">Won</div>
-                </div>
-                <div class="surface-card p-4">
+                    <div class="surface-card p-4">
+                        <div class="text-2xl font-semibold" :class="lateTasks.length ? 'text-red-600' : 'text-slate-900'">
+                            {{ lateTasks.length }}
+                        </div>
+                        <div class="text-xs text-gray-500">Overdue tasks</div>
+                    </div>
+                    <div class="surface-card p-4">
+                        <div class="text-2xl font-semibold text-slate-900">{{ completedTodayTasks.length }}</div>
+                        <div class="text-xs text-gray-500">Completed today</div>
+                    </div>
+                </template>
+                <template v-if="isFeatureEnabled('prospection')">
+                    <div class="surface-card p-4">
+                        <div class="text-2xl font-semibold text-slate-900">{{ prospection.directories_count }}</div>
+                        <div class="text-xs text-gray-500">Directories</div>
+                    </div>
+                    <div class="surface-card p-4">
+                        <div class="text-2xl font-semibold text-slate-900">{{ prospection.prospects_count }}</div>
+                        <div class="text-xs text-gray-500">Prospects</div>
+                    </div>
+                    <div class="surface-card p-4">
+                        <div class="text-2xl font-semibold text-blue-700">{{ prospection.won_count }}</div>
+                        <div class="text-xs text-gray-500">Won</div>
+                    </div>
+                </template>
+                <div v-if="isFeatureEnabled('documents')" class="surface-card p-4">
                     <div class="text-2xl font-semibold text-slate-900">{{ documents.count }}</div>
                     <div class="text-xs text-gray-500">Documents</div>
                 </div>
-                <div class="surface-card p-4">
+                <div v-if="isFeatureEnabled('needs')" class="surface-card p-4">
                     <div class="text-2xl font-semibold text-slate-900">{{ needs.count }}</div>
                     <div class="text-xs text-gray-500">Needs</div>
                 </div>
@@ -79,7 +133,7 @@ const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm')
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-                <div class="surface-card overflow-hidden">
+                <div v-if="isFeatureEnabled('tasks')" class="surface-card overflow-hidden">
                     <div class="p-4 flex items-center justify-between border-b border-gray-100">
                         <div class="text-sm font-medium text-gray-900">Tasks</div>
                         <Link :href="route('tasks')" class="text-xs font-medium text-brand-navy hover:underline">
@@ -110,7 +164,7 @@ const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm')
                     </div>
                 </div>
 
-                <div class="surface-card overflow-hidden">
+                <div v-if="isFeatureEnabled('prospection')" class="surface-card overflow-hidden">
                     <div class="p-4 flex items-center justify-between border-b border-gray-100">
                         <div class="text-sm font-medium text-gray-900">Prospection</div>
                         <Link :href="route('products')" class="text-xs font-medium text-brand-navy hover:underline">
@@ -172,7 +226,7 @@ const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm')
                     </div>
                 </div>
 
-                <div class="surface-card overflow-hidden">
+                <div v-if="isFeatureEnabled('documents')" class="surface-card overflow-hidden">
                     <div class="p-4 flex items-center justify-between border-b border-gray-100">
                         <div class="text-sm font-medium text-gray-900">Documents</div>
                         <Link :href="route('documents')" class="text-xs font-medium text-brand-navy hover:underline">
@@ -193,7 +247,7 @@ const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm')
                     </div>
                 </div>
 
-                <div class="surface-card overflow-hidden">
+                <div v-if="isFeatureEnabled('needs')" class="surface-card overflow-hidden">
                     <div class="p-4 flex items-center justify-between border-b border-gray-100">
                         <div class="text-sm font-medium text-gray-900">Needs</div>
                         <Link :href="route('needs')" class="text-xs font-medium text-brand-navy hover:underline">
@@ -218,5 +272,28 @@ const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm')
 
             </div>
         </div>
+
+        <Modal :show="showFeatureRequestModal" @close="closeFeatureRequestModal">
+            <div class="p-6 flex flex-col gap-4">
+                <h3 class="text-lg font-medium text-gray-900">Submit a request to the developer</h3>
+                <p class="text-sm text-gray-500">
+                    Describe a feature, improvement, or issue — it'll be emailed straight to the developer.
+                </p>
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Your suggestion</label>
+                    <textarea v-model="featureRequestMessage" rows="5" autofocus
+                              placeholder="It would be great if…"
+                              class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm"/>
+                </div>
+                <div v-if="featureRequestError" class="text-sm text-red-600">{{ featureRequestError }}</div>
+                <div class="flex justify-end gap-2">
+                    <SecondaryButton @click="closeFeatureRequestModal">Cancel</SecondaryButton>
+                    <PrimaryButton @click="submitFeatureRequest"
+                                   :disabled="sendingFeatureRequest || !featureRequestMessage.trim()">
+                        {{ sendingFeatureRequest ? 'Sending…' : 'Send' }}
+                    </PrimaryButton>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>

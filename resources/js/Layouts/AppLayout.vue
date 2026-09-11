@@ -18,6 +18,11 @@ const showingNavigationDropdown = ref(false);
 
 const page = usePage();
 
+const isFeatureEnabled = (feature) => {
+    const disabled = page.props.auth?.user?.current_team?.disabled_features ?? [];
+    return !disabled.includes(feature);
+};
+
 useIdleRedirect({
     // Redirect a bit before the server session likely expires.
     timeoutMs: Math.max(0, Number(page.props.sessionIdleMs ?? 0) - 60_000),
@@ -85,17 +90,17 @@ Echo.private('my-private-channel')
                                 <NavLink :href="route('dashboard')" :active="route().current('dashboard')">
                                     Dashboard
                                 </NavLink>
-                                <NavLink :href="route('tasks')" :active="route().current('tasks')">
+                                <NavLink v-if="isFeatureEnabled('tasks')" :href="route('tasks')" :active="route().current('tasks')">
                                     Tasks
                                 </NavLink>
-                                <NavLink :href="route('products')"
+                                <NavLink v-if="isFeatureEnabled('prospection')" :href="route('products')"
                                          :active="route().current('products*') || route().current('directories*')">
                                     Prospection
                                 </NavLink>
-                                <NavLink :href="route('documents')" :active="route().current('documents*')">
+                                <NavLink v-if="isFeatureEnabled('documents')" :href="route('documents')" :active="route().current('documents*')">
                                     Documents
                                 </NavLink>
-                                <NavLink :href="route('needs')" :active="route().current('needs*')">
+                                <NavLink v-if="isFeatureEnabled('needs')" :href="route('needs')" :active="route().current('needs*')">
                                     Needs
                                 </NavLink>
                             </div>
@@ -268,17 +273,17 @@ Echo.private('my-private-channel')
                         <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">
                             Dashboard
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('tasks')" :active="route().current('tasks')">
+                        <ResponsiveNavLink v-if="isFeatureEnabled('tasks')" :href="route('tasks')" :active="route().current('tasks')">
                             Tasks
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('products')"
+                        <ResponsiveNavLink v-if="isFeatureEnabled('prospection')" :href="route('products')"
                                             :active="route().current('products*') || route().current('directories*')">
                             Prospection
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('documents')" :active="route().current('documents*')">
+                        <ResponsiveNavLink v-if="isFeatureEnabled('documents')" :href="route('documents')" :active="route().current('documents*')">
                             Documents
                         </ResponsiveNavLink>
-                        <ResponsiveNavLink :href="route('needs')" :active="route().current('needs*')">
+                        <ResponsiveNavLink v-if="isFeatureEnabled('needs')" :href="route('needs')" :active="route().current('needs*')">
                             Needs
                         </ResponsiveNavLink>
                     </div>

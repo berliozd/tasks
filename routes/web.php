@@ -35,20 +35,32 @@ Route::middleware([
     'verified',
 ])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
-    Route::get('/tasks', TaskController::class)->name('tasks');
-    Route::get('/completed-tasks', CompletedTasksController::class)->name('completed-tasks');
-    Route::get('/future-tasks', FutureTasksController::class)->name('future-tasks');
     Route::get('/flags', FlagController::class)->name('flags');
-    Route::get('/products', ProductsController::class)->name('products');
-    Route::get('/products/{product}', ProductController::class)->name('products.view');
-    Route::get('/directories/{directory}', DirectoryController::class)->name('directories.view');
-    Route::get('/directories/{directory}/email-templates', EmailTemplatesController::class)->name('directories.email-templates');
-    Route::get('/directories/{directory}/email-templates/{template}', EmailTemplateController::class)
-        ->name('email-templates.view');
-    Route::get('/directories/{directory}/prospects/{prospect}', ProspectController::class)->name('prospects.view');
-    Route::get('/documents', DocumentsController::class)->name('documents');
-    Route::get('/documents/{document}', DocumentController::class)->name('documents.view');
-    Route::get('/needs', NeedsController::class)->name('needs');
+
+    Route::middleware('feature:tasks')->group(function () {
+        Route::get('/tasks', TaskController::class)->name('tasks');
+        Route::get('/completed-tasks', CompletedTasksController::class)->name('completed-tasks');
+        Route::get('/future-tasks', FutureTasksController::class)->name('future-tasks');
+    });
+
+    Route::middleware('feature:prospection')->group(function () {
+        Route::get('/products', ProductsController::class)->name('products');
+        Route::get('/products/{product}', ProductController::class)->name('products.view');
+        Route::get('/directories/{directory}', DirectoryController::class)->name('directories.view');
+        Route::get('/directories/{directory}/email-templates', EmailTemplatesController::class)->name('directories.email-templates');
+        Route::get('/directories/{directory}/email-templates/{template}', EmailTemplateController::class)
+            ->name('email-templates.view');
+        Route::get('/directories/{directory}/prospects/{prospect}', ProspectController::class)->name('prospects.view');
+    });
+
+    Route::middleware('feature:documents')->group(function () {
+        Route::get('/documents', DocumentsController::class)->name('documents');
+        Route::get('/documents/{document}', DocumentController::class)->name('documents.view');
+    });
+
+    Route::middleware('feature:needs')->group(function () {
+        Route::get('/needs', NeedsController::class)->name('needs');
+    });
 
 });
 

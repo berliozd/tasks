@@ -65,4 +65,8 @@ return [
         'from_email' => env('PROSPECTION_FROM_EMAIL', 'no-reply@addeos.com'),
     ],
 
+    'developer' => [
+        'email' => env('DEVELOPER_EMAIL'),
+    ],
+
 ];

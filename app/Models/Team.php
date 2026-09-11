@@ -14,6 +14,11 @@ class Team extends JetstreamTeam
     use HasFactory;
 
     /**
+     * The features a team admin can individually disable for their team.
+     */
+    public const FEATURES = ['tasks', 'needs', 'prospection', 'documents'];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
@@ -43,6 +48,12 @@ class Team extends JetstreamTeam
     {
         return [
             'personal_team' => 'boolean',
+            'disabled_features' => 'array',
         ];
+    }
+
+    public function hasFeatureEnabled(string $feature): bool
+    {
+        return !in_array($feature, $this->disabled_features ?? [], true);
     }
 }

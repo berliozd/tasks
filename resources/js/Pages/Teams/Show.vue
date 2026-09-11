@@ -2,6 +2,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import DeleteTeamForm from '@/Pages/Teams/Partials/DeleteTeamForm.vue';
 import SectionBorder from '@/Components/SectionBorder.vue';
+import TeamFeaturesForm from '@/Pages/Teams/Partials/TeamFeaturesForm.vue';
 import TeamMemberManager from '@/Pages/Teams/Partials/TeamMemberManager.vue';
 import UpdateTeamNameForm from '@/Pages/Teams/Partials/UpdateTeamNameForm.vue';
 
@@ -23,6 +24,12 @@ defineProps({
         <div>
             <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
                 <UpdateTeamNameForm :team="team" :permissions="permissions" />
+
+                <SectionBorder />
+
+                <TeamFeaturesForm class="mt-10 sm:mt-0" :permissions="permissions" />
+
+                <SectionBorder />
 
                 <TeamMemberManager
                     class="mt-10 sm:mt-0"
