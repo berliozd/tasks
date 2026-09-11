@@ -224,4 +224,25 @@ class ProspectActionSendTest extends TestCase
         $this->assertEquals('sent', $action->status);
         $this->assertFalse($action->queued_for_send);
     }
+
+    public function test_sending_is_rate_limited(): void
+    {
+        config(['services.prospection.from_email' => 'no-reply@addeos.com']);
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $directory = Directory::factory()->create(['team_id' => $user->currentTeam->id]);
+        $prospect = Prospect::factory()->create(['directory_id' => $directory->id, 'email' => 'prospect@example.com']);
+        $actions = ProspectAction::factory()->count(11)->create(['prospect_id' => $prospect->id]);
+
+        $this->mock(MailSenderInterface::class, function ($mock) {
+            $mock->shouldReceive('send')->times(10);
+        });
+
+        foreach ($actions->take(10) as $action) {
+            $this->postJson("/api/prospect-actions/{$action->id}/send")->assertSuccessful();
+        }
+
+        $this->postJson("/api/prospect-actions/{$actions->last()->id}/send")->assertStatus(429);
+    }
 }

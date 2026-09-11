@@ -57,4 +57,23 @@ class FeatureRequestTest extends TestCase
         $this->postJson('/api/feature-requests', ['message' => 'Please add dark mode'])
             ->assertServerError();
     }
+
+    public function test_submissions_are_rate_limited(): void
+    {
+        config(['services.developer.email' => 'dev@example.com']);
+
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+
+        $this->mock(MailSenderInterface::class, function ($mock) {
+            $mock->shouldReceive('send')->times(5);
+        });
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/feature-requests', ['message' => 'Spam ' . $i])->assertSuccessful();
+        }
+
+        $this->postJson('/api/feature-requests', ['message' => 'One too many'])
+            ->assertStatus(429);
+    }
 }

@@ -15,6 +15,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/daily-report-settings', [App\Http\Controllers\Api\DailyReportSettingsController::class, 'update'])
         ->name('daily-report-settings.update');
     Route::post('/feature-requests', [App\Http\Controllers\Api\FeatureRequestController::class, 'store'])
+        ->middleware('throttle:5,1')
         ->name('feature-requests.store');
     Route::get('/team-features', [App\Http\Controllers\Api\TeamFeatureController::class, 'index'])
         ->name('team-features.index');
@@ -102,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/prospect-actions/{id}', [App\Http\Controllers\Api\ProspectActionController::class, 'destroy'])
             ->name('prospect-actions.destroy');
         Route::post('/prospect-actions/{id}/send', [App\Http\Controllers\Api\ProspectActionController::class, 'send'])
+            ->middleware('throttle:10,1')
             ->name('prospect-actions.send');
 
         Route::get('/directories/{directoryId}/email-templates', [App\Http\Controllers\Api\EmailTemplateController::class, 'index'])
