@@ -292,6 +292,24 @@ const exportTasks = async () => {
         </template>
 
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div v-if="!usePage().props.auth.user.daily_report_enabled"
+                 class="mb-4 rounded-xl bg-brand-accent/10 ring-1 ring-brand-accent/20 px-4 py-3 flex items-center gap-3 text-sm text-brand-accent-dark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="shrink-0">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                </svg>
+                <span class="flex-1">
+                    You can get a daily email recap of your day — what you completed and what's scheduled
+                    for tomorrow.
+                    <Link :href="route('profile.show')" class="font-medium underline hover:no-underline">
+                        Set it up
+                    </Link>
+                </span>
+            </div>
+
             <div class="min-h-6 ">
                 <SavedLabel/>
                 <button @click="dispatchEvent" class="rounded bg-gray-500 m-2 hidden">DISP</button>
