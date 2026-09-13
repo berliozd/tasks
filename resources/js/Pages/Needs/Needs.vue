@@ -216,6 +216,7 @@ const openNeed = (need) => {
     if (justDragged.value || presentationMode.value) return;
     confirmingDelete.value = false;
     newNote.value = '';
+    hiddenActivityTypes.value = defaultHiddenActivityTypes();
     watchDetailActive = false;
     loadingDetail.value = true;
     showDetail.value = true;
@@ -320,6 +321,26 @@ const activityText = computed(() => (activity) => {
     }
     return activity.note;
 });
+
+// --- Activity filter (stage changes are hidden by default — noisy) ---
+
+const activityTypeOptions = [
+    {type: 'created', label: 'Created'},
+    {type: 'stage_changed', label: 'Stage changes'},
+    {type: 'note', label: 'Notes'},
+];
+const defaultHiddenActivityTypes = () => ['stage_changed'];
+const hiddenActivityTypes = ref(defaultHiddenActivityTypes());
+
+const toggleActivityType = (type) => {
+    hiddenActivityTypes.value = hiddenActivityTypes.value.includes(type)
+        ? hiddenActivityTypes.value.filter(t => t !== type)
+        : [...hiddenActivityTypes.value, type];
+}
+
+const visibleActivities = computed(
+    () => (selectedNeed.value?.activities ?? []).filter(a => !hiddenActivityTypes.value.includes(a.type)),
+);
 
 refreshStages().then(refreshBoard);
 </script>
@@ -540,15 +561,29 @@ refreshStages().then(refreshBoard);
                 </div>
 
                 <div class="border-t border-gray-100 pt-3 flex flex-col gap-2">
-                    <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Activity</div>
+                    <div class="flex items-center justify-between gap-2 flex-wrap">
+                        <div class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Activity</div>
+                        <div class="flex flex-wrap gap-1">
+                            <button v-for="option in activityTypeOptions" :key="option.type"
+                                    type="button" @click="toggleActivityType(option.type)"
+                                    class="rounded-full text-[11px] font-medium px-2 py-0.5 ring-1 transition"
+                                    :class="hiddenActivityTypes.includes(option.type)
+                                        ? 'text-gray-400 ring-gray-200 hover:ring-gray-300'
+                                        : 'text-brand-accent-dark bg-brand-accent/10 ring-brand-accent/30'">
+                                {{ option.label }}
+                            </button>
+                        </div>
+                    </div>
                     <div class="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                        <div v-for="activity in selectedNeed.activities" :key="activity.id" class="text-sm">
+                        <div v-for="activity in visibleActivities" :key="activity.id" class="text-sm">
                             <span class="text-gray-700">{{ activityText(activity) }}</span>
                             <span class="text-xs text-gray-400 ml-1">
                                 — {{ activity.user?.name ?? 'Someone' }}, {{ formatDate(activity.created_at) }}
                             </span>
                         </div>
-                        <div v-if="!selectedNeed.activities?.length" class="text-sm text-gray-400">No activity yet.</div>
+                        <div v-if="!visibleActivities.length" class="text-sm text-gray-400">
+                            {{ selectedNeed.activities?.length ? 'No activity matches the current filter.' : 'No activity yet.' }}
+                        </div>
                     </div>
                     <div class="flex items-center gap-2 mt-1">
                         <input type="text" v-model="newNote" placeholder="Add a note or feedback…"
