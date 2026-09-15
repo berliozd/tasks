@@ -275,8 +275,7 @@ defineProps({
                             </div>
                             <h2 class="mt-4 text-xl font-semibold text-black">Documents</h2>
                             <p class="mt-4 text-sm/relaxed">
-                                A Markdown knowledge base shared with your team, auto-tagged by AI so you can
-                                find things by topic instead of hunting through files.
+                                A Markdown knowledge base shared with your team.
                             </p>
                             <a href="/documents"
                                class="mt-4 inline-flex items-center gap-2 text-sm font-medium text-brand-accent-dark hover:underline">
@@ -333,10 +332,10 @@ defineProps({
                                     </svg>
                                 </div>
                                 <div>
-                                    <h3 class="text-base font-semibold text-black">AI-Tagged &amp; Filterable</h3>
+                                    <h3 class="text-base font-semibold text-black">Tagging &amp; Filterable</h3>
                                     <p class="mt-2 text-sm/relaxed">
-                                        On save, AI scans the content and attaches topical flags — filter the
-                                        list by them to find things fast.
+                                        Filter the
+                                        list by tags to find things fast.
                                     </p>
                                 </div>
                             </div>
