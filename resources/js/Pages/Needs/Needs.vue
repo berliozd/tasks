@@ -54,6 +54,41 @@ const visibleGroups = computed(() => groups.value
 
 const stageBgStyle = (color) => ({backgroundColor: `${color}1a`, color});
 
+// --- CSV export (full board, ignoring the current search/stage filter) ---
+
+const csvCell = (value) => {
+    const str = value === null || value === undefined ? '' : String(value);
+    return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+const exportBoardAsCsv = () => {
+    const header = [
+        'Group', 'Stage', 'Title', 'Description', 'Business owner',
+        'Jira key', 'Jira URL', 'Confluence URL', 'Created at', 'Updated at',
+    ];
+    const rows = [header];
+
+    groups.value.forEach(group => {
+        group.stages.forEach(stage => {
+            (needsByStage[stage.id] ?? []).forEach(need => {
+                rows.push([
+                    group.label, stage.label, need.title, need.description, need.business_owner,
+                    need.jira_key, need.jira_url, need.confluence_url, need.created_at, need.updated_at,
+                ]);
+            });
+        });
+    });
+
+    const csv = rows.map(row => row.map(csvCell).join(',')).join('\n');
+    const blob = new Blob([csv], {type: 'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'needs-board.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 // --- Search ---
 
 const searchQuery = ref('');
@@ -364,6 +399,15 @@ refreshStages().then(refreshBoard);
                     </svg>
                 </button>
                 <template v-if="!presentationMode">
+                    <button type="button" @click="exportBoardAsCsv" title="Export board as CSV"
+                            class="shrink-0 inline-flex items-center justify-center size-10 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3v12"/>
+                            <path d="m7 10 5 5 5-5"/>
+                            <path d="M5 21h14"/>
+                        </svg>
+                    </button>
                     <button type="button" @click="openManageModal" title="Manage pipeline"
                             class="shrink-0 inline-flex items-center justify-center size-10 rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
