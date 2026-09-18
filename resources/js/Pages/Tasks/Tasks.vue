@@ -14,6 +14,26 @@ import Flags from "@/Pages/Tasks/Partials/Flags.vue";
 import Modal from "@/Components/Modal.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 
+// Off by default — a page reload with no stored preference should not
+// highlight anything.
+const HIGHLIGHT_LATE_STORAGE_KEY = 'tasks-highlight-late';
+const loadHighlightLate = () => {
+    try {
+        return localStorage.getItem(HIGHLIGHT_LATE_STORAGE_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+const highlightLate = ref(loadHighlightLate());
+const toggleHighlightLate = () => {
+    highlightLate.value = !highlightLate.value;
+    try {
+        localStorage.setItem(HIGHLIGHT_LATE_STORAGE_KEY, highlightLate.value ? '1' : '0');
+    } catch (e) {
+        // localStorage unavailable (private mode, quota, ...) — toggle still works for this session.
+    }
+}
+
 const newTaskLabel = ref('');
 const newTaskDescription = ref('');
 const newTaskRecurrenceId = ref(null);
@@ -137,14 +157,28 @@ const addTask = () => {
 }
 
 const draggingTaskId = ref(null);
+const dragOverTaskId = ref(null);
 
 const onDragStartTask = (task) => {
     draggingTaskId.value = task.id;
 }
 
+// Fires whether the drag ended in a drop or was cancelled (e.g. released
+// outside the list) — without this, dragging out of the list would leave
+// the source row dimmed and the drop-target ring stuck forever.
+const onDragEndTask = () => {
+    draggingTaskId.value = null;
+    dragOverTaskId.value = null;
+}
+
+const onDragOverTask = (task) => {
+    dragOverTaskId.value = task.id;
+}
+
 const onDropTask = (targetTask) => {
     const fromId = draggingTaskId.value;
     draggingTaskId.value = null;
+    dragOverTaskId.value = null;
     if (fromId === null || fromId === targetTask.id) return;
 
     const list = reactiveTasks.value;
@@ -331,23 +365,43 @@ const exportTasks = async () => {
 
             <div class="flex items-center justify-between gap-2 px-1 mb-2">
                 <div class="text-xs font-medium text-gray-500">{{ filteredTasks.length }} task(s)</div>
-                <button type="button" @click="exportTasks" :disabled="!undoneFilteredTasks.length"
-                        class="btn btn-ghost btn-xs gap-1 normal-case disabled:opacity-50">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                         class="lucide lucide-copy">
-                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                    </svg>
-                    Export undone tasks as text
-                </button>
+                <div class="flex items-center gap-1">
+                    <button type="button" @click="toggleHighlightLate"
+                            :title="highlightLate ? 'Stop highlighting late tasks' : 'Highlight late tasks'"
+                            class="btn btn-ghost btn-xs gap-1 normal-case"
+                            :class="highlightLate ? 'text-red-600' : ''">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
+                            <path d="M12 9v4"/>
+                            <path d="M12 17h.01"/>
+                        </svg>
+                        Highlight late tasks
+                    </button>
+                    <button type="button" @click="exportTasks" :disabled="!undoneFilteredTasks.length"
+                            class="btn btn-ghost btn-xs gap-1 normal-case disabled:opacity-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             class="lucide lucide-copy">
+                            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                        </svg>
+                        Export undone tasks as text
+                    </button>
+                </div>
             </div>
 
             <div class="surface-card mb-2 overflow-hidden">
                 <div class="flex flex-col gap-2 p-2">
-                    <div v-for="task in filteredTasks" :key="task.id" class="flex items-start gap-1"
-                         @dragover.prevent @drop="onDropTask(task)">
-                        <div draggable="true" @dragstart="onDragStartTask(task)" title="Drag to reorder"
+                    <div v-for="task in filteredTasks" :key="task.id"
+                         class="flex items-start gap-1 rounded-lg transition"
+                         :class="[
+                            draggingTaskId === task.id ? 'opacity-40' : '',
+                            dragOverTaskId === task.id && draggingTaskId !== null && draggingTaskId !== task.id
+                                ? 'ring-2 ring-brand-accent' : '',
+                         ]"
+                         @dragover.prevent="onDragOverTask(task)" @drop="onDropTask(task)">
+                        <div draggable="true" @dragstart="onDragStartTask(task)" @dragend="onDragEndTask" title="Drag to reorder"
                              class="shrink-0 pt-3 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition select-none">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -359,7 +413,7 @@ const exportTasks = async () => {
                         <div class="min-w-0 flex-1">
                             <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"
                                   @toggle-editing="setActiveTask" :all-flags="allFlags"
-                                  :all-recurrences="allRecurrences"/>
+                                  :all-recurrences="allRecurrences" :highlight-late="highlightLate"/>
                         </div>
                     </div>
                     <div v-if="!filteredTasks.length" class="px-4 py-10 text-center text-sm text-gray-400">

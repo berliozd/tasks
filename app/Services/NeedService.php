@@ -20,6 +20,7 @@ readonly class NeedService
     public function getAll(): Collection
     {
         return Need::where('team_id', auth()->user()->currentTeam->id)
+            ->with('flags')
             ->orderBy('position')
             ->get();
     }
@@ -31,7 +32,10 @@ readonly class NeedService
     {
         $need = $this->findNeed($id);
         $this->checkPerms($need);
-        $need->load(['activities' => fn ($query) => $query->with('user')->latest()]);
+        $need->load([
+            'activities' => fn ($query) => $query->with('user')->latest(),
+            'flags',
+        ]);
         return $need;
     }
 
@@ -65,6 +69,36 @@ readonly class NeedService
             'type' => 'created',
         ]);
 
+        $flagIds = $data['flag_ids'] ?? null;
+        if (is_array($flagIds) && !empty($flagIds)) {
+            $need->flags()->sync(array_map('intval', $flagIds));
+        }
+        $need->load('flags');
+
+        return $need;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function addFlag(int $needId, int $flagId): Need
+    {
+        $need = $this->findNeed($needId);
+        $this->checkPerms($need);
+        $need->flags()->syncWithoutDetaching($flagId);
+        $need->load('flags');
+        return $need;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function removeFlag(int $needId, int $flagId): Need
+    {
+        $need = $this->findNeed($needId);
+        $this->checkPerms($need);
+        $need->flags()->detach($flagId);
+        $need->load('flags');
         return $need;
     }
 

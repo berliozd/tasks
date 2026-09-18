@@ -5,17 +5,24 @@ import {computed, ref, watch} from 'vue';
 import {addDays, format, parseISO} from 'date-fns';
 import {Link, usePage} from '@inertiajs/vue3';
 import FlagSwatches from '@/Components/FlagSwatches.vue';
+import Modal from '@/Components/Modal.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
 
 const period = ref('day'); // day|week|month
 const loading = ref(false);
 const tasks = ref([]);
-const expandedIds = ref(new Set());
 
-const toggleExpanded = (task) => {
-    const next = new Set(expandedIds.value);
-    if (next.has(task.id)) next.delete(task.id);
-    else next.add(task.id);
-    expandedIds.value = next;
+const showDetail = ref(false);
+const selectedTask = ref(null);
+
+const openDetail = (task) => {
+    selectedTask.value = task;
+    showDetail.value = true;
+};
+
+const closeDetail = () => {
+    showDetail.value = false;
+    selectedTask.value = null;
 };
 
 const yesterdayYmd = () => {
@@ -148,42 +155,61 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                     No completed tasks.
                 </div>
                 <div v-else class="divide-y divide-gray-100">
-                    <div v-for="task in tasks" :key="task.id">
-                        <div class="p-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-brand-surface transition"
-                             @click="toggleExpanded(task)">
-                            <div class="min-w-0 flex items-center gap-2">
-                                <svg class="shrink-0 size-3.5 text-gray-400 transition-transform"
-                                     :class="expandedIds.has(task.id) ? 'rotate-90' : ''"
-                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                     stroke-width="2.5" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                                </svg>
-                                <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
-                            </div>
-                            <div class="shrink-0 flex items-center gap-3">
-                                <div class="w-24 flex justify-end">
-                                    <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
-                                </div>
-                                <div class="w-32 text-xs text-gray-500 text-right">
-                                    {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
-                                </div>
-                            </div>
+                    <div v-for="task in tasks" :key="task.id"
+                         class="p-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-brand-surface transition"
+                         @click="openDetail(task)">
+                        <div class="min-w-0 flex items-center gap-2">
+                            <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
                         </div>
-                        <div v-if="expandedIds.has(task.id)" class="px-3 pb-3 pl-9 flex flex-col gap-2">
-                            <div v-if="task.description" class="text-sm text-gray-600 whitespace-pre-wrap">
-                                {{ task.description }}
+                        <div class="shrink-0 flex items-center gap-3">
+                            <div class="w-24 flex justify-end">
+                                <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
                             </div>
-                            <div v-else class="text-xs text-gray-400">No description.</div>
-                            <div v-if="(task.links ?? []).length" class="flex flex-col gap-1">
-                                <a v-for="link in task.links" :key="link.id" :href="link.url" target="_blank" rel="noopener"
-                                   class="text-sm text-brand-accent-dark hover:text-brand-accent hover:underline truncate">
-                                    {{ link.label || link.url }}
-                                </a>
+                            <div class="w-32 text-xs text-gray-500 text-right">
+                                {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <Modal :show="showDetail" @close="closeDetail">
+            <div v-if="selectedTask" class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
+                <div class="text-lg font-medium text-gray-900">{{ selectedTask.label }}</div>
+
+                <FlagSwatches v-if="(selectedTask.flags ?? []).length" :flags="selectedTask.flags"
+                              size-class="w-4 h-4" gap-class="gap-2"/>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
+                    <div v-if="selectedTask.scheduled_at">
+                        Scheduled: {{ formatDateTime(selectedTask.scheduled_at) }}
+                    </div>
+                    <div v-if="selectedTask.completed_at">
+                        Completed: {{ formatDateTime(selectedTask.completed_at) }}
+                    </div>
+                </div>
+
+                <div>
+                    <div class="text-xs font-medium text-gray-500 mb-1">Description</div>
+                    <div v-if="selectedTask.description" class="text-sm text-gray-700 whitespace-pre-wrap">
+                        {{ selectedTask.description }}
+                    </div>
+                    <div v-else class="text-sm text-gray-400">No description.</div>
+                </div>
+
+                <div v-if="(selectedTask.links ?? []).length" class="flex flex-col gap-1">
+                    <div class="text-xs font-medium text-gray-500 mb-1">Links</div>
+                    <a v-for="link in selectedTask.links" :key="link.id" :href="link.url" target="_blank" rel="noopener"
+                       class="text-sm text-brand-accent-dark hover:text-brand-accent hover:underline truncate">
+                        {{ link.label || link.url }}
+                    </a>
+                </div>
+
+                <div class="flex justify-end pt-2">
+                    <SecondaryButton @click="closeDetail">Close</SecondaryButton>
+                </div>
+            </div>
+        </Modal>
     </AppLayout>
 </template>

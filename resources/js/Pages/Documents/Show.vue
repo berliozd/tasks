@@ -240,7 +240,7 @@ refreshDocument();
                                @keydown.enter="addFlag" :disabled="addingFlag"
                                class="h-7 w-28 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
                         <button type="button" @click="rescanFlags" :disabled="rescanning"
-                                title="Re-scan the content with AI and add any newly-relevant flags"
+                                title="Re-scan the content and add any newly-relevant flags"
                                 class="inline-flex items-center px-2 py-1 rounded-lg border border-gray-300 text-[11px] font-medium text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
                             {{ rescanning ? 'Rescanning…' : 'Rescan flags' }}
                         </button>

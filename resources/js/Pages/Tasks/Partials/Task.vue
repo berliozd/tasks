@@ -9,7 +9,10 @@ import axios from "axios";
 import ReScheduleModal from "@/Pages/Tasks/Partials/ReScheduleModal.vue";
 import {ref, watch} from "vue";
 
-const props = defineProps({task: Object, allFlags: Array, allRecurrences: Array});
+const props = defineProps({
+    task: Object, allFlags: Array, allRecurrences: Array,
+    highlightLate: {type: Boolean, default: true},
+});
 const emits = defineEmits(['deleted', 'changed', 'toggle-editing']);
 
 const historyLoading = ref(false);
@@ -226,7 +229,7 @@ watch(editFlagIds, (next, prev) => {
 <template>
     <div class="rounded-lg ring-1 shadow-soft px-3 py-2.5 transition hover:shadow-card-hover"
          :class="[
-            taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400 bg-red-50/40' : 'ring-slate-900/[0.08] hover:ring-slate-900/[0.16]',
+            highlightLate && taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400 bg-red-50/40' : 'ring-slate-900/[0.08] hover:ring-slate-900/[0.16]',
             task.completed_at ? 'bg-gray-50/70' : 'bg-white'
          ]">
             <div class="flex items-start gap-2 sm:grid sm:grid-cols-[auto_1fr_10rem_6.5rem] sm:items-center">

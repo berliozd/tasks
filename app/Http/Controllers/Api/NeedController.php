@@ -69,6 +69,22 @@ class NeedController extends Controller
     /**
      * @throws Exception
      */
+    public function addFlag(string $id, string $flagId)
+    {
+        return $this->needService->addFlag((int) $id, (int) $flagId);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function removeFlag(string $id, string $flagId)
+    {
+        return $this->needService->removeFlag((int) $id, (int) $flagId);
+    }
+
+    /**
+     * @throws Exception
+     */
     public function destroy(string $id)
     {
         $this->needService->destroy((int) $id);

@@ -74,8 +74,8 @@ readonly class DocumentService
             'content' => $data['content'] ?? '',
         ]);
 
-        // Best-effort: a flaky AI call shouldn't prevent the document itself
-        // from being saved — it just comes back with no flags yet.
+        // Best-effort: an unexpected extraction failure shouldn't prevent the
+        // document itself from being saved — it just comes back with no flags yet.
         try {
             $flagNames = $this->documentFlagExtractor->extract($document->title, (string) $document->content);
             $flagIds = collect($flagNames)
@@ -107,10 +107,10 @@ readonly class DocumentService
 
     /**
      * Explicit, user-triggered re-scan (not run automatically on every
-     * autosave, which would mean an AI call on every debounced edit) — adds
-     * any newly-relevant flags without touching ones already on the
-     * document. Lets a failed AI call propagate, unlike create()'s
-     * best-effort scan, since the user is waiting on this one specifically.
+     * autosave) — adds any newly-relevant flags without touching ones
+     * already on the document. Lets a failed extraction propagate, unlike
+     * create()'s best-effort scan, since the user is waiting on this one
+     * specifically.
      *
      * @throws Exception
      */

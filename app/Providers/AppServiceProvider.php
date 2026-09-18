@@ -6,8 +6,7 @@ use App\Services\CompanySearch\BraveCompanySearchService;
 use App\Services\CompanySearch\CompanySearchInterface;
 use App\Services\CompanySearch\StubCompanySearchService;
 use App\Services\DocumentFlagExtractor\DocumentFlagExtractorInterface;
-use App\Services\DocumentFlagExtractor\OpenAiDocumentFlagExtractor;
-use App\Services\DocumentFlagExtractor\StubDocumentFlagExtractor;
+use App\Services\DocumentFlagExtractor\HeuristicDocumentFlagExtractor;
 use App\Services\EmailFinder\EmailFinderInterface;
 use App\Services\EmailFinder\OpenAiEmailFinder;
 use App\Services\EmailFinder\StubEmailFinder;
@@ -55,16 +54,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
 
-        $this->app->bind(DocumentFlagExtractorInterface::class, function () {
-            if ($this->app->environment('testing') || empty(config('services.openai.key'))) {
-                return new StubDocumentFlagExtractor();
-            }
-
-            return new OpenAiDocumentFlagExtractor(
-                (string) config('services.openai.key'),
-                (string) config('services.openai.model'),
-            );
-        });
+        $this->app->bind(DocumentFlagExtractorInterface::class, HeuristicDocumentFlagExtractor::class);
 
         $this->app->bind(ProfileSearchInterface::class, function () {
             // Keep tests hermetic (no network calls) regardless of whether a key is configured.

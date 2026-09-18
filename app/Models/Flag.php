@@ -26,4 +26,10 @@ class Flag extends Model
         return $this->belongsToMany(Task::class)
             ->withTimestamps();
     }
+
+    public function needs(): BelongsToMany
+    {
+        return $this->belongsToMany(Need::class)
+            ->withTimestamps();
+    }
 }

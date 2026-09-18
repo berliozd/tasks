@@ -146,6 +146,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/needs/{id}', [App\Http\Controllers\Api\NeedController::class, 'update'])->name('needs.update');
         Route::patch('/needs/{id}/stage', [App\Http\Controllers\Api\NeedController::class, 'moveStage'])->name('needs.stage');
         Route::post('/needs/{id}/notes', [App\Http\Controllers\Api\NeedController::class, 'addNote'])->name('needs.notes.store');
+        Route::post('/needs/{id}/flags/{flagId}', [App\Http\Controllers\Api\NeedController::class, 'addFlag'])->name('needs.flags.add');
+        Route::delete('/needs/{id}/flags/{flagId}', [App\Http\Controllers\Api\NeedController::class, 'removeFlag'])->name('needs.flags.remove');
         Route::delete('/needs/{id}', [App\Http\Controllers\Api\NeedController::class, 'destroy'])->name('needs.destroy');
 
         Route::get('/need-stage-groups', [App\Http\Controllers\Api\NeedStageController::class, 'index'])

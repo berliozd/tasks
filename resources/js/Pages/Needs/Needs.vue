@@ -10,11 +10,17 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import SaveButton from '@/Components/SaveButton.vue';
 import ManagePipelineModal from '@/Pages/Needs/Partials/ManagePipelineModal.vue';
+import FlagSwatches from '@/Components/FlagSwatches.vue';
 import {useStore} from '@/Composables/store.js';
 
 const loading = ref(true);
 const groups = ref([]); // [{id, label, position, stages: [{id, label, color, position, need_stage_group_id}]}]
 const needsByStage = reactive({}); // stage id -> Need[]
+const allFlags = ref([]);
+
+const refreshFlags = () => axios.get(route('flags.index')).then(response => {
+    allFlags.value = response.data;
+});
 
 const allStages = computed(() => groups.value.flatMap(g => g.stages));
 const stagesById = computed(() => Object.fromEntries(allStages.value.map(s => [s.id, s])));
@@ -63,7 +69,7 @@ const csvCell = (value) => {
 
 const exportBoardAsCsv = () => {
     const header = [
-        'Group', 'Stage', 'Title', 'Description', 'Business owner',
+        'Group', 'Stage', 'Title', 'Description', 'Business owner', 'Flags',
         'Jira key', 'Jira URL', 'Confluence URL', 'Created at', 'Updated at',
     ];
     const rows = [header];
@@ -73,6 +79,7 @@ const exportBoardAsCsv = () => {
             (needsByStage[stage.id] ?? []).forEach(need => {
                 rows.push([
                     group.label, stage.label, need.title, need.description, need.business_owner,
+                    (need.flags ?? []).map(f => f.name).join('; '),
                     need.jira_key, need.jira_url, need.confluence_url, need.created_at, need.updated_at,
                 ]);
             });
@@ -100,7 +107,20 @@ const matchesSearch = (need) => {
         || (need.description ?? '').toLowerCase().includes(query);
 }
 
-const visibleNeeds = (stageId) => (needsByStage[stageId] ?? []).filter(matchesSearch);
+// --- Flag filter (cumulative/OR — empty means every need is shown) ---
+
+const flagFilters = ref([]);
+
+const toggleFlagFilter = (flagId) => {
+    flagFilters.value = flagFilters.value.includes(flagId)
+        ? flagFilters.value.filter(id => id !== flagId)
+        : [...flagFilters.value, flagId];
+}
+
+const matchesFlagFilter = (need) => !flagFilters.value.length
+    || (need.flags ?? []).some(f => flagFilters.value.includes(f.id));
+
+const visibleNeeds = (stageId) => (needsByStage[stageId] ?? []).filter(n => matchesSearch(n) && matchesFlagFilter(n));
 
 // --- Presentation mode ---
 
@@ -138,11 +158,13 @@ const closeManageModal = () => {
 const showAddModal = ref(false);
 const newNeedTitle = ref('');
 const newNeedDescription = ref('');
+const newNeedFlagIds = ref([]);
 const creating = ref(false);
 
 const openAddModal = () => {
     newNeedTitle.value = '';
     newNeedDescription.value = '';
+    newNeedFlagIds.value = [];
     showAddModal.value = true;
 }
 
@@ -150,11 +172,19 @@ const closeAddModal = () => {
     showAddModal.value = false;
 }
 
+const toggleNewNeedFlag = (flagId) => {
+    newNeedFlagIds.value = newNeedFlagIds.value.includes(flagId)
+        ? newNeedFlagIds.value.filter(id => id !== flagId)
+        : [...newNeedFlagIds.value, flagId];
+}
+
 const addNeed = () => {
     const title = newNeedTitle.value.trim();
     if (!title) return;
     creating.value = true;
-    axios.post(route('needs.store'), {title, description: newNeedDescription.value.trim() || null}).then(response => {
+    axios.post(route('needs.store'), {
+        title, description: newNeedDescription.value.trim() || null, flag_ids: newNeedFlagIds.value,
+    }).then(response => {
         ensureBucket(response.data.need_stage_id);
         needsByStage[response.data.need_stage_id].push(response.data);
         showAddModal.value = false;
@@ -297,6 +327,21 @@ const updateDetail = () => {
 }
 const debouncedUpdateDetail = debounce(updateDetail, 600);
 
+const needHasFlag = (need, flag) => (need?.flags ?? []).some(f => f.id === flag.id);
+
+const toggleDetailFlag = (flag) => {
+    if (!selectedNeed.value) return;
+    const has = needHasFlag(selectedNeed.value, flag);
+    const request = has
+        ? axios.delete(route('needs.flags.remove', {id: selectedNeed.value.id, flagId: flag.id}))
+        : axios.post(route('needs.flags.add', {id: selectedNeed.value.id, flagId: flag.id}));
+    request.then(response => {
+        selectedNeed.value.flags = response.data.flags;
+        const card = needsByStage[selectedNeed.value.need_stage_id]?.find(n => n.id === selectedNeed.value.id);
+        if (card) card.flags = response.data.flags;
+    });
+}
+
 watch(() => selectedNeed.value && [
     selectedNeed.value.title, selectedNeed.value.description, selectedNeed.value.confluence_url,
     selectedNeed.value.jira_key, selectedNeed.value.jira_url, selectedNeed.value.business_owner,
@@ -378,6 +423,7 @@ const visibleActivities = computed(
 );
 
 refreshStages().then(refreshBoard);
+refreshFlags();
 </script>
 
 <template>
@@ -471,6 +517,28 @@ refreshStages().then(refreshBoard);
                         </button>
                     </div>
                 </div>
+
+                <div v-if="allFlags.length" class="flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">Filter by flag</span>
+                        <button v-if="flagFilters.length" type="button" @click="flagFilters = []"
+                                class="text-xs text-gray-400 hover:text-gray-600 underline">
+                            Clear
+                        </button>
+                    </div>
+                    <div class="flex flex-wrap gap-1">
+                        <button v-for="flag in allFlags" :key="flag.id"
+                                type="button" @click="toggleFlagFilter(flag.id)"
+                                class="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-medium ring-1 transition"
+                                :class="flagFilters.includes(flag.id)
+                                    ? 'bg-brand-navy text-white ring-brand-navy'
+                                    : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                            <span class="inline-block w-2 h-2 rounded-full ring-1 ring-black/10"
+                                  :style="{ backgroundColor: flag.color }"/>
+                            {{ flag.name }}
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
@@ -507,6 +575,8 @@ refreshStages().then(refreshBoard);
                                         <div v-if="need.business_owner" class="text-gray-400 mt-1 text-xs">
                                             {{ need.business_owner }}
                                         </div>
+                                        <FlagSwatches v-if="!presentationMode" :flags="need.flags" size-class="w-2.5 h-2.5"
+                                                      gap-class="gap-1" class="mt-1.5"/>
                                         <div v-if="!presentationMode && (need.jira_key || need.jira_url || need.confluence_url)" class="flex flex-wrap gap-1 mt-2">
                                             <a v-if="need.jira_url" :href="need.jira_url" target="_blank" rel="noopener" @click.stop
                                                :title="need.jira_key || 'Jira ticket'"
@@ -599,6 +669,22 @@ refreshStages().then(refreshBoard);
                     </div>
                 </div>
 
+                <div v-if="allFlags.length" class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Flags</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button v-for="flag in allFlags" :key="flag.id"
+                                type="button" @click="toggleDetailFlag(flag)"
+                                class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition"
+                                :class="needHasFlag(selectedNeed, flag)
+                                    ? 'bg-brand-navy text-white ring-brand-navy'
+                                    : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
+                                  :style="{ backgroundColor: flag.color }"/>
+                            <span class="truncate max-w-48">{{ flag.name }}</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div class="text-[11px] leading-3 text-gray-500 h-3">
                     <span v-if="savingDetail" class="text-gray-400">Saving…</span>
                     <span v-else-if="savedDetail" class="text-brand-accent-dark font-medium">Saved</span>
@@ -669,6 +755,21 @@ refreshStages().then(refreshBoard);
                     <label class="text-xs font-medium text-gray-500">Description (optional)</label>
                     <textarea v-model="newNeedDescription" rows="3"
                               class="px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm"/>
+                </div>
+                <div v-if="allFlags.length" class="flex flex-col gap-1">
+                    <label class="text-xs font-medium text-gray-500">Flags</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button v-for="flag in allFlags" :key="flag.id"
+                                type="button" @click="toggleNewNeedFlag(flag.id)"
+                                class="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium ring-1 transition"
+                                :class="newNeedFlagIds.includes(flag.id)
+                                    ? 'bg-brand-navy text-white ring-brand-navy'
+                                    : 'bg-white text-gray-700 ring-gray-200 hover:ring-gray-300 hover:bg-gray-50'">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
+                                  :style="{ backgroundColor: flag.color }"/>
+                            <span class="truncate max-w-48">{{ flag.name }}</span>
+                        </button>
+                    </div>
                 </div>
                 <span class="text-xs text-gray-400">New needs always start in the first stage of your pipeline.</span>
                 <div class="flex justify-end gap-2">

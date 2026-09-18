@@ -40,7 +40,7 @@ class DocumentTest extends TestCase
         $this->assertNull(Document::find($document->id));
     }
 
-    public function test_creating_a_document_attaches_ai_extracted_flags_and_can_be_filtered_by_them(): void
+    public function test_creating_a_document_attaches_auto_extracted_flags_and_can_be_filtered_by_them(): void
     {
         $user = User::factory()->withPersonalTeam()->create();
         $this->actingAs($user);
