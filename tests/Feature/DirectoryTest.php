@@ -6,6 +6,7 @@ use App\Models\Directory;
 use App\Models\Product;
 use App\Models\Prospect;
 use App\Models\User;
+use App\Services\CompanySearch\CompanySearchInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -117,6 +118,30 @@ class DirectoryTest extends TestCase
         $websites = collect($response->json())->pluck('website')->all();
         $this->assertNotContains('https://www.saas-companies-1.example.com', $websites);
         $this->assertNotEmpty($websites);
+    }
+
+    public function test_company_search_excludes_reference_and_directory_sites(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->actingAs($user);
+        $directory = Directory::factory()->create([
+            'team_id' => $user->currentTeam->id,
+            'prompt' => 'SaaS companies',
+        ]);
+
+        $this->mock(CompanySearchInterface::class, function ($mock) {
+            $mock->shouldReceive('search')->once()->andReturn([
+                ['name' => 'Acme Inc', 'website' => 'https://www.acme.example.com', 'snippet' => null],
+                ['name' => 'Acme', 'website' => 'https://en.wikipedia.org/wiki/Acme', 'snippet' => null],
+                ['name' => 'Acme on LinkedIn', 'website' => 'https://www.linkedin.com/company/acme', 'snippet' => null],
+            ]);
+        });
+
+        $response = $this->postJson("/api/directories/{$directory->id}/company-search", ['count' => 3])
+            ->assertSuccessful();
+
+        $websites = collect($response->json())->pluck('website')->all();
+        $this->assertEquals(['https://www.acme.example.com'], $websites);
     }
 
     public function test_company_search_requires_a_directory_prompt(): void

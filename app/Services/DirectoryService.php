@@ -275,8 +275,45 @@ readonly class DirectoryService
                 $existingUrls,
                 true,
             ))
+            ->reject(fn (array $row) => $this->isExcludedSearchDomain($row['website']))
             ->values()
             ->all();
+    }
+
+    /**
+     * Reference/directory-style sites that show up in web search results but
+     * are never themselves a prospect's own company website.
+     */
+    private const EXCLUDED_SEARCH_HOST_SUFFIXES = [
+        'wikipedia.org',
+        'wikimedia.org',
+        'wikidata.org',
+        'linkedin.com',
+        'crunchbase.com',
+        'glassdoor.com',
+        'indeed.com',
+        'facebook.com',
+        'twitter.com',
+        'x.com',
+        'youtube.com',
+        'instagram.com',
+        'yelp.com',
+    ];
+
+    private function isExcludedSearchDomain(string $url): bool
+    {
+        $host = mb_strtolower((string) parse_url($url, PHP_URL_HOST));
+        if ($host === '') {
+            return false;
+        }
+
+        foreach (self::EXCLUDED_SEARCH_HOST_SUFFIXES as $suffix) {
+            if ($host === $suffix || str_ends_with($host, ".{$suffix}")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
