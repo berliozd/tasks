@@ -139,6 +139,51 @@ const markProspectsNew = (ids) => {
     });
 }
 
+// Same mechanic as markProspectsNew, for prospects whose email was just
+// filled in by the bulk "Find emails" action.
+const updatedProspectIds = ref(new Set());
+const updatedProspectIdTimers = new Map();
+
+const markProspectsUpdated = (ids) => {
+    if (!ids.length) return;
+    const merged = new Set(updatedProspectIds.value);
+    ids.forEach(id => merged.add(id));
+    updatedProspectIds.value = merged;
+
+    ids.forEach(id => {
+        if (updatedProspectIdTimers.has(id)) clearTimeout(updatedProspectIdTimers.get(id));
+        updatedProspectIdTimers.set(id, setTimeout(() => {
+            const next = new Set(updatedProspectIds.value);
+            next.delete(id);
+            updatedProspectIds.value = next;
+            updatedProspectIdTimers.delete(id);
+        }, 30000));
+    });
+}
+
+// Same mechanic again, for prospects the bulk "Find emails" action searched
+// but came up empty for — so a mixed batch shows exactly which ones need a
+// manual look, not just an aggregate count in the toast.
+const notFoundProspectIds = ref(new Set());
+const notFoundProspectIdTimers = new Map();
+
+const markProspectsNotFound = (ids) => {
+    if (!ids.length) return;
+    const merged = new Set(notFoundProspectIds.value);
+    ids.forEach(id => merged.add(id));
+    notFoundProspectIds.value = merged;
+
+    ids.forEach(id => {
+        if (notFoundProspectIdTimers.has(id)) clearTimeout(notFoundProspectIdTimers.get(id));
+        notFoundProspectIdTimers.set(id, setTimeout(() => {
+            const next = new Set(notFoundProspectIds.value);
+            next.delete(id);
+            notFoundProspectIds.value = next;
+            notFoundProspectIdTimers.delete(id);
+        }, 30000));
+    });
+}
+
 const searchWithAi = () => {
     searchingWithAi.value = true;
     aiSearchError.value = '';
@@ -277,6 +322,7 @@ const excludedFilter = ref('all');
 // has at least one action in any of the selected statuses (empty = any).
 const statusFilters = ref([]);
 const withoutActionsFilter = ref(false);
+const withoutEmailFilter = ref(false);
 
 const toggleStatusFilter = (status) => {
     statusFilters.value = statusFilters.value.includes(status)
@@ -291,10 +337,21 @@ const filteredProspects = computed(() => {
         if (excludedFilter.value === 'yes' && !p.is_excluded) return false;
         if (excludedFilter.value === 'no' && p.is_excluded) return false;
         if (withoutActionsFilter.value && !hasNoActions(p)) return false;
+        if (withoutEmailFilter.value && p.email) return false;
         if (statusFilters.value.length && !statusFilters.value.some(s => p[`${s}_count`] > 0)) return false;
         return true;
     });
 });
+
+const anyProspectFilterActive = computed(() => excludedFilter.value !== 'all'
+    || withoutEmailFilter.value || withoutActionsFilter.value || statusFilters.value.length > 0);
+
+const clearProspectFilters = () => {
+    excludedFilter.value = 'all';
+    withoutEmailFilter.value = false;
+    withoutActionsFilter.value = false;
+    statusFilters.value = [];
+}
 
 const toggleProspectSelected = (prospect) => {
     const next = new Set(selectedProspectIds.value);
@@ -424,6 +481,37 @@ const actionFlags = (prospect) => {
     return flags;
 }
 
+const findingEmailsForSelected = ref(false);
+
+const findEmailsForSelected = async () => {
+    // Only prospects that both lack an email and have a website to search —
+    // mirrors the single-prospect "Find email from website" button's own
+    // v-if condition on ProspectShow.vue.
+    const candidates = (directory.value.prospects ?? [])
+        .filter(p => selectedProspectIds.value.has(p.id) && !p.email && p.website);
+    if (!candidates.length) return;
+
+    findingEmailsForSelected.value = true;
+    try {
+        const results = await Promise.allSettled(candidates.map(p =>
+            axios.post(route('prospects.find-email', p.id)).then(response => ({id: p.id, email: response.data.email}))
+        ));
+        const foundIds = results.filter(r => r.status === 'fulfilled').map(r => r.value.id);
+        const notFoundIds = candidates.map(p => p.id).filter(id => !foundIds.includes(id));
+        selectedProspectIds.value = new Set();
+        refreshDirectory();
+        markProspectsUpdated(foundIds);
+        markProspectsNotFound(notFoundIds);
+
+        const parts = [];
+        if (foundIds.length) parts.push(`Found ${foundIds.length} email${foundIds.length === 1 ? '' : 's'}`);
+        if (notFoundIds.length) parts.push(`${notFoundIds.length} not found`);
+        useStore().setSaved(parts.length ? parts.join(', ') : 'No emails found');
+    } finally {
+        findingEmailsForSelected.value = false;
+    }
+}
+
 const settingExcluded = ref(false);
 
 const setExcludedForSelected = async (excluded) => {
@@ -521,6 +609,10 @@ refreshTemplates();
                                     class="inline-flex items-center px-3 py-1.5 bg-brand-navy border border-transparent rounded-lg font-semibold text-[11px] text-white uppercase tracking-widest shadow-soft hover:bg-brand-navy-light transition">
                                 Schedule sending
                             </button>
+                            <button type="button" @click="findEmailsForSelected" :disabled="findingEmailsForSelected"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-[11px] text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
+                                {{ findingEmailsForSelected ? 'Searching…' : 'Search emails' }}
+                            </button>
                             <button type="button" @click="setExcludedForSelected(true)" :disabled="settingExcluded"
                                     class="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-300 font-semibold text-[11px] text-gray-600 uppercase tracking-widest hover:bg-gray-100 disabled:opacity-50 transition">
                                 Exclude
@@ -545,29 +637,42 @@ refreshTemplates();
                     No prospects yet. Add one above, or generate some with AI.
                 </div>
                 <template v-else>
-                    <div class="flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
-                        <label class="flex items-center gap-1">
-                            Excluded:
-                            <select v-model="excludedFilter"
-                                    class="h-8 pl-1 pr-6 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-xs">
-                                <option value="all">All</option>
-                                <option value="yes">Yes</option>
-                                <option value="no">No</option>
-                            </select>
-                        </label>
-                        <label class="flex items-center gap-1">
-                            <input type="checkbox" v-model="withoutActionsFilter"
-                                   class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
-                            Without actions
-                        </label>
-                        <span class="flex items-center gap-1 flex-wrap">
-                            Action status:
+                    <div class="flex flex-col gap-2 px-4 py-3 text-xs text-gray-500 border-b border-gray-100">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <button type="button" @click="excludedFilter = excludedFilter === 'yes' ? 'all' : 'yes'"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="excludedFilter === 'yes' ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                Excluded
+                            </button>
+                            <button type="button" @click="excludedFilter = excludedFilter === 'no' ? 'all' : 'no'"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="excludedFilter === 'no' ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                Included
+                            </button>
+                            <span class="w-px h-4 bg-gray-200"/>
+                            <button type="button" @click="withoutEmailFilter = !withoutEmailFilter"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="withoutEmailFilter ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                Without emails
+                            </button>
+                            <button type="button" @click="withoutActionsFilter = !withoutActionsFilter"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="withoutActionsFilter ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                Without actions
+                            </button>
+                            <button v-if="anyProspectFilterActive" type="button" @click="clearProspectFilters"
+                                    class="ml-auto text-gray-400 hover:text-gray-600 underline shrink-0">
+                                Clear filters
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="shrink-0">Action status</span>
                             <button v-for="s in STATUS_ORDER" :key="s" type="button" @click="toggleStatusFilter(s)"
                                     class="rounded-full text-xs font-semibold px-2 py-1 transition"
                                     :class="statusFilters.includes(s) ? [STATUS_COLORS[s], 'ring-1 ring-current'] : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
                                 {{ STATUS_LABELS[s] }}
                             </button>
-                        </span>
+                        </div>
                     </div>
                     <label class="flex items-center gap-2 px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
                         <input type="checkbox" :checked="allProspectsSelected" @change="toggleSelectAllProspects"
@@ -580,7 +685,7 @@ refreshTemplates();
                     <div v-else class="divide-y divide-gray-100">
                     <div v-for="prospect in filteredProspects" :key="prospect.id"
                          class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-brand-surface transition"
-                         :class="newProspectIds.has(prospect.id) ? 'bg-brand-accent/5' : ''"
+                         :class="newProspectIds.has(prospect.id) || updatedProspectIds.has(prospect.id) ? 'bg-brand-accent/5' : ''"
                          @click="openProspect(prospect)">
                         <div @click.stop>
                             <input type="checkbox" :checked="selectedProspectIds.has(prospect.id)"
@@ -593,6 +698,14 @@ refreshTemplates();
                                 <span v-if="newProspectIds.has(prospect.id)"
                                       class="shrink-0 rounded-full bg-brand-accent text-white text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5">
                                     New
+                                </span>
+                                <span v-else-if="updatedProspectIds.has(prospect.id)"
+                                      class="shrink-0 rounded-full bg-blue-600 text-white text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5">
+                                    Updated
+                                </span>
+                                <span v-else-if="notFoundProspectIds.has(prospect.id)"
+                                      class="shrink-0 rounded-full bg-gray-400 text-white text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5">
+                                    Email not found
                                 </span>
                             </div>
                             <div class="text-xs text-gray-500 truncate">

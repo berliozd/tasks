@@ -11,8 +11,9 @@ import {ref, watch, watchEffect} from "vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import CollapsibleSection from "@/Components/CollapsibleSection.vue";
 import ProspectActions from "@/Pages/Directories/Partials/ProspectActions.vue";
+import DeleteModal from "@/Pages/Tasks/Partials/DeleteModal.vue";
 import debounce from "lodash/debounce";
-import {Head} from "@inertiajs/vue3";
+import {Head, router} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
 
 const props = defineProps({directoryId: Number, prospectId: Number});
@@ -96,6 +97,13 @@ const findEmail = () => {
     }).finally(() => findingEmail.value = false);
 }
 
+const deleteProspect = () => {
+    axios.delete(route('prospects.delete', prospect.value.id)).then(() => {
+        useStore().setSaved('Prospect deleted');
+        router.visit(route('directories.view', props.directoryId));
+    });
+}
+
 refreshProspect();
 </script>
 
@@ -107,6 +115,10 @@ refreshProspect();
     <div v-if="loading" class="p-8 text-center text-sm text-gray-400">Loading…</div>
         <template v-else-if="prospect">
                 <CollapsibleSection title="Prospect details" default-open>
+                    <template #actions>
+                        <DeleteModal @deleted="deleteProspect"
+                                     label="Are you sure you want to delete this prospect?"/>
+                    </template>
                     <label class="text-xs font-medium text-gray-500">Name</label>
                     <input type="text" v-model="prospect.name"
                            class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
