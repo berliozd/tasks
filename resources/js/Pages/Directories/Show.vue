@@ -316,13 +316,43 @@ const openProspect = (prospect) => {
 
 const selectedProspectIds = ref(new Set());
 
+// Persisted across directories/sessions, same convention as the tasks
+// flag-filter (Tasks/Partials/Flags.vue) and highlight-late toggle.
+const PROSPECT_FILTERS_STORAGE_KEY = 'directory-prospect-filters';
+
+const loadStoredProspectFilters = () => {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(PROSPECT_FILTERS_STORAGE_KEY) ?? '{}');
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (e) {
+        return {};
+    }
+}
+const storedProspectFilters = loadStoredProspectFilters();
+
 // 'all' | 'yes' | 'no'
-const excludedFilter = ref('all');
+const excludedFilter = ref(storedProspectFilters.excludedFilter ?? 'all');
 // Array of selected ProspectAction status values — a prospect matches if it
 // has at least one action in any of the selected statuses (empty = any).
-const statusFilters = ref([]);
-const withoutActionsFilter = ref(false);
-const withoutEmailFilter = ref(false);
+const statusFilters = ref(Array.isArray(storedProspectFilters.statusFilters) ? storedProspectFilters.statusFilters : []);
+// 'all' | 'with' | 'without'
+const emailFilter = ref(storedProspectFilters.emailFilter ?? 'all');
+const actionsFilter = ref(storedProspectFilters.actionsFilter ?? 'all');
+
+const persistProspectFilters = () => {
+    try {
+        localStorage.setItem(PROSPECT_FILTERS_STORAGE_KEY, JSON.stringify({
+            excludedFilter: excludedFilter.value,
+            emailFilter: emailFilter.value,
+            actionsFilter: actionsFilter.value,
+            statusFilters: statusFilters.value,
+        }));
+    } catch (e) {
+        // localStorage unavailable (private mode, quota, ...) — filters still work for this session.
+    }
+}
+
+watch([excludedFilter, emailFilter, actionsFilter, statusFilters], persistProspectFilters, {deep: true});
 
 const toggleStatusFilter = (status) => {
     statusFilters.value = statusFilters.value.includes(status)
@@ -336,20 +366,22 @@ const filteredProspects = computed(() => {
     return (directory.value.prospects ?? []).filter(p => {
         if (excludedFilter.value === 'yes' && !p.is_excluded) return false;
         if (excludedFilter.value === 'no' && p.is_excluded) return false;
-        if (withoutActionsFilter.value && !hasNoActions(p)) return false;
-        if (withoutEmailFilter.value && p.email) return false;
+        if (actionsFilter.value === 'with' && hasNoActions(p)) return false;
+        if (actionsFilter.value === 'without' && !hasNoActions(p)) return false;
+        if (emailFilter.value === 'with' && !p.email) return false;
+        if (emailFilter.value === 'without' && p.email) return false;
         if (statusFilters.value.length && !statusFilters.value.some(s => p[`${s}_count`] > 0)) return false;
         return true;
     });
 });
 
 const anyProspectFilterActive = computed(() => excludedFilter.value !== 'all'
-    || withoutEmailFilter.value || withoutActionsFilter.value || statusFilters.value.length > 0);
+    || emailFilter.value !== 'all' || actionsFilter.value !== 'all' || statusFilters.value.length > 0);
 
 const clearProspectFilters = () => {
     excludedFilter.value = 'all';
-    withoutEmailFilter.value = false;
-    withoutActionsFilter.value = false;
+    emailFilter.value = 'all';
+    actionsFilter.value = 'all';
     statusFilters.value = [];
 }
 
@@ -641,23 +673,34 @@ refreshTemplates();
                         <div class="flex flex-wrap items-center gap-1.5">
                             <button type="button" @click="excludedFilter = excludedFilter === 'yes' ? 'all' : 'yes'"
                                     class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                                    :class="excludedFilter === 'yes' ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                    :class="excludedFilter === 'yes' ? 'bg-red-600 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
                                 Excluded
                             </button>
                             <button type="button" @click="excludedFilter = excludedFilter === 'no' ? 'all' : 'no'"
                                     class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                                    :class="excludedFilter === 'no' ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                    :class="excludedFilter === 'no' ? 'bg-emerald-600 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
                                 Included
                             </button>
                             <span class="w-px h-4 bg-gray-200"/>
-                            <button type="button" @click="withoutEmailFilter = !withoutEmailFilter"
+                            <button type="button" @click="emailFilter = emailFilter === 'with' ? 'all' : 'with'"
                                     class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                                    :class="withoutEmailFilter ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                    :class="emailFilter === 'with' ? 'bg-emerald-600 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                With emails
+                            </button>
+                            <button type="button" @click="emailFilter = emailFilter === 'without' ? 'all' : 'without'"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="emailFilter === 'without' ? 'bg-amber-600 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
                                 Without emails
                             </button>
-                            <button type="button" @click="withoutActionsFilter = !withoutActionsFilter"
+                            <span class="w-px h-4 bg-gray-200"/>
+                            <button type="button" @click="actionsFilter = actionsFilter === 'with' ? 'all' : 'with'"
                                     class="rounded-full text-xs font-semibold px-2 py-1 transition"
-                                    :class="withoutActionsFilter ? 'bg-gray-700 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                    :class="actionsFilter === 'with' ? 'bg-blue-600 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
+                                With actions
+                            </button>
+                            <button type="button" @click="actionsFilter = actionsFilter === 'without' ? 'all' : 'without'"
+                                    class="rounded-full text-xs font-semibold px-2 py-1 transition"
+                                    :class="actionsFilter === 'without' ? 'bg-amber-600 text-white ring-1 ring-current' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'">
                                 Without actions
                             </button>
                             <button v-if="anyProspectFilterActive" type="button" @click="clearProspectFilters"
@@ -692,9 +735,11 @@ refreshTemplates();
                                    @change="toggleProspectSelected(prospect)"
                                    class="rounded border-gray-300 text-brand-accent focus:ring-brand-accent transition">
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <div class="text-sm font-medium text-gray-900 truncate flex items-center gap-2">
-                                <span class="truncate">{{ prospect.name || 'Untitled prospect' }}</span>
+                        <div class="min-w-0 flex-1 flex items-center gap-2">
+                            <div class="min-w-0 flex-1 flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-900 truncate">
+                                    {{ prospect.name || 'Untitled prospect' }}
+                                </span>
                                 <span v-if="newProspectIds.has(prospect.id)"
                                       class="shrink-0 rounded-full bg-brand-accent text-white text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5">
                                     New
@@ -708,14 +753,26 @@ refreshTemplates();
                                     Email not found
                                 </span>
                             </div>
-                            <div class="text-xs text-gray-500 truncate">
+                            <div class="shrink-0 flex items-center gap-1.5">
                                 <a v-if="prospect.website" :href="prospect.website" target="_blank" rel="noopener"
-                                   @click.stop class="hover:underline hover:text-brand-accent-dark">
-                                    {{ prospect.website }}
+                                   @click.stop :data-tip="prospect.website"
+                                   class="tooltip shrink-0 inline-flex items-center justify-center size-5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2v20"/>
+                                        <path d="M2 12h20"/>
+                                        <path d="M4.9 4.9l14.2 14.2"/>
+                                        <path d="M19.1 4.9 4.9 19.1"/>
+                                        <circle cx="12" cy="12" r="4"/>
+                                        <circle cx="12" cy="12" r="8"/>
+                                    </svg>
                                 </a>
-                                <span v-if="prospect.website && prospect.email"> · </span>
-                                <span v-if="prospect.email">{{ prospect.email }}</span>
-                                <span v-if="!prospect.website && !prospect.email" class="text-gray-300">
+                                <a v-if="prospect.email" :href="`mailto:${prospect.email}`" @click.stop
+                                   :data-tip="prospect.email"
+                                   class="tooltip shrink-0 inline-flex items-center justify-center size-5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold hover:bg-emerald-100 transition">
+                                    @
+                                </a>
+                                <span v-if="!prospect.website && !prospect.email" class="text-xs text-gray-300 whitespace-nowrap">
                                     No website or email yet
                                 </span>
                             </div>
