@@ -47,13 +47,16 @@ readonly class ProspectActionRepository
     }
 
     /**
-     * The most recently sent actions across a team, latest first. Same
-     * limit+1 convention as getPlannedForTeam().
+     * The most recently carried-out actions across a team, latest first —
+     * any status other than pending/planned, not just 'sent' (that only
+     * covers email; logged actions like linkedin/call/meeting default to
+     * 'done' and were previously invisible here). Same limit+1 convention
+     * as getPlannedForTeam().
      */
     public function getLastSentForTeam(int $teamId, int $limit): Collection
     {
         return ProspectAction::query()
-            ->where('status', 'sent')
+            ->whereNotIn('status', ['pending', 'planned'])
             ->whereHas('prospect.directory', fn ($query) => $query->where('team_id', $teamId))
             ->with([
                 'prospect:id,name,email,directory_id',
@@ -66,23 +69,24 @@ readonly class ProspectActionRepository
     }
 
     /**
-     * updated_at timestamps of actions actually carried out (i.e. not still
-     * pending/planned) within the given UTC window — updated_at is when an
-     * action's status last changed, which for a non-pending/planned action
-     * is effectively when it was carried out. Returns raw timestamps rather
-     * than grouping by date here, since DATE() in SQL would bucket by the
-     * UTC calendar day regardless of the user's own timezone; the caller
+     * Completed actions (not still pending/planned) within the given UTC
+     * window, with their product preloaded — updated_at is when an action's
+     * status last changed, which for a non-pending/planned action is
+     * effectively when it was carried out. Returns full rows rather than
+     * grouping by date here, since DATE() in SQL would bucket by the UTC
+     * calendar day regardless of the user's own timezone; the caller
      * converts each timestamp to local time before bucketing.
      *
-     * @return Collection<int, \Illuminate\Support\Carbon>
+     * @return Collection<int, ProspectAction>
      */
-    public function getCompletedActionTimestampsForTeam(int $teamId, \DateTimeInterface $from, \DateTimeInterface $until): Collection
+    public function getCompletedActionsForTeam(int $teamId, \DateTimeInterface $from, \DateTimeInterface $until): Collection
     {
         return ProspectAction::query()
             ->whereNotIn('status', ['pending', 'planned'])
             ->whereHas('prospect.directory', fn ($query) => $query->where('team_id', $teamId))
             ->whereBetween('updated_at', [$from, $until])
-            ->pluck('updated_at');
+            ->with('prospect.directory.product:id,name,color')
+            ->get(['id', 'prospect_id', 'updated_at']);
     }
 
     public function update(ProspectAction $action, array $data): ProspectAction

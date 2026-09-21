@@ -18,7 +18,7 @@ import {useStore} from "@/Composables/store.js";
 
 const props = defineProps({productId: Number});
 
-const product = ref({name: '', website_url: '', brief: '', from_label: '', default_reply_to_email: '', directories: []});
+const product = ref({name: '', website_url: '', brief: '', from_label: '', default_reply_to_email: '', color: '#158749', directories: []});
 const newDirectoryName = ref('');
 const newDirectoryPrompt = ref('');
 const errorMsg = ref('');
@@ -60,12 +60,12 @@ const refreshProduct = () => {
 
 const cleanProduct = (p) => JSON.stringify({
     name: p.name, website_url: p.website_url, brief: p.brief,
-    from_label: p.from_label, default_reply_to_email: p.default_reply_to_email,
+    from_label: p.from_label, default_reply_to_email: p.default_reply_to_email, color: p.color,
 });
 
 watch(() => [
     product.value.name, product.value.website_url, product.value.brief,
-    product.value.from_label, product.value.default_reply_to_email,
+    product.value.from_label, product.value.default_reply_to_email, product.value.color,
 ], () => {
     if (!watchProductActive) return;
     if (cleanProduct(product.value) === storedProductSnapshot) return;
@@ -80,6 +80,7 @@ const updateProduct = () => {
         brief: product.value.brief,
         from_label: product.value.from_label,
         default_reply_to_email: product.value.default_reply_to_email,
+        color: product.value.color,
     }).then(() => {
         storedProductSnapshot = cleanProduct(product.value);
         savingProduct.value = false;
@@ -131,8 +132,13 @@ refreshProduct();
 
     <CollapsibleSection title="Product details" default-open>
         <label class="text-xs font-medium text-gray-500">Name</label>
-        <input type="text" v-model="product.name"
-               class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+        <div class="flex items-center gap-2">
+            <input type="color" v-model="product.color" title="Chart color for this product"
+                   class="size-10 shrink-0 rounded-lg border-0 p-0 cursor-pointer">
+            <input type="text" v-model="product.name"
+                   class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">
+        </div>
+        <span class="text-[11px] text-gray-400">Identifies this product on the activity chart.</span>
         <label class="text-xs font-medium text-gray-500 mt-2">Website URL</label>
         <input type="text" v-model="product.website_url"
                class="h-10 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition">

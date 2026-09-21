@@ -54,10 +54,27 @@ readonly class ProductService
         return $product;
     }
 
+    /**
+     * Identifies each product on the "Actions completed over time" chart —
+     * same palette the backfill migration used for existing products.
+     */
+    private const COLOR_PALETTE = [
+        '#158749', '#2563eb', '#d97706', '#dc2626', '#7c3aed',
+        '#0891b2', '#db2777', '#65a30d', '#ea580c', '#4338ca',
+    ];
+
     public function create(array $data): Product
     {
-        $data['team_id'] = auth()->user()->currentTeam->id;
+        $teamId = auth()->user()->currentTeam->id;
+        $data['team_id'] = $teamId;
+        $data['color'] = $data['color'] ?? $this->nextColor($teamId);
         return $this->productRepository->create($data);
+    }
+
+    private function nextColor(int $teamId): string
+    {
+        $count = Product::where('team_id', $teamId)->count();
+        return self::COLOR_PALETTE[$count % count(self::COLOR_PALETTE)];
     }
 
     /**

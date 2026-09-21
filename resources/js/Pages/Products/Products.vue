@@ -137,7 +137,8 @@ refreshLastSentActions();
                  @click="openProduct(product)">
                 <div class="flex items-center gap-3">
                     <div class="min-w-0 flex-1">
-                        <div class="text-sm font-medium text-gray-900 truncate">
+                        <div class="text-sm font-medium text-gray-900 truncate flex items-center gap-2">
+                            <span class="shrink-0 size-2.5 rounded-full ring-1 ring-black/10" :style="{backgroundColor: product.color}"/>
                             {{ product.name || 'Untitled product' }}
                         </div>
                         <div class="text-xs text-gray-500 truncate">

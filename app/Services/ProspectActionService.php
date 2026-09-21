@@ -65,6 +65,9 @@ readonly class ProspectActionService
      *
      * @return array<int, array{date: string, count: int}>
      */
+    /**
+     * @return array{products: array<int, array{id: int, name: string, color: string}>, rows: array<int, array{date: string, counts: array<int, int>}>}
+     */
     public function getActivityOverTime(int $days): array
     {
         $days = max(1, min(365, $days));
@@ -74,24 +77,33 @@ readonly class ProspectActionService
         $startLocal = Carbon::now($tz)->startOfDay()->subDays($days - 1);
         $endLocal = Carbon::now($tz)->endOfDay();
 
-        $timestamps = $this->prospectActionRepository->getCompletedActionTimestampsForTeam(
+        $actions = $this->prospectActionRepository->getCompletedActionsForTeam(
             $user->currentTeam->id,
             $startLocal->copy()->utc(),
             $endLocal->copy()->utc(),
         );
 
-        $counts = [];
-        foreach ($timestamps as $timestamp) {
-            $localDate = Carbon::parse($timestamp, 'UTC')->setTimezone($tz)->format('Y-m-d');
-            $counts[$localDate] = ($counts[$localDate] ?? 0) + 1;
+        $products = [];
+        $countsByDate = [];
+        foreach ($actions as $action) {
+            $product = $action->prospect?->directory?->product;
+            if (!$product) {
+                continue;
+            }
+
+            $localDate = Carbon::parse($action->updated_at, 'UTC')->setTimezone($tz)->format('Y-m-d');
+            $countsByDate[$localDate][$product->id] = ($countsByDate[$localDate][$product->id] ?? 0) + 1;
+            $products[$product->id] ??= ['id' => $product->id, 'name' => $product->name, 'color' => $product->color];
         }
 
-        return collect(range(0, $days - 1))
-            ->map(function (int $offset) use ($startLocal, $counts) {
+        $rows = collect(range(0, $days - 1))
+            ->map(function (int $offset) use ($startLocal, $countsByDate) {
                 $date = $startLocal->copy()->addDays($offset)->format('Y-m-d');
-                return ['date' => $date, 'count' => $counts[$date] ?? 0];
+                return ['date' => $date, 'counts' => $countsByDate[$date] ?? []];
             })
             ->all();
+
+        return ['products' => array_values($products), 'rows' => $rows];
     }
 
     /**

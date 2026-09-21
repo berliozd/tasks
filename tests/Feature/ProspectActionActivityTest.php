@@ -33,12 +33,16 @@ class ProspectActionActivityTest extends TestCase
             ->assertSuccessful()
             ->json();
 
-        $this->assertCount(3, $response);
-        $byDate = collect($response)->keyBy('date');
+        $this->assertCount(3, $response['rows']);
+        $byDate = collect($response['rows'])->keyBy('date');
+        $productId = $directory->product_id;
 
-        $this->assertEquals(1, $byDate[now()->format('Y-m-d')]['count']);
-        $this->assertEquals(0, $byDate[now()->subDays(1)->format('Y-m-d')]['count']);
-        $this->assertEquals(1, $byDate[now()->subDays(2)->format('Y-m-d')]['count']);
+        $this->assertEquals(1, $byDate[now()->format('Y-m-d')]['counts'][$productId] ?? 0);
+        $this->assertEquals(0, $byDate[now()->subDays(1)->format('Y-m-d')]['counts'][$productId] ?? 0);
+        $this->assertEquals(1, $byDate[now()->subDays(2)->format('Y-m-d')]['counts'][$productId] ?? 0);
+
+        $this->assertEquals([$productId], collect($response['products'])->pluck('id')->all());
+        $this->assertNotEmpty($response['products'][0]['color']);
     }
 
     public function test_activity_over_time_buckets_by_the_users_local_date_not_utc(): void
@@ -61,12 +65,13 @@ class ProspectActionActivityTest extends TestCase
             ->assertSuccessful()
             ->json();
 
-        $byDate = collect($response)->keyBy('date');
+        $byDate = collect($response['rows'])->keyBy('date');
         $localToday = $localNow->format('Y-m-d');
         $localYesterday = $localNow->copy()->subDay()->format('Y-m-d');
+        $productId = $directory->product_id;
 
-        $this->assertEquals(1, $byDate[$localToday]['count']);
-        $this->assertEquals(0, $byDate[$localYesterday]['count']);
+        $this->assertEquals(1, $byDate[$localToday]['counts'][$productId] ?? 0);
+        $this->assertEquals(0, $byDate[$localYesterday]['counts'][$productId] ?? 0);
     }
 
     public function test_activity_over_time_is_scoped_to_the_current_team(): void
@@ -83,7 +88,8 @@ class ProspectActionActivityTest extends TestCase
             ->assertSuccessful()
             ->json();
 
-        $total = collect($response)->sum('count');
+        $this->assertEmpty($response['products']);
+        $total = collect($response['rows'])->sum(fn ($row) => array_sum($row['counts']));
         $this->assertEquals(0, $total);
     }
 }

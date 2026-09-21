@@ -19,6 +19,7 @@ class Product extends Model
         'brief',
         'from_label',
         'default_reply_to_email',
+        'color',
     ];
 
     public function team(): BelongsTo

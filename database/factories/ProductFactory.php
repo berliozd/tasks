@@ -22,6 +22,7 @@ class ProductFactory extends Factory
             'website_url' => $this->faker->url(),
             'brief' => $this->faker->paragraph(),
             'team_id' => Team::factory(),
+            'color' => $this->faker->hexColor(),
         ];
     }
 }

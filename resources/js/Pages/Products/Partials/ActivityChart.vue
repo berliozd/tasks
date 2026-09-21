@@ -6,40 +6,42 @@ import {format} from 'date-fns';
 const days = ref(30);
 const canvas = ref(null);
 const loading = ref(true);
+const hasActivity = ref(true);
 let chart = null;
 
 const load = () => {
     loading.value = true;
     axios.get(route('prospect-actions.activity'), {params: {days: days.value}}).then(response => {
-        const labels = response.data.map(row => format(new Date(row.date), 'MMM d'));
-        const counts = response.data.map(row => row.count);
+        const {products, rows} = response.data;
+        hasActivity.value = products.length > 0;
+
+        const labels = rows.map(row => format(new Date(row.date), 'MMM d'));
+        const datasets = products.map(product => ({
+            label: product.name,
+            data: rows.map(row => row.counts[product.id] ?? 0),
+            backgroundColor: product.color,
+            stack: 'activity',
+            borderRadius: 4,
+            maxBarThickness: 24,
+        }));
 
         if (chart) {
             chart.data.labels = labels;
-            chart.data.datasets[0].data = counts;
+            chart.data.datasets = datasets;
             chart.update();
             return;
         }
 
         chart = new Chart(canvas.value, {
             type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Actions completed',
-                    data: counts,
-                    backgroundColor: '#158749',
-                    borderRadius: 4,
-                    maxBarThickness: 24,
-                }],
-            },
+            data: {labels, datasets},
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {legend: {display: false}},
+                plugins: {legend: {display: true, position: 'bottom', labels: {boxWidth: 10, usePointStyle: true}}},
                 scales: {
-                    x: {grid: {display: false}},
-                    y: {beginAtZero: true, ticks: {precision: 0}},
+                    x: {stacked: true, grid: {display: false}},
+                    y: {stacked: true, beginAtZero: true, ticks: {precision: 0}},
                 },
             },
         });
@@ -66,7 +68,10 @@ onBeforeUnmount(() => chart?.destroy());
             <div v-if="loading" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
                 Loading…
             </div>
-            <canvas ref="canvas"/>
+            <div v-else-if="!hasActivity" class="absolute inset-0 flex items-center justify-center text-sm text-gray-400">
+                No activity in this window.
+            </div>
+            <canvas ref="canvas" :class="hasActivity ? '' : 'invisible'"/>
         </div>
     </div>
 </template>
