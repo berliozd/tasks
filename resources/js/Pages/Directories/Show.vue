@@ -416,6 +416,47 @@ const refreshTemplates = () => {
     });
 }
 
+// --- Quick "log action" from the prospect list, without opening the prospect's own page ---
+
+const LOG_ACTION_TYPES = ['email', 'call', 'linkedin', 'meeting', 'other'];
+const showLogActionModal = ref(false);
+const logActionProspect = ref(null);
+const loggingAction = ref(false);
+const logActionError = ref('');
+const newLogAction = ref({type: 'email', subject: '', message: '', email_template_id: ''});
+
+const openLogActionModal = (prospect) => {
+    logActionProspect.value = prospect;
+    newLogAction.value = {type: 'email', subject: '', message: '', email_template_id: ''};
+    logActionError.value = '';
+    showLogActionModal.value = true;
+}
+
+const closeLogActionModal = () => {
+    showLogActionModal.value = false;
+    logActionProspect.value = null;
+}
+
+const onLogActionTemplateSelected = () => {
+    const template = templates.value.find(t => t.id === newLogAction.value.email_template_id);
+    if (!template) return;
+    if (!newLogAction.value.subject) newLogAction.value.subject = template.subject ?? '';
+    if (!newLogAction.value.message) newLogAction.value.message = template.body;
+}
+
+const submitLogAction = () => {
+    if (!newLogAction.value.message || !logActionProspect.value) return;
+    logActionError.value = '';
+    loggingAction.value = true;
+    axios.post(route('prospect-actions.store', logActionProspect.value.id), newLogAction.value).then(() => {
+        closeLogActionModal();
+        refreshDirectory();
+        useStore().setSaved('Action logged');
+    }).catch((error) => {
+        logActionError.value = error.response?.data?.message ?? 'Could not log action';
+    }).finally(() => loggingAction.value = false);
+}
+
 function toDatetimeLocal(date) {
     const d = new Date(date);
     if (isNaN(d)) return '';
@@ -785,6 +826,14 @@ refreshTemplates();
                             </span>
                         </div>
                         <span v-else class="shrink-0 text-xs text-gray-400">No actions yet</span>
+                        <button type="button" @click.stop="openLogActionModal(prospect)" title="Log an action"
+                                class="shrink-0 inline-flex items-center justify-center size-7 rounded-full text-gray-400 hover:text-brand-accent-dark hover:bg-brand-accent/10 transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 20h9"/>
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                            </svg>
+                        </button>
                         <div @click.stop>
                             <DeleteConfirmPopover @deleted="deleteProspect(prospect)"
                                                    label="Delete this prospect? Its logged actions will be deleted too."/>
@@ -839,6 +888,42 @@ refreshTemplates();
                         <DangerButton @click="deleteSelectedProspects" :disabled="deletingSelected">
                             {{ deletingSelected ? 'Deleting…' : 'Delete' }}
                         </DangerButton>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal :show="showLogActionModal" @close="closeLogActionModal" max-width="md">
+                <div class="p-4 flex flex-col gap-2">
+                    <div class="text-sm font-medium text-gray-900">
+                        Log an action for {{ logActionProspect?.name || 'this prospect' }}
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <select v-model="newLogAction.type"
+                                class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                            <option v-for="t in LOG_ACTION_TYPES" :key="t" :value="t">{{ t }}</option>
+                        </select>
+                        <select v-model="newLogAction.email_template_id" @change="onLogActionTemplateSelected"
+                                class="h-9 px-2 rounded-lg border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                            <option value="">No template</option>
+                            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                    </div>
+                    <input v-if="newLogAction.type === 'email'" type="text" v-model="newLogAction.subject" placeholder="Subject"
+                           class="h-9 px-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition text-sm">
+                    <textarea v-model="newLogAction.message" placeholder="Message" rows="4"
+                              class="text-sm px-2 py-2 rounded-lg w-full border-gray-300 focus:border-brand-accent focus:ring-brand-accent transition"/>
+                    <div v-if="newLogAction.type === 'email'" class="text-[11px] text-gray-500">
+                        Email actions are logged as pending — send them (or schedule a send) from the prospect's page once created.
+                    </div>
+                    <div v-else class="text-[11px] text-gray-500">
+                        Logged as done immediately — this records something you already did.
+                    </div>
+                    <div v-if="logActionError" class="text-xs text-red-600">{{ logActionError }}</div>
+                    <div class="flex justify-end gap-2 mt-2">
+                        <SecondaryButton @click="closeLogActionModal">Cancel</SecondaryButton>
+                        <PrimaryButton @click="submitLogAction" :disabled="loggingAction">
+                            {{ loggingAction ? 'Logging…' : 'Log action' }}
+                        </PrimaryButton>
                     </div>
                 </div>
             </Modal>
