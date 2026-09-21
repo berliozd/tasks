@@ -19,6 +19,7 @@ import EmailTemplates from "@/Pages/Directories/Partials/EmailTemplates.vue";
 import debounce from "lodash/debounce";
 import {Head, router} from "@inertiajs/vue3";
 import {useStore} from "@/Composables/store.js";
+import {STATUS_COLORS, STATUS_LABELS, STATUS_ORDER} from "@/Composables/prospectActionStatus.js";
 
 const props = defineProps({directoryId: Number});
 
@@ -524,21 +525,6 @@ const submitSchedule = async () => {
     }
 }
 
-const STATUS_LABELS = {
-    pending: 'pending', planned: 'planned', sent: 'sent', done: 'done', replied: 'replied', bounced: 'bounced',
-    no_response: 'no response', lost: 'lost',
-};
-const STATUS_COLORS = {
-    replied: 'bg-blue-50 text-blue-700',
-    bounced: 'bg-red-50 text-red-700',
-    no_response: 'bg-red-50 text-red-700',
-    lost: 'bg-red-50 text-red-700',
-    sent: 'bg-brand-accent/10 text-brand-accent-dark',
-    done: 'bg-brand-accent/10 text-brand-accent-dark',
-    planned: 'bg-brand-accent/10 text-brand-accent-dark',
-    pending: 'bg-gray-100 text-gray-600',
-};
-const STATUS_ORDER = ['sent', 'done', 'replied', 'lost', 'bounced', 'no_response', 'planned', 'pending'];
 
 const actionFlags = (prospect) => {
     const flags = STATUS_ORDER
