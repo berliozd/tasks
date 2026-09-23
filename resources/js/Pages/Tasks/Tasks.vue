@@ -37,9 +37,11 @@ const toggleHighlightLate = () => {
 const COMPACT_MODE_STORAGE_KEY = 'tasks-compact-mode';
 const loadCompactMode = () => {
     try {
-        return localStorage.getItem(COMPACT_MODE_STORAGE_KEY) === '1';
+        const stored = localStorage.getItem(COMPACT_MODE_STORAGE_KEY);
+        // Default on when no preference has been stored yet.
+        return stored === null ? true : stored === '1';
     } catch (e) {
-        return false;
+        return true;
     }
 }
 const compactMode = ref(loadCompactMode());
@@ -430,7 +432,7 @@ const exportTasks = async () => {
             </div>
 
             <div class="surface-card mb-2 overflow-hidden">
-                <div class="flex flex-col p-2" :class="compactMode ? 'gap-0.5' : 'gap-2'">
+                <div class="flex flex-col p-2" :class="compactMode ? 'gap-1.5' : 'gap-2'">
                     <div v-for="task in filteredTasks" :key="task.id"
                          class="relative flex items-start gap-1 rounded-lg transition"
                          :class="draggingTaskId === task.id ? 'opacity-40' : ''"
