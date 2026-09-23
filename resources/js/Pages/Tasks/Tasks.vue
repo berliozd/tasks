@@ -34,6 +34,24 @@ const toggleHighlightLate = () => {
     }
 }
 
+const COMPACT_MODE_STORAGE_KEY = 'tasks-compact-mode';
+const loadCompactMode = () => {
+    try {
+        return localStorage.getItem(COMPACT_MODE_STORAGE_KEY) === '1';
+    } catch (e) {
+        return false;
+    }
+}
+const compactMode = ref(loadCompactMode());
+const toggleCompactMode = () => {
+    compactMode.value = !compactMode.value;
+    try {
+        localStorage.setItem(COMPACT_MODE_STORAGE_KEY, compactMode.value ? '1' : '0');
+    } catch (e) {
+        // localStorage unavailable — toggle still works for this session.
+    }
+}
+
 const newTaskLabel = ref('');
 const newTaskDescription = ref('');
 const newTaskRecurrenceId = ref(null);
@@ -158,6 +176,7 @@ const addTask = () => {
 
 const draggingTaskId = ref(null);
 const dragOverTaskId = ref(null);
+const dropPosition = ref(null); // 'before' | 'after' — where the dragged task will land relative to dragOverTaskId
 
 const onDragStartTask = (task) => {
     draggingTaskId.value = task.id;
@@ -165,28 +184,35 @@ const onDragStartTask = (task) => {
 
 // Fires whether the drag ended in a drop or was cancelled (e.g. released
 // outside the list) — without this, dragging out of the list would leave
-// the source row dimmed and the drop-target ring stuck forever.
+// the source row dimmed and the drop-target indicator stuck forever.
 const onDragEndTask = () => {
     draggingTaskId.value = null;
     dragOverTaskId.value = null;
+    dropPosition.value = null;
 }
 
-const onDragOverTask = (task) => {
+const onDragOverTask = (task, event) => {
     dragOverTaskId.value = task.id;
+    const rect = event.currentTarget.getBoundingClientRect();
+    dropPosition.value = (event.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
 }
 
 const onDropTask = (targetTask) => {
     const fromId = draggingTaskId.value;
+    const position = dropPosition.value;
     draggingTaskId.value = null;
     dragOverTaskId.value = null;
+    dropPosition.value = null;
     if (fromId === null || fromId === targetTask.id) return;
 
     const list = reactiveTasks.value;
     const fromIndex = list.findIndex(t => t.id === fromId);
-    const toIndex = list.findIndex(t => t.id === targetTask.id);
-    if (fromIndex === -1 || toIndex === -1) return;
+    if (fromIndex === -1) return;
 
     const [moved] = list.splice(fromIndex, 1);
+    let toIndex = list.findIndex(t => t.id === targetTask.id);
+    if (toIndex === -1) return;
+    if (position === 'after') toIndex += 1;
     list.splice(toIndex, 0, moved);
 
     axios.post(route('tasks.reorder'), {ids: list.map(t => t.id).filter(Boolean)});
@@ -366,6 +392,18 @@ const exportTasks = async () => {
             <div class="flex items-center justify-between gap-2 px-1 mb-2">
                 <div class="text-xs font-medium text-gray-500">{{ filteredTasks.length }} task(s)</div>
                 <div class="flex items-center gap-1">
+                    <button type="button" @click="toggleCompactMode"
+                            :title="compactMode ? 'Switch to comfortable view' : 'Switch to compact view'"
+                            class="btn btn-ghost btn-xs gap-1 normal-case"
+                            :class="compactMode ? 'text-brand-accent-dark' : ''">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="6" x2="21" y2="6"/>
+                            <line x1="3" y1="12" x2="21" y2="12"/>
+                            <line x1="3" y1="18" x2="21" y2="18"/>
+                        </svg>
+                        Compact mode
+                    </button>
                     <button type="button" @click="toggleHighlightLate"
                             :title="highlightLate ? 'Stop highlighting late tasks' : 'Highlight late tasks'"
                             class="btn btn-ghost btn-xs gap-1 normal-case"
@@ -392,17 +430,16 @@ const exportTasks = async () => {
             </div>
 
             <div class="surface-card mb-2 overflow-hidden">
-                <div class="flex flex-col gap-2 p-2">
+                <div class="flex flex-col p-2" :class="compactMode ? 'gap-0.5' : 'gap-2'">
                     <div v-for="task in filteredTasks" :key="task.id"
-                         class="flex items-start gap-1 rounded-lg transition"
-                         :class="[
-                            draggingTaskId === task.id ? 'opacity-40' : '',
-                            dragOverTaskId === task.id && draggingTaskId !== null && draggingTaskId !== task.id
-                                ? 'ring-2 ring-brand-accent' : '',
-                         ]"
-                         @dragover.prevent="onDragOverTask(task)" @drop="onDropTask(task)">
+                         class="relative flex items-start gap-1 rounded-lg transition"
+                         :class="draggingTaskId === task.id ? 'opacity-40' : ''"
+                         @dragover.prevent="onDragOverTask(task, $event)" @drop="onDropTask(task)">
+                        <div v-if="dragOverTaskId === task.id && draggingTaskId !== null && draggingTaskId !== task.id && dropPosition === 'before'"
+                             class="pointer-events-none absolute -top-1 inset-x-2 h-0.5 rounded-full bg-brand-accent"/>
                         <div draggable="true" @dragstart="onDragStartTask(task)" @dragend="onDragEndTask" title="Drag to reorder"
-                             class="shrink-0 pt-3 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition select-none">
+                             class="shrink-0 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition select-none"
+                             :class="compactMode ? 'pt-1.5' : 'pt-3'">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                  stroke-linejoin="round" class="lucide lucide-grip-vertical">
@@ -413,8 +450,11 @@ const exportTasks = async () => {
                         <div class="min-w-0 flex-1">
                             <Task :task="task" @deleted="refreshTasks()" @changed="refreshTasks()"
                                   @toggle-editing="setActiveTask" :all-flags="allFlags"
-                                  :all-recurrences="allRecurrences" :highlight-late="highlightLate"/>
+                                  :all-recurrences="allRecurrences" :highlight-late="highlightLate"
+                                  :compact="compactMode"/>
                         </div>
+                        <div v-if="dragOverTaskId === task.id && draggingTaskId !== null && draggingTaskId !== task.id && dropPosition === 'after'"
+                             class="pointer-events-none absolute -bottom-1 inset-x-2 h-0.5 rounded-full bg-brand-accent"/>
                     </div>
                     <div v-if="!filteredTasks.length" class="px-4 py-10 text-center text-sm text-gray-400">
                         No tasks here. Use the + button to add one.

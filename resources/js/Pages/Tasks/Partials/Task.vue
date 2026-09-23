@@ -12,6 +12,7 @@ import {ref, watch} from "vue";
 const props = defineProps({
     task: Object, allFlags: Array, allRecurrences: Array,
     highlightLate: {type: Boolean, default: true},
+    compact: {type: Boolean, default: false},
 });
 const emits = defineEmits(['deleted', 'changed', 'toggle-editing']);
 
@@ -227,8 +228,9 @@ watch(editFlagIds, (next, prev) => {
 </script>
 
 <template>
-    <div class="rounded-lg ring-1 shadow-soft px-3 py-2.5 transition hover:shadow-card-hover"
+    <div class="rounded-lg ring-1 shadow-soft transition hover:shadow-card-hover"
          :class="[
+            compact ? 'px-2 py-1' : 'px-3 py-2.5',
             highlightLate && taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400 bg-red-50/40' : 'ring-slate-900/[0.08] hover:ring-slate-900/[0.16]',
             task.completed_at ? 'bg-gray-50/70' : 'bg-white'
          ]">
@@ -253,26 +255,30 @@ watch(editFlagIds, (next, prev) => {
                             </svg>
                         </a>
                     </div>
-                    <div v-if="task.completed_at !== null" class="text-xs text-gray-400">
+                    <div v-if="task.completed_at !== null && !compact" class="text-xs text-gray-400">
                         Completed on {{ formatDateTime(task.completed_at) }}
                     </div>
-                    <div v-if="task.recurrence_id" class="text-xs text-brand-accent-dark">
+                    <div v-if="task.recurrence_id && !compact" class="text-xs text-brand-accent-dark">
                         Repeats: {{ recurrenceLabel(task) }}
                     </div>
                 </div>
-                <div class="ml-auto flex items-center gap-2 sm:ml-0 sm:justify-end sm:min-h-10 sm:w-40">
+                <div class="ml-auto flex items-center gap-2 sm:ml-0 sm:justify-end sm:w-40"
+                     :class="compact ? 'sm:min-h-6' : 'sm:min-h-10'">
                     <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-1.5"/>
                 </div>
-                <div class="flex items-center justify-end gap-1 sm:min-h-10 sm:w-[6.5rem]">
-                    <div class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+                <div class="flex items-center justify-end gap-1 sm:w-[6.5rem]" :class="compact ? 'sm:min-h-6' : 'sm:min-h-10'">
+                    <div class="flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+                         :class="compact ? 'w-6 h-6' : 'w-7 h-7'">
                         <ReScheduleModal v-if="task.completed_at === null" @reschedule="rescheduleTomorrow(task)"/>
                     </div>
-                    <div class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+                    <div class="flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+                         :class="compact ? 'w-6 h-6' : 'w-7 h-7'">
                         <InProgressIcon v-if="task.completed_at === null"
                                         :in-progress="taskHasActiveProgression(task)" :enabled="true"
                                         @click="updateProgression(task)"/>
                     </div>
-                    <div class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-red-50 transition">
+                    <div class="flex items-center justify-center rounded-full hover:bg-red-50 transition"
+                         :class="compact ? 'w-6 h-6' : 'w-7 h-7'">
                         <DeleteModal @deleted="deleteTask(task)" label="Are you sure you want to delete this task?"/>
                     </div>
                 </div>
