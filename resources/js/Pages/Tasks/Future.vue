@@ -124,7 +124,8 @@ const setActiveTask = (task) => {
                     <Task v-for="task in (reactiveTasks.value ?? [])" :key="task.id" :task="task"
                           @deleted="refreshTasks()" @changed="refreshTasks()"
                           @toggle-editing="setActiveTask" :all-flags="allFlags"
-                          :all-recurrences="allRecurrences" :readonly="true" :compact="compactMode"/>
+                          :all-recurrences="allRecurrences" :readonly="true" :compact="compactMode"
+                          :highlight-late="false"/>
                     <div v-if="!(reactiveTasks.value ?? []).length" class="px-4 py-10 text-center text-sm text-gray-400">
                         No future tasks scheduled.
                     </div>

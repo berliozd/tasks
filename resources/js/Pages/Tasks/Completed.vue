@@ -163,7 +163,8 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                 <div v-else class="flex flex-col p-2" :class="compactMode ? 'gap-1.5' : 'gap-2'">
                     <Task v-for="task in tasks" :key="task.id" :task="task"
                           @toggle-editing="setActiveTask" :all-flags="allFlags"
-                          :all-recurrences="allRecurrences" :readonly="true" :compact="compactMode"/>
+                          :all-recurrences="allRecurrences" :readonly="true" :compact="compactMode"
+                          :strike-through-completed="false"/>
                 </div>
             </div>
         </div>

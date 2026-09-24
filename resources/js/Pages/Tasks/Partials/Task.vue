@@ -14,6 +14,7 @@ const props = defineProps({
     highlightLate: {type: Boolean, default: true},
     compact: {type: Boolean, default: false},
     readonly: {type: Boolean, default: false},
+    strikeThroughCompleted: {type: Boolean, default: true},
 });
 const emits = defineEmits(['deleted', 'changed', 'toggle-editing']);
 
@@ -242,10 +243,10 @@ watch(editFlagIds, (next, prev) => {
                 </div>
                 <div class="min-w-0 w-full">
                     <div @click="toggleEditing" class="cursor-pointer w-full flex items-center gap-1.5">
-                        <span :class="task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900'">
+                        <span :class="task.completed_at && strikeThroughCompleted ? 'text-gray-400 line-through' : 'text-gray-900'">
                             {{ task.label }}
                         </span>
-                        <a v-if="!readonly && (task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
+                        <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
                            @click.stop :title="task.links[0].url"
                            class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
