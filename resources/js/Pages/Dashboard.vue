@@ -74,14 +74,14 @@ const submitFeatureRequest = () => {
             <div class="flex items-center gap-4">
                 <h2 class="font-semibold text-xl leading-tight text-slate-900">Dashboard</h2>
                 <SavedLabel/>
-                <button type="button" @click="openFeatureRequestModal"
-                        class="ml-auto shrink-0 inline-flex items-center gap-2 h-10 px-4 rounded-full border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                <button type="button" @click="openFeatureRequestModal" title="Submit a request to developer"
+                        class="ml-auto shrink-0 inline-flex items-center gap-2 h-10 px-3 sm:px-4 rounded-full border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M4 4h16v12H7l-3 3z"/>
                         <path d="M8 9h8M8 13h5"/>
                     </svg>
-                    Submit a request to developer
+                    <span class="hidden sm:inline">Submit a request to developer</span>
                 </button>
             </div>
         </template>
