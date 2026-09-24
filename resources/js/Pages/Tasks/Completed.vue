@@ -158,8 +158,19 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                     <div v-for="task in tasks" :key="task.id"
                          class="p-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-brand-surface transition"
                          @click="openDetail(task)">
-                        <div class="min-w-0 flex items-center gap-2">
+                        <div class="min-w-0 flex items-center gap-1.5">
                             <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
+                            <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
+                               @click.stop :title="task.links[0].url"
+                               class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round" class="lucide lucide-link">
+                                    <path d="M9 17H7A5 5 0 0 1 7 7h2"/>
+                                    <path d="M15 7h2a5 5 0 1 1 0 10h-2"/>
+                                    <line x1="8" x2="16" y1="12" y2="12"/>
+                                </svg>
+                            </a>
                         </div>
                         <div class="shrink-0 flex items-center gap-3">
                             <div class="w-24 flex justify-end">

@@ -372,17 +372,19 @@ const exportTasks = async () => {
                 </span>
             </div>
 
-            <div class="min-h-6 ">
-                <SavedLabel/>
-                <button @click="dispatchEvent" class="rounded bg-gray-500 m-2 hidden">DISP</button>
-            </div>
-            <div class="text-xs text-gray-400 flex justify-end pr-2">
-                Last saved on {{
-                    format(
-                        lastSaved,
-                        usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
-                    )
-                }}
+            <div class="min-h-6 flex items-center justify-between gap-2 pr-2">
+                <div class="flex-1">
+                    <SavedLabel/>
+                    <button @click="dispatchEvent" class="rounded bg-gray-500 m-2 hidden">DISP</button>
+                </div>
+                <div class="shrink-0 text-xs text-gray-400 whitespace-nowrap">
+                    Last saved on {{
+                        format(
+                            lastSaved,
+                            usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
+                        )
+                    }}
+                </div>
             </div>
             <div class="surface-card my-6 px-4"
                  v-if="!isNaN(progress) && progress > 0">
@@ -404,7 +406,7 @@ const exportTasks = async () => {
                             <line x1="3" y1="12" x2="21" y2="12"/>
                             <line x1="3" y1="18" x2="21" y2="18"/>
                         </svg>
-                        Compact mode
+                        <span class="hidden sm:inline">Compact mode</span>
                     </button>
                     <button type="button" @click="toggleHighlightLate"
                             :title="highlightLate ? 'Stop highlighting late tasks' : 'Highlight late tasks'"
@@ -416,9 +418,10 @@ const exportTasks = async () => {
                             <path d="M12 9v4"/>
                             <path d="M12 17h.01"/>
                         </svg>
-                        Highlight late tasks
+                        <span class="hidden sm:inline">Highlight late tasks</span>
                     </button>
                     <button type="button" @click="exportTasks" :disabled="!undoneFilteredTasks.length"
+                            title="Export undone tasks as text"
                             class="btn btn-ghost btn-xs gap-1 normal-case disabled:opacity-50">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -426,7 +429,7 @@ const exportTasks = async () => {
                             <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
                             <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                         </svg>
-                        Export undone tasks as text
+                        <span class="hidden sm:inline">Export undone tasks as text</span>
                     </button>
                 </div>
             </div>
