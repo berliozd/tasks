@@ -6,7 +6,10 @@ import {reactive, ref, watch} from "vue";
 import SavedLabel from "@/Components/SavedLabel.vue";
 import Task from "@/Pages/Tasks/Partials/Task.vue";
 import {useStore} from "@/Composables/store.js";
+import {useCompactMode} from "@/Composables/compactMode.js";
 import debounce from "lodash/debounce";
+
+const {compactMode, toggleCompactMode} = useCompactMode();
 
 const reactiveTasks = reactive({});
 let storedReactiveTasks = null;
@@ -101,12 +104,27 @@ const setActiveTask = (task) => {
                 <SavedLabel/>
             </div>
 
+            <div class="flex items-center justify-end gap-1 px-1 mb-2">
+                <button type="button" @click="toggleCompactMode"
+                        :title="compactMode ? 'Switch to comfortable view' : 'Switch to compact view'"
+                        class="btn btn-ghost btn-xs gap-1 normal-case"
+                        :class="compactMode ? 'text-brand-accent-dark' : ''">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                    <span class="hidden sm:inline">Compact mode</span>
+                </button>
+            </div>
+
             <div class="surface-card mb-2 overflow-hidden">
-                <div class="flex flex-col gap-2 p-2">
+                <div class="flex flex-col p-2" :class="compactMode ? 'gap-1.5' : 'gap-2'">
                     <Task v-for="task in (reactiveTasks.value ?? [])" :key="task.id" :task="task"
                           @deleted="refreshTasks()" @changed="refreshTasks()"
                           @toggle-editing="setActiveTask" :all-flags="allFlags"
-                          :all-recurrences="allRecurrences"/>
+                          :all-recurrences="allRecurrences" :readonly="true" :compact="compactMode"/>
                     <div v-if="!(reactiveTasks.value ?? []).length" class="px-4 py-10 text-center text-sm text-gray-400">
                         No future tasks scheduled.
                     </div>

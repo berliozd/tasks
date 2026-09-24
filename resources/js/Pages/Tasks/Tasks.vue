@@ -13,6 +13,7 @@ import Task from "@/Pages/Tasks/Partials/Task.vue";
 import Flags from "@/Pages/Tasks/Partials/Flags.vue";
 import Modal from "@/Components/Modal.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
+import {useCompactMode} from "@/Composables/compactMode.js";
 
 // Off by default — a page reload with no stored preference should not
 // highlight anything.
@@ -34,25 +35,7 @@ const toggleHighlightLate = () => {
     }
 }
 
-const COMPACT_MODE_STORAGE_KEY = 'tasks-compact-mode';
-const loadCompactMode = () => {
-    try {
-        const stored = localStorage.getItem(COMPACT_MODE_STORAGE_KEY);
-        // Default on when no preference has been stored yet.
-        return stored === null ? true : stored === '1';
-    } catch (e) {
-        return true;
-    }
-}
-const compactMode = ref(loadCompactMode());
-const toggleCompactMode = () => {
-    compactMode.value = !compactMode.value;
-    try {
-        localStorage.setItem(COMPACT_MODE_STORAGE_KEY, compactMode.value ? '1' : '0');
-    } catch (e) {
-        // localStorage unavailable — toggle still works for this session.
-    }
-}
+const {compactMode, toggleCompactMode} = useCompactMode();
 
 const newTaskLabel = ref('');
 const newTaskDescription = ref('');

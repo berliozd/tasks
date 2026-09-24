@@ -13,6 +13,7 @@ const props = defineProps({
     task: Object, allFlags: Array, allRecurrences: Array,
     highlightLate: {type: Boolean, default: true},
     compact: {type: Boolean, default: false},
+    readonly: {type: Boolean, default: false},
 });
 const emits = defineEmits(['deleted', 'changed', 'toggle-editing']);
 
@@ -234,8 +235,9 @@ watch(editFlagIds, (next, prev) => {
             highlightLate && taskIsLate(task) ? 'ring-red-200 border-l-4 border-red-400 bg-red-50/40' : 'ring-slate-900/[0.08] hover:ring-slate-900/[0.16]',
             task.completed_at ? 'bg-gray-50/70' : 'bg-white'
          ]">
-            <div class="flex items-start gap-2 sm:grid sm:grid-cols-[auto_1fr_10rem_6.5rem] sm:items-center">
-                <div class="flex items-center pt-0.5 sm:pt-0">
+            <div class="flex items-start gap-2 sm:grid sm:items-center"
+                 :class="readonly ? 'sm:grid-cols-[1fr_10rem]' : 'sm:grid-cols-[auto_1fr_10rem_6.5rem]'">
+                <div v-if="!readonly" class="flex items-center pt-0.5 sm:pt-0">
                     <CompleteTaskModal :task="task" @changed="emits('changed')"/>
                 </div>
                 <div class="min-w-0 w-full">
@@ -243,7 +245,7 @@ watch(editFlagIds, (next, prev) => {
                         <span :class="task.completed_at ? 'text-gray-400 line-through' : 'text-gray-900'">
                             {{ task.label }}
                         </span>
-                        <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
+                        <a v-if="!readonly && (task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
                            @click.stop :title="task.links[0].url"
                            class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
@@ -266,7 +268,7 @@ watch(editFlagIds, (next, prev) => {
                      :class="compact ? 'sm:min-h-6' : 'sm:min-h-10'">
                     <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-1.5"/>
                 </div>
-                <div class="flex items-center justify-end gap-1 sm:w-[6.5rem]" :class="compact ? 'sm:min-h-6' : 'sm:min-h-10'">
+                <div v-if="!readonly" class="flex items-center justify-end gap-1 sm:w-[6.5rem]" :class="compact ? 'sm:min-h-6' : 'sm:min-h-10'">
                     <div class="flex items-center justify-center rounded-full hover:bg-gray-100 transition"
                          :class="compact ? 'w-6 h-6' : 'w-7 h-7'">
                         <ReScheduleModal v-if="task.completed_at === null" @reschedule="rescheduleTomorrow(task)"/>

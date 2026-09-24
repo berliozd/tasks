@@ -3,26 +3,25 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import axios from 'axios';
 import {computed, ref, watch} from 'vue';
 import {addDays, format, parseISO} from 'date-fns';
-import {Link, usePage} from '@inertiajs/vue3';
-import FlagSwatches from '@/Components/FlagSwatches.vue';
-import Modal from '@/Components/Modal.vue';
-import SecondaryButton from '@/Components/SecondaryButton.vue';
+import {Link} from '@inertiajs/vue3';
+import Task from '@/Pages/Tasks/Partials/Task.vue';
+import {useCompactMode} from '@/Composables/compactMode.js';
+
+const {compactMode, toggleCompactMode} = useCompactMode();
 
 const period = ref('day'); // day|week|month
 const loading = ref(false);
 const tasks = ref([]);
 
-const showDetail = ref(false);
-const selectedTask = ref(null);
+const allFlags = ref([]);
+const allRecurrences = ref([]);
+axios.get(route('flags.index')).then(response => allFlags.value = response.data);
+axios.get(route('recurrences.index')).then(response => allRecurrences.value = response.data);
 
-const openDetail = (task) => {
-    selectedTask.value = task;
-    showDetail.value = true;
-};
-
-const closeDetail = () => {
-    showDetail.value = false;
-    selectedTask.value = null;
+const setActiveTask = (task) => {
+    tasks.value.forEach(t => {
+        t.editing = t.id === task.id ? !t.editing : false;
+    });
 };
 
 const yesterdayYmd = () => {
@@ -45,14 +44,6 @@ const shiftEndDate = (deltaDays) => {
     const next = addDays(current, deltaDays);
     const nextYmd = format(next, 'yyyy-MM-dd');
     endDate.value = nextYmd > maxEndDate.value ? maxEndDate.value : nextYmd;
-};
-
-const formatDateTime = (date) => {
-    if (!date) return '';
-    return format(
-        new Date(date),
-        usePage().props.appLocale === 'en' ? 'MM/dd/yyyy HH:mm:ss' : 'dd/MM/yyyy HH:mm:ss'
-    );
 };
 
 const fetchCompleted = async () => {
@@ -150,77 +141,31 @@ watch([period, endDate], fetchCompleted, {immediate: true});
                 </div>
             </div>
 
-            <div class="surface-card mt-4 overflow-hidden">
+            <div class="flex items-center justify-end gap-1 px-1 mt-4 mb-2">
+                <button type="button" @click="toggleCompactMode"
+                        :title="compactMode ? 'Switch to comfortable view' : 'Switch to compact view'"
+                        class="btn btn-ghost btn-xs gap-1 normal-case"
+                        :class="compactMode ? 'text-brand-accent-dark' : ''">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                    <span class="hidden sm:inline">Compact mode</span>
+                </button>
+            </div>
+
+            <div class="surface-card overflow-hidden">
                 <div v-if="!loading && !tasks.length" class="p-8 text-center text-sm text-gray-400">
                     No completed tasks.
                 </div>
-                <div v-else class="divide-y divide-gray-100">
-                    <div v-for="task in tasks" :key="task.id"
-                         class="p-3 flex items-center justify-between gap-4 cursor-pointer hover:bg-brand-surface transition"
-                         @click="openDetail(task)">
-                        <div class="min-w-0 flex items-center gap-1.5">
-                            <div class="text-sm text-gray-900 truncate">{{ task.label }}</div>
-                            <a v-if="(task.links ?? []).length" :href="task.links[0].url" target="_blank" rel="noopener"
-                               @click.stop :title="task.links[0].url"
-                               class="shrink-0 text-gray-400 hover:text-brand-accent-dark transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                     stroke-linejoin="round" class="lucide lucide-link">
-                                    <path d="M9 17H7A5 5 0 0 1 7 7h2"/>
-                                    <path d="M15 7h2a5 5 0 1 1 0 10h-2"/>
-                                    <line x1="8" x2="16" y1="12" y2="12"/>
-                                </svg>
-                            </a>
-                        </div>
-                        <div class="shrink-0 flex items-center gap-3">
-                            <div class="w-24 flex justify-end">
-                                <FlagSwatches :flags="task.flags" size-class="w-4 h-4" gap-class="gap-2"/>
-                            </div>
-                            <div class="w-32 text-xs text-gray-500 text-right">
-                                {{ task.completed_at ? formatDateTime(task.completed_at) : '' }}
-                            </div>
-                        </div>
-                    </div>
+                <div v-else class="flex flex-col p-2" :class="compactMode ? 'gap-1.5' : 'gap-2'">
+                    <Task v-for="task in tasks" :key="task.id" :task="task"
+                          @toggle-editing="setActiveTask" :all-flags="allFlags"
+                          :all-recurrences="allRecurrences" :readonly="true" :compact="compactMode"/>
                 </div>
             </div>
         </div>
-
-        <Modal :show="showDetail" @close="closeDetail">
-            <div v-if="selectedTask" class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
-                <div class="text-lg font-medium text-gray-900">{{ selectedTask.label }}</div>
-
-                <FlagSwatches v-if="(selectedTask.flags ?? []).length" :flags="selectedTask.flags"
-                              size-class="w-4 h-4" gap-class="gap-2"/>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-gray-500">
-                    <div v-if="selectedTask.scheduled_at">
-                        Scheduled: {{ formatDateTime(selectedTask.scheduled_at) }}
-                    </div>
-                    <div v-if="selectedTask.completed_at">
-                        Completed: {{ formatDateTime(selectedTask.completed_at) }}
-                    </div>
-                </div>
-
-                <div>
-                    <div class="text-xs font-medium text-gray-500 mb-1">Description</div>
-                    <div v-if="selectedTask.description" class="text-sm text-gray-700 whitespace-pre-wrap">
-                        {{ selectedTask.description }}
-                    </div>
-                    <div v-else class="text-sm text-gray-400">No description.</div>
-                </div>
-
-                <div v-if="(selectedTask.links ?? []).length" class="flex flex-col gap-1">
-                    <div class="text-xs font-medium text-gray-500 mb-1">Links</div>
-                    <a v-for="link in selectedTask.links" :key="link.id" :href="link.url" target="_blank" rel="noopener"
-                       class="text-sm text-brand-accent-dark hover:text-brand-accent hover:underline truncate">
-                        {{ link.label || link.url }}
-                    </a>
-                </div>
-
-                <div class="flex justify-end pt-2">
-                    <SecondaryButton @click="closeDetail">Close</SecondaryButton>
-                </div>
-            </div>
-        </Modal>
     </AppLayout>
 </template>
