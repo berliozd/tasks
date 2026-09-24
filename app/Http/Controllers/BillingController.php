@@ -42,6 +42,7 @@ class BillingController extends Controller
         return $team->newSubscription('default', $priceId)->checkout([
             'success_url' => route('billing') . '?checkout=success',
             'cancel_url' => route('billing') . '?checkout=cancelled',
+            'allow_promotion_codes' => true,
         ]);
     }
 
