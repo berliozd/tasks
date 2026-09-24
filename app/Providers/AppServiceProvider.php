@@ -22,7 +22,9 @@ use App\Services\ProfileSearch\StubProfileSearchService;
 use App\Services\ProspectGenerator\OpenAiProspectGenerator;
 use App\Services\ProspectGenerator\ProspectGeneratorInterface;
 use App\Services\ProspectGenerator\StubProspectGenerator;
+use App\Models\Team;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Cashier\Cashier;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -106,6 +108,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Teams are billed, not individual users — Prospection/Documents/Needs
+        // are gated per team (see Team::hasFeatureEnabled()).
+        Cashier::useCustomerModel(Team::class);
     }
 }

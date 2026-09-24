@@ -8,6 +8,7 @@ import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import {useIdleRedirect} from '@/Composables/useIdleRedirect';
+import {isTeamFeatureEnabled} from '@/Composables/teamFeatures';
 
 defineProps({
     title: String,
@@ -18,10 +19,7 @@ const showingNavigationDropdown = ref(false);
 
 const page = usePage();
 
-const isFeatureEnabled = (feature) => {
-    const disabled = page.props.auth?.user?.current_team?.disabled_features ?? [];
-    return !disabled.includes(feature);
-};
+const isFeatureEnabled = (feature) => isTeamFeatureEnabled(page.props.auth?.user?.current_team, feature);
 
 useIdleRedirect({
     // Redirect a bit before the server session likely expires.
@@ -216,6 +214,9 @@ Echo.private('my-private-channel')
                                         <DropdownLink :href="route('flags')">
                                             Flags
                                         </DropdownLink>
+                                        <DropdownLink :href="route('billing')">
+                                            Billing
+                                        </DropdownLink>
 
                                         <DropdownLink v-if="$page.props.jetstream.hasApiFeatures"
                                                       :href="route('api-tokens.index')">
@@ -312,6 +313,9 @@ Echo.private('my-private-channel')
                             </ResponsiveNavLink>
                             <ResponsiveNavLink :href="route('flags')" :active="route().current('flags')">
                                 Flags
+                            </ResponsiveNavLink>
+                            <ResponsiveNavLink :href="route('billing')" :active="route().current('billing')">
+                                Billing
                             </ResponsiveNavLink>
 
                             <ResponsiveNavLink v-if="$page.props.jetstream.hasApiFeatures"

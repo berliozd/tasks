@@ -26,13 +26,18 @@ defineProps({
     <Head title="Welcome"/>
     <GuestLayout :show-home-link="false">
         <template #header-right>
-            <Link
-                v-if="canLogin && !$page.props.auth.user"
-                :href="route('login')"
-                class="text-sm font-medium text-slate-200 hover:text-white transition"
-            >
-                Log in
-            </Link>
+            <div class="flex items-center gap-4">
+                <Link :href="route('pricing')" class="text-sm font-medium text-slate-200 hover:text-white transition">
+                    Pricing
+                </Link>
+                <Link
+                    v-if="canLogin && !$page.props.auth.user"
+                    :href="route('login')"
+                    class="text-sm font-medium text-slate-200 hover:text-white transition"
+                >
+                    Log in
+                </Link>
+            </div>
         </template>
 
         <div class="relative -mx-4 sm:-mx-6 lg:-mx-8 -my-8 text-gray-600">
@@ -76,6 +81,10 @@ defineProps({
                         <Link v-if="$page.props.auth.user" :href="route('dashboard')"
                               class="inline-flex items-center gap-2 rounded-lg bg-brand-navy px-5 py-2.5 text-sm font-semibold text-white shadow-card hover:bg-brand-navy-light transition">
                             Go to dashboard
+                        </Link>
+                        <Link :href="route('pricing')"
+                              class="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 ring-1 ring-slate-900/[0.06] shadow-card hover:bg-gray-50 transition">
+                            See pricing
                         </Link>
                     </div>
 

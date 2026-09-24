@@ -41,6 +41,9 @@ class HandleInertiaRequests extends Middleware
             'environment' => config('app.env'),
             // Client-side idle redirect uses this to approximate session expiry without polling.
             'sessionIdleMs' => (int) config('session.lifetime') * 60 * 1000,
+            'flash' => [
+                'message' => fn () => $request->session()->get('message'),
+            ],
         ];
     }
 }

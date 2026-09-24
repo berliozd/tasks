@@ -23,4 +23,33 @@ class TeamFactory extends Factory
             'personal_team' => true,
         ];
     }
+
+    /**
+     * Factory-created teams are Pro by default in tests — Prospection,
+     * Documents, and Needs are gated behind a subscription (see
+     * Team::hasFeatureEnabled()), and almost every existing feature test
+     * predates that gate. Tests that specifically exercise the free-tier
+     * gate should call unsubscribed() to opt out.
+     */
+    public function configure(): static
+    {
+        return $this->afterCreating(function (\App\Models\Team $team) {
+            if (app()->environment('testing')) {
+                $team->subscriptions()->create([
+                    'type' => 'default',
+                    'stripe_id' => 'sub_test_' . $team->id,
+                    'stripe_status' => 'active',
+                    'stripe_price' => 'price_test',
+                    'quantity' => 1,
+                ]);
+            }
+        });
+    }
+
+    public function unsubscribed(): static
+    {
+        return $this->afterCreating(function (\App\Models\Team $team) {
+            $team->subscriptions()->delete();
+        });
+    }
 }

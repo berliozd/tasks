@@ -10,6 +10,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SavedLabel from '@/Components/SavedLabel.vue';
 import {useStore} from '@/Composables/store.js';
+import {isTeamFeatureEnabled} from '@/Composables/teamFeatures';
 
 const props = defineProps({
     todayTasks: {type: Array, default: () => []},
@@ -35,10 +36,7 @@ const props = defineProps({
 const stageBgStyle = (color) => ({backgroundColor: `${color}1a`, color});
 
 const page = usePage();
-const isFeatureEnabled = (feature) => {
-    const disabled = page.props.auth?.user?.current_team?.disabled_features ?? [];
-    return !disabled.includes(feature);
-};
+const isFeatureEnabled = (feature) => isTeamFeatureEnabled(page.props.auth?.user?.current_team, feature);
 
 const formatTime = (date) => date ? format(new Date(date), 'HH:mm') : '';
 const formatRecentDate = (date) => date ? format(new Date(date), 'MMM d, HH:mm') : '';

@@ -1,7 +1,9 @@
 <script setup>
 import {onMounted, ref} from 'vue';
+import {Link, usePage} from '@inertiajs/vue3';
 import FormSection from '@/Components/FormSection.vue';
 import ActionMessage from '@/Components/ActionMessage.vue';
+import {PAID_FEATURES} from '@/Composables/teamFeatures';
 
 const props = defineProps({
     permissions: Object,
@@ -13,6 +15,9 @@ const featureLabels = {
     prospection: 'Prospection',
     documents: 'Documents',
 };
+
+const isPro = usePage().props.auth?.user?.current_team?.is_pro ?? false;
+const isPaidFeature = (feature) => PAID_FEATURES.includes(feature);
 
 const features = ref([]);
 const disabled = ref([]);
@@ -58,8 +63,19 @@ const toggle = (feature) => {
         <template #form>
             <div class="col-span-6 flex flex-col gap-4">
                 <div v-for="feature in features" :key="feature" class="flex items-center justify-between gap-4">
-                    <span class="text-sm text-gray-700">{{ featureLabels[feature] ?? feature }}</span>
-                    <button type="button" @click="toggle(feature)"
+                    <span class="text-sm text-gray-700 flex items-center gap-2">
+                        {{ featureLabels[feature] ?? feature }}
+                        <span v-if="isPaidFeature(feature) && !isPro"
+                              class="rounded-full bg-brand-accent/10 text-brand-accent-dark text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5">
+                            Pro
+                        </span>
+                    </span>
+                    <template v-if="isPaidFeature(feature) && !isPro">
+                        <Link :href="route('billing')" class="text-xs font-medium text-brand-accent-dark hover:underline">
+                            Upgrade to unlock
+                        </Link>
+                    </template>
+                    <button v-else type="button" @click="toggle(feature)"
                             :disabled="!permissions.canUpdateTeam || saving"
                             :aria-pressed="isEnabled(feature) ? 'true' : 'false'"
                             class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition disabled:opacity-50 disabled:cursor-not-allowed"

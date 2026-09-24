@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\ProvidersCallbackController;
+use App\Http\Controllers\BillingController;
 use App\Http\Controllers\CompletedTasksController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DirectoryController;
@@ -29,6 +30,13 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/pricing', function () {
+    return Inertia::render('Pricing', [
+        'canLogin' => Route::has('login'),
+        'canRegister' => Route::has('register'),
+    ]);
+})->name('pricing');
+
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
@@ -36,6 +44,12 @@ Route::middleware([
 ])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/flags', FlagController::class)->name('flags');
+    Route::get('/billing', [BillingController::class, 'show'])->name('billing');
+    // Plain GET, hit via a real <a href> (not Inertia's Link/axios) so the
+    // browser follows Stripe's redirect natively instead of an XHR
+    // silently following it and returning Stripe's HTML as a response body.
+    Route::get('/billing/checkout', [BillingController::class, 'checkout'])->name('billing.checkout');
+    Route::get('/billing/portal', [BillingController::class, 'portal'])->name('billing.portal');
 
     Route::middleware('feature:tasks')->group(function () {
         Route::get('/tasks', TaskController::class)->name('tasks');
