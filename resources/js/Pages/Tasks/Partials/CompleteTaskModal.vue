@@ -58,6 +58,10 @@ const complete = async () => {
     emits('changed')
 }
 
+const cancel = () => {
+    hideModal()
+}
+
 const confirmNoFollowUp = async () => {
     await complete()
     hideModal()
@@ -76,14 +80,19 @@ const createTasks = async (nbDays) => {
 <template>
     <CheckButton :checked="checked"
                  @click="toggleChecked()"/>
-    <Modal :show="isShowModal" @close="hideModal">
+    <Modal :show="isShowModal" @close="cancel">
         <div class="p-4 w-full space-y-4 flex flex-col">
             <div>Mark "{{ task.label }}" as completed?</div>
-            <div>Do you want to create a similar task?</div>
             <div class="flex justify-between gap-2 md:gap-0 flex-col md:flex-row">
                 <div class="w-full text-center">
-                    <PrimaryButton @click="confirmNoFollowUp">No</PrimaryButton>
+                    <SecondaryButton @click="cancel">No</SecondaryButton>
                 </div>
+                <div class="w-full text-center">
+                    <PrimaryButton @click="confirmNoFollowUp">Yes</PrimaryButton>
+                </div>
+            </div>
+            <div class="text-sm text-gray-500">Or complete it and schedule a follow-up task:</div>
+            <div class="flex justify-between gap-2 md:gap-0 flex-col md:flex-row">
                 <div class="w-full text-center">
                     <SecondaryButton @click="createTasks(1)">Tomorrow</SecondaryButton>
                 </div>
