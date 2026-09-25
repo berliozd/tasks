@@ -23,9 +23,21 @@ const hideModal = () => {
     isShowModal.value = false
 }
 
+// Completing a non-recurring task opens a modal to ask about a follow-up
+// task — the task is only actually marked complete once the user answers
+// (any button), not just from clicking the checkbox.
 const toggleChecked = async () => {
-    if (!checked.value && !props.task.recurrence_id) isShowModal.value = true;
-    checked.value = !checked.value;
+    if (checked.value) {
+        checked.value = false;
+        await updateTask()
+        emits('changed')
+        return;
+    }
+    if (!props.task.recurrence_id) {
+        isShowModal.value = true;
+        return;
+    }
+    checked.value = true;
     await updateTask()
     emits('changed')
 }
@@ -39,7 +51,20 @@ const getDate = (nbDays) => {
 const updateTask = async () => {
     await axios.patch(route('tasks.update', props.task.id), {completed_at: checked.value ? new Date() : null})
 }
+
+const complete = async () => {
+    checked.value = true;
+    await updateTask()
+    emits('changed')
+}
+
+const confirmNoFollowUp = async () => {
+    await complete()
+    hideModal()
+}
+
 const createTasks = async (nbDays) => {
+    await complete()
     await axios.post(
         route('tasks.store'),
         {label: props.task.label, description: props.task.description, scheduled_at: getDate(nbDays)}
@@ -51,13 +76,13 @@ const createTasks = async (nbDays) => {
 <template>
     <CheckButton :checked="checked"
                  @click="toggleChecked()"/>
-    <Modal :show="isShowModal">
+    <Modal :show="isShowModal" @close="hideModal">
         <div class="p-4 w-full space-y-4 flex flex-col">
-            <div>Your task "{{ task.label }}" is marked as completed.</div>
+            <div>Mark "{{ task.label }}" as completed?</div>
             <div>Do you want to create a similar task?</div>
             <div class="flex justify-between gap-2 md:gap-0 flex-col md:flex-row">
                 <div class="w-full text-center">
-                    <PrimaryButton @click="hideModal">No</PrimaryButton>
+                    <PrimaryButton @click="confirmNoFollowUp">No</PrimaryButton>
                 </div>
                 <div class="w-full text-center">
                     <SecondaryButton @click="createTasks(1)">Tomorrow</SecondaryButton>
