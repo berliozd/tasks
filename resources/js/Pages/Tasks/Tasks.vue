@@ -69,6 +69,7 @@ let storedReactiveTasks = null;
 let watchActive = false;
 
 const selectedFlagIds = ref([]);
+const flagsRef = ref(null);
 
 const scrollTo = (view) => {
     view.value?.scrollIntoView({behavior: 'smooth'})
@@ -154,6 +155,9 @@ const addTask = () => {
             storedReactiveTasks = JSON.parse(JSON.stringify(reactiveTasks.value));
             calculateProgress()
             showAddTaskModal.value = false;
+            // Clear the flag filter so the new task — which might not have
+            // the currently-filtered flags — is actually visible.
+            flagsRef.value?.clearFlagFilters();
             scrollTo(belowList)
         }
     )
@@ -374,7 +378,7 @@ const exportTasks = async () => {
                 <progress class="my-4 progress progress-primary w-full" :value="progress" max="100"/>
             </div>
 
-            <Flags :all-flags="pageFlags" :known-flag-ids="(allFlags ?? []).map(f => f.id)" @filter="updateSelectedFlags"/>
+            <Flags ref="flagsRef" :all-flags="pageFlags" :known-flag-ids="(allFlags ?? []).map(f => f.id)" @filter="updateSelectedFlags"/>
 
             <div class="flex items-center justify-between gap-2 px-1 mb-2">
                 <div class="text-xs font-medium text-gray-500">{{ filteredTasks.length }} task(s)</div>

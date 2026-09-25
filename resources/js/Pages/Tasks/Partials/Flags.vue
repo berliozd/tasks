@@ -81,6 +81,8 @@ const toggleFlagFilter = (flagId) => {
     persistFlagIds();
     emit("filter", selectedFlagIds);
 }
+
+defineExpose({clearFlagFilters});
 </script>
 
 <template>
